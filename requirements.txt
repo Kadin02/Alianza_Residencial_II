@@ -4,10 +4,17 @@ sqlalchemy==2.0.30
 pydantic==2.7.1
 pydantic-settings==2.2.1
 python-jose[cryptography]==3.3.0
+<<<<<<< HEAD
 
+=======
+passlib[bcrypt]==1.8.0
+>>>>>>> d6a8b5f89c583105a091731bad8f78b694b2352e
 python-multipart==0.0.9
 aiofiles==23.2.1
 jinja2==3.1.4
 psycopg2-binary==2.9.6
+<<<<<<< HEAD
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
+=======
+>>>>>>> d6a8b5f89c583105a091731bad8f78b694b2352e
