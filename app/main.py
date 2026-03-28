@@ -17,15 +17,15 @@ Base.metadata.create_all(bind=engine)
 
 
 # ── Crear usuario admin por defecto ──────────
-def _seed_admin():
-    from app.services.auth_service import create_default_admin
-    db = SessionLocal()
-    try:
-        create_default_admin(db)
-    finally:
-        db.close()
+#def _seed_admin():
+    #from app.services.auth_service import create_default_admin
+    #db = SessionLocal()
+    #try:
+        #"create_default_admin(db)
+    #finally:
+        #db.close()
 
-_seed_admin()
+#_seed_admin()
 
 
 # ── App principal ────────────────────────────
