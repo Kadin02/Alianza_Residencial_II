@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ── Tabs ── */
+    .ag-tabs { display:flex; gap:6px; margin-bottom:18px; }
+    .ag-tab {
+      padding:7px 16px; border-radius:8px; border:1px solid var(--border);
+      background:var(--card-bg); color:var(--text-secondary); font-size:.82rem;
+      font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    .ag-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .ag-panel { display:none; }
+    .ag-panel.active { display:block; }
+
+    /* ── Calendario ── */
+    .calendar-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+    .cal-header {
+      background:var(--accent); color:#fff;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 20px;
+    }
+    .cal-header h3 { font-size:1rem; font-weight:700; margin:0; text-transform:capitalize; }
+    .cal-nav { background:rgba(255,255,255,.18); border:none; color:#fff;
+      width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:.9rem;
+      display:flex; align-items:center; justify-content:center; transition:background .15s; }
+    .cal-nav:hover { background:rgba(255,255,255,.3); }
+    .cal-weekdays {
+      display:grid; grid-template-columns:repeat(7,1fr);
+      background:#f8fafc; border-bottom:1px solid var(--border);
+    }
+    .cal-weekdays span {
+      text-align:center; padding:8px 0; font-size:.72rem;
+      font-weight:700; color:var(--text-muted); text-transform:uppercase;
+    }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+    .cal-day {
+      min-height:72px; padding:6px 8px; border-right:1px solid var(--border-light);
+      border-bottom:1px solid var(--border-light); cursor:pointer;
+      transition:background .12s; position:relative;
+    }
+    .cal-day:hover { background:#f0f4ff; }
+    .cal-day.today { background:var(--accent-soft); }
+    .cal-day.other-month .day-num { color:var(--text-muted); opacity:.4; }
+    .day-num { font-size:.8rem; font-weight:700; color:var(--text-primary); }
+    .cal-day.today .day-num {
+      background:var(--accent); color:#fff; width:22px; height:22px;
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:.75rem;
+    }
+    .day-events { margin-top:4px; display:flex; flex-direction:column; gap:2px; }
+    .day-event-dot {
+      font-size:.68rem; padding:1px 6px; border-radius:4px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      font-weight:600; cursor:pointer;
+    }
+    .dot-CITA    { background:#dbeafe; color:#1e40af; }
+    .dot-EVENTO  { background:#fef3c7; color:#92400e; }
+    .dot-TAREA   { background:#d1fae5; color:#065f46; }
+    .dot-done    { opacity:.45; text-decoration:line-through; }
+
+    /* ── Event cards (lista) ── */
+    .event-card {
+      border:1px solid var(--border); border-radius:var(--radius-md);
+      padding:14px 16px; margin-bottom:8px; background:var(--card-bg);
+      display:flex; align-items:flex-start; gap:14px; transition:box-shadow .15s;
+    }
+    .event-card:hover { box-shadow:var(--shadow-sm); }
+    .event-type-icon {
+      width:38px; height:38px; border-radius:10px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:1rem;
+    }
+    .icon-CITA   { background:#dbeafe; color:#1d4ed8; }
+    .icon-EVENTO { background:#fef3c7; color:#b45309; }
+    .icon-TAREA  { background:#d1fae5; color:#059669; }
+    .event-info { flex:1; min-width:0; }
+    .event-info strong { font-size:.88rem; color:var(--text-primary); display:block; margin-bottom:2px; }
+    .event-meta { font-size:.76rem; color:var(--text-secondary); }
+    .event-actions { display:flex; gap:6px; align-items:center; }
+
+    .priority-ALTA   { border-left:3px solid var(--danger); }
+    .priority-NORMAL { border-left:3px solid var(--accent); }
+    .priority-BAJA   { border-left:3px solid var(--text-muted); }
+
+    .status-chip {
+      font-size:.7rem; font-weight:700; padding:2px 8px;
+      border-radius:20px; white-space:nowrap;
+    }
+    .chip-PENDIENTE  { background:#fef3c7; color:#92400e; }
+    .chip-COMPLETADO { background:#d1fae5; color:#065f46; }
+    .chip-CANCELADO  { background:#fee2e2; color:#991b1b; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(10,20,40,.45); z-index:500;
+      align-items:center; justify-content:center; backdrop-filter:blur(2px);
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--card-bg); border-radius:var(--radius-xl);
+      padding:28px 30px; width:480px; max-width:95vw; max-height:90vh;
+      overflow-y:auto; box-shadow:var(--shadow-lg); animation:modalIn .2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(.96) translateY(10px); }
+      to   { opacity:1; transform:scale(1)   translateY(0); }
+    }
+    .modal-box h3 { font-size:1.05rem; font-weight:700; margin-bottom:18px;
+      color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+    .filter-chips { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+    .filter-chip {
+      padding:4px 12px; border-radius:20px; font-size:.76rem; font-weight:600;
+      cursor:pointer; border:1px solid var(--border); background:var(--card-bg);
+      color:var(--text-secondary); transition:all .15s;
+    }
+    .filter-chip.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  </style>
+</head>
+<body>
+
+<header class="main-header" id="main-header"></header>
+
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-calendar-alt" style="color:var(--accent);margin-right:8px;"></i>Agenda</h1>
+    <p>Citas, eventos del edificio y tareas pendientes</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="ag-tabs">
+    <button class="ag-tab active" onclick="switchTab('calendario')"><i class="fas fa-calendar"></i> Calendario</button>
+    <button class="ag-tab" onclick="switchTab('lista')"><i class="fas fa-list-ul"></i> Lista</button>
+    <button class="ag-tab" onclick="switchTab('nuevo')"><i class="fas fa-plus"></i> Nuevo</button>
+  </div>
+
+  <!-- ══ TAB: CALENDARIO ══ -->
+  <div class="ag-panel active" id="panel-calendario">
+    <div class="calendar-wrap">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="prevMonth()"><i class="fas fa-chevron-left"></i></button>
+        <h3 id="cal-title"></h3>
+        <button class="cal-nav" onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="cal-weekdays">
+        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span>
+        <span>Jue</span><span>Vie</span><span>Sáb</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: LISTA ══ -->
+  <div class="ag-panel" id="panel-lista">
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-list-ul"></i> Todos los eventos</h3>
+        <span class="badge badge-primary" id="ev-count">0</span>
+      </div>
+      <div class="card-body">
+        <div class="filter-chips">
+          <span class="filter-chip on" data-filter="ALL"    onclick="setFilter('ALL',this)">Todos</span>
+          <span class="filter-chip"    data-filter="CITA"   onclick="setFilter('CITA',this)">🗓 Citas</span>
+          <span class="filter-chip"    data-filter="EVENTO" onclick="setFilter('EVENTO',this)">🏛 Eventos</span>
+          <span class="filter-chip"    data-filter="TAREA"  onclick="setFilter('TAREA',this)">✅ Tareas</span>
+          <span class="filter-chip"    data-filter="PENDIENTE" onclick="setFilter('PENDIENTE',this)">Pendientes</span>
+        </div>
+        <div id="ev-list">
+          <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: NUEVO ══ -->
+  <div class="ag-panel" id="panel-nuevo">
+    <div style="max-width:560px;">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle"></i> <span id="ev-form-title">Nuevo Evento</span></h3>
+          <button class="btn btn-muted btn-sm" id="ev-btn-cancel" onclick="cancelEvEdit()" style="display:none;">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+        </div>
+        <div class="card-body">
+          <input type="hidden" id="ev-id">
+
+          <label class="field-label">Tipo *</label>
+          <select id="ev-type">
+            <option value="CITA">🗓 Cita / Reunión</option>
+            <option value="EVENTO">🏛 Evento del Edificio</option>
+            <option value="TAREA">✅ Tarea Pendiente</option>
+          </select>
+
+          <label class="field-label">Título *</label>
+          <input type="text" id="ev-title" placeholder="Ej: Asamblea de propietarios">
+
+          <label class="field-label">Descripción</label>
+          <textarea id="ev-desc" rows="2" placeholder="Detalles adicionales" style="resize:vertical;"></textarea>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label class="field-label">Fecha *</label>
+              <input type="date" id="ev-date">
+            </div>
+            <div>
+              <label class="field-label">Hora</label>
+              <input type="time" id="ev-time">
+            </div>
+          </div>
+
+          <label class="field-label">Lugar / Ubicación</label>
+          <input type="text" id="ev-location" placeholder="Ej: Salón comunal, Piso 1">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label class="field-label">Prioridad</label>
+              <select id="ev-priority">
+                <option value="NORMAL">Normal</option>
+                <option value="ALTA">Alta</option>
+                <option value="BAJA">Baja</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Estado</label>
+              <select id="ev-status">
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="COMPLETADO">Completado</option>
+                <option value="CANCELADO">Cancelado</option>
+              </select>
+            </div>
+          </div>
+
+          <button onclick="saveEvent()">
+            <i class="fas fa-save"></i> <span id="ev-btn-label">Guardar Evento</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderHeader('agenda');
+
+let allEvents  = [];
+let evEditingId = null;
+let calYear, calMonth;
+let activeFilter = 'ALL';
+
+const TYPE_ICONS = { CITA:'fa-handshake', EVENTO:'fa-landmark', TAREA:'fa-check-square' };
+
+// ── Init ─────────────────────────────────────
+async function init() {
+  const now = new Date();
+  calYear  = now.getFullYear();
+  calMonth = now.getMonth();
+  document.getElementById('ev-date').value = todayISO();
+  await loadEvents();
+}
+
+// ── Tabs ──────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.ag-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['calendario','lista','nuevo'][i] === tab);
+  });
+  document.querySelectorAll('.ag-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ── Cargar eventos ────────────────────────────
+async function loadEvents() {
+  allEvents = await apiRequest('/agenda') || [];
+  renderCalendar();
+  renderList();
+}
+
+// ── Filtro lista ──────────────────────────────
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  renderList();
+}
+
+function renderList() {
+  let list = allEvents;
+  if (activeFilter !== 'ALL') {
+    if (['CITA','EVENTO','TAREA'].includes(activeFilter))
+      list = list.filter(e => e.event_type === activeFilter);
+    else
+      list = list.filter(e => e.status === activeFilter);
+  }
+
+  document.getElementById('ev-count').textContent = list.length;
+  const container = document.getElementById('ev-list');
+
+  if (!list.length) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <i class="fas fa-calendar-times" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+      Sin eventos que mostrar</div>`;
+    return;
+  }
+
+  // Agrupar por fecha
+  const grouped = {};
+  list.forEach(e => {
+    const key = e.event_date;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(e);
+  });
+
+  container.innerHTML = Object.keys(grouped).sort().map(dateKey => {
+    const d = new Date(dateKey + 'T00:00:00');
+    const label = d.toLocaleDateString('es-PA', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    return `
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+        color:var(--text-muted);padding:6px 0;border-bottom:1px solid var(--border);margin:12px 0 8px;">
+        ${label}
+      </div>
+      ${grouped[dateKey].map(e => `
+        <div class="event-card priority-${e.priority}">
+          <div class="event-type-icon icon-${e.event_type}">
+            <i class="fas ${TYPE_ICONS[e.event_type]}"></i>
+          </div>
+          <div class="event-info">
+            <strong>${e.title}</strong>
+            <div class="event-meta">
+              ${e.event_time ? `<i class="fas fa-clock" style="opacity:.5;"></i> ${e.event_time} &nbsp;` : ''}
+              ${e.location ? `<i class="fas fa-map-marker-alt" style="opacity:.5;"></i> ${e.location} &nbsp;` : ''}
+              ${e.description ? `<span style="opacity:.7;">${e.description}</span>` : ''}
+            </div>
+          </div>
+          <div class="event-actions">
+            <span class="status-chip chip-${e.status}">${e.status}</span>
+            ${e.status === 'PENDIENTE' ? `
+              <button class="btn btn-ghost btn-sm" title="Marcar completado"
+                onclick="markDone(${e.id})" style="color:var(--success);">
+                <i class="fas fa-check"></i>
+              </button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="editEvent(${e.id})" title="Editar">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteEvent(${e.id})" title="Eliminar">
+              <i class="fas fa-trash" style="color:var(--danger);"></i>
+            </button>
+          </div>
+        </div>`).join('')}`;
+  }).join('');
+}
+
+// ── Calendario ────────────────────────────────
+function prevMonth() { if (--calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function nextMonth() { if (++calMonth > 11) { calMonth = 0;  calYear++; } renderCalendar(); }
+
+function renderCalendar() {
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-title').textContent = `${months[calMonth]} ${calYear}`;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const today = todayISO();
+
+  // Indexar eventos del mes
+  const evMap = {};
+  allEvents.forEach(e => {
+    const [y, m] = e.event_date.split('-').map(Number);
+    if (y === calYear && m - 1 === calMonth) {
+      const d = parseInt(e.event_date.split('-')[2]);
+      if (!evMap[d]) evMap[d] = [];
+      evMap[d].push(e);
+    }
+  });
+
+  let html = '';
+  let day = 1;
+
+  // Días del mes anterior
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="cal-day other-month">
+      <div class="day-num">${daysInPrev - firstDay + i + 1}</div></div>`;
+  }
+  // Días del mes actual
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === today;
+    const evs = evMap[d] || [];
+    html += `<div class="cal-day${isToday ? ' today' : ''}" onclick="openDayModal('${dateStr}')">
+      <div class="day-num">${isToday ? `<span style="background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${d}</span>` : d}</div>
+      <div class="day-events">
+        ${evs.slice(0, 3).map(e => `
+          <div class="day-event-dot dot-${e.event_type} ${e.status!=='PENDIENTE'?'dot-done':''}"
+            onclick="event.stopPropagation();editEvent(${e.id})">
+            ${e.title}
+          </div>`).join('')}
+        ${evs.length > 3 ? `<div style="font-size:.65rem;color:var(--text-muted);padding:0 2px;">+${evs.length-3} más</div>` : ''}
+      </div>
+    </div>`;
+  }
+  // Días del mes siguiente
+  const remaining = 42 - firstDay - daysInMonth;
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-day other-month"><div class="day-num">${i}</div></div>`;
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function openDayModal(dateStr) {
+  document.getElementById('ev-date').value = dateStr;
+  switchTab('nuevo');
+}
+
+// ── Guardar evento ────────────────────────────
+async function saveEvent() {
+  const title = document.getElementById('ev-title').value.trim();
+  const dt    = document.getElementById('ev-date').value;
+  if (!title || !dt) { showToast('Título y fecha son obligatorios', 'error'); return; }
+
+  const time = document.getElementById('ev-time').value;
+  const data = {
+    title,
+    description: document.getElementById('ev-desc').value.trim()     || null,
+    event_type:  document.getElementById('ev-type').value,
+    event_date:  dt,
+    event_time:  time || null,
+    location:    document.getElementById('ev-location').value.trim() || null,
+    priority:    document.getElementById('ev-priority').value,
+    status:      document.getElementById('ev-status').value,
+  };
+
+  let r;
+  if (evEditingId) {
+    r = await apiRequest(`/agenda/${evEditingId}`, 'PUT', data);
+    if (r) showToast('Evento actualizado');
+  } else {
+    r = await apiRequest('/agenda/', 'POST', data);
+    if (r) showToast('Evento guardado');
+  }
+  if (r) { cancelEvEdit(); loadEvents(); switchTab('calendario'); }
+}
+
+function editEvent(id) {
+  const e = allEvents.find(x => x.id === id);
+  if (!e) return;
+  evEditingId = id;
+  document.getElementById('ev-id').value            = id;
+  document.getElementById('ev-type').value          = e.event_type;
+  document.getElementById('ev-title').value         = e.title;
+  document.getElementById('ev-desc').value          = e.description || '';
+  document.getElementById('ev-date').value          = e.event_date;
+  document.getElementById('ev-time').value          = e.event_time || '';
+  document.getElementById('ev-location').value      = e.location || '';
+  document.getElementById('ev-priority').value      = e.priority;
+  document.getElementById('ev-status').value        = e.status;
+  document.getElementById('ev-form-title').textContent = 'Editar Evento';
+  document.getElementById('ev-btn-label').textContent  = 'Actualizar';
+  document.getElementById('ev-btn-cancel').style.display = '';
+  switchTab('nuevo');
+}
+
+function cancelEvEdit() {
+  evEditingId = null;
+  ['ev-id','ev-title','ev-desc','ev-time','ev-location'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ev-type').value     = 'CITA';
+  document.getElementById('ev-priority').value = 'NORMAL';
+  document.getElementById('ev-status').value   = 'PENDIENTE';
+  document.getElementById('ev-date').value     = todayISO();
+  document.getElementById('ev-form-title').textContent = 'Nuevo Evento';
+  document.getElementById('ev-btn-label').textContent  = 'Guardar Evento';
+  document.getElementById('ev-btn-cancel').style.display = 'none';
+}
+
+async function markDone(id) {
+  const r = await apiRequest(`/agenda/${id}/status?status=COMPLETADO`, 'PATCH');
+  if (r) { showToast('Marcado como completado', 'success'); loadEvents(); }
+}
+
+async function deleteEvent(id) {
+  if (!confirm('¿Eliminar este evento?')) return;
+  const r = await apiRequest(`/agenda/${id}`, 'DELETE');
+  if (r) { showToast('Evento eliminado'); loadEvents(); }
+}
+
+init();
+</script>
+</body>
+</html>

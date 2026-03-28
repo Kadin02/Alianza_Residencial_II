@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Propiedades | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<header class="main-header" id="main-header"></header>
+
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-building" style="color:var(--accent);margin-right:8px;"></i>Propiedades</h1>
+    <p>Registra y administra los edificios y conjuntos residenciales</p>
+  </div>
+
+  <div class="two-col">
+
+    <!-- Formulario -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle"></i> <span id="form-title">Nueva Propiedad</span></h3>
+          <button class="btn btn-muted btn-sm" id="btn-cancel" onclick="cancelEdit()" style="display:none;">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+        </div>
+        <div class="card-body">
+          <input type="hidden" id="prop-id">
+
+          <label class="field-label">Nombre</label>
+          <input type="text" id="name" placeholder="Ej: Torre Alianza I">
+
+          <label class="field-label">Tipo</label>
+          <select id="type">
+            <option value="">Seleccione tipo</option>
+            <option value="PH">Penthouse (PH)</option>
+            <option value="EDIFICIO">Edificio</option>
+            <option value="CASA">Casa</option>
+            <option value="LOCAL">Local Comercial</option>
+          </select>
+
+          <label class="field-label">Dirección</label>
+          <input type="text" id="address" placeholder="Ej: Av. Balboa, Ciudad de Panamá">
+
+          <label class="field-label">Máximo de unidades</label>
+          <input type="number" id="max_units" value="50" min="1">
+
+          <button onclick="saveProperty()">
+            <i class="fas fa-save"></i> <span id="btn-label">Guardar Propiedad</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-list"></i> Propiedades Registradas</h3>
+        <span class="badge badge-primary" id="prop-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Dirección</th>
+              <th>Unidades</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="props-table">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderHeader('properties');
+
+let editingId = null;
+let allUnitsCache = [];
+
+async function loadTable() {
+  const [props, units] = await Promise.all([
+    apiRequest('/properties'),
+    apiRequest('/units'),
+  ]);
+
+  allUnitsCache = units || [];
+  const tbody = document.getElementById('props-table');
+  document.getElementById('prop-count').textContent = props?.length ?? 0;
+
+  if (!props?.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <i class="fas fa-building" style="font-size:1.5rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+      Sin propiedades registradas</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = props.map(p => {
+    const unitCount = allUnitsCache.filter(u => u.property_id === p.id).length;
+    return `<tr>
+      <td class="td-mono">${p.id}</td>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="badge badge-primary">${p.type}</span></td>
+      <td style="color:var(--text-secondary);font-size:.83rem;">${p.address}</td>
+      <td>${unitCount} / ${p.max_units}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="editProperty(${p.id})">
+          <i class="fas fa-pencil-alt"></i>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveProperty() {
+  const name     = document.getElementById('name').value.trim();
+  const type     = document.getElementById('type').value;
+  const address  = document.getElementById('address').value.trim();
+  const maxUnits = parseInt(document.getElementById('max_units').value);
+
+  if (!name || !type || !address) {
+    showToast('Completa todos los campos obligatorios', 'error'); return;
+  }
+
+  const data = { name, type, address, max_units: maxUnits };
+
+  let result;
+  if (editingId) {
+    result = await apiRequest(`/properties/${editingId}`, 'PUT', data);
+    if (result) showToast('Propiedad actualizada correctamente');
+  } else {
+    result = await apiRequest('/properties/', 'POST', data);
+    if (result) showToast('Propiedad creada correctamente');
+  }
+
+  if (result) { cancelEdit(); loadTable(); }
+}
+
+async function editProperty(id) {
+  const props = await apiRequest('/properties') || [];
+  const p = props.find(x => x.id === id);
+  if (!p) return;
+
+  editingId = id;
+  document.getElementById('prop-id').value    = id;
+  document.getElementById('name').value        = p.name;
+  document.getElementById('type').value        = p.type;
+  document.getElementById('address').value     = p.address;
+  document.getElementById('max_units').value   = p.max_units;
+  document.getElementById('form-title').textContent = 'Editar Propiedad';
+  document.getElementById('btn-label').textContent  = 'Actualizar';
+  document.getElementById('btn-cancel').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('prop-id').value       = '';
+  document.getElementById('name').value           = '';
+  document.getElementById('type').value           = '';
+  document.getElementById('address').value        = '';
+  document.getElementById('max_units').value      = 50;
+  document.getElementById('form-title').textContent = 'Nueva Propiedad';
+  document.getElementById('btn-label').textContent  = 'Guardar Propiedad';
+  document.getElementById('btn-cancel').style.display = 'none';
+}
+
+loadTable();
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Alianza Residencial | Asignación Propietarios</title>
+    <script defer src="/static/js/main.js"></script>
+</head>
+
+<body>
+   <header class="main-header">
+    <div class="logo">Alianza Residencial</div>
+    <nav>
+        <a href="/static/properties.html">Propiedades</a>
+        <a href="/static/units.html">Unidades</a>
+        <a href="/static/owners.html">Propietarios</a>
+        <a href="/static/finances.html">Finanzas</a>
+    </nav>
+</header>
+</body>
+
+<body>
+
+    <h1>Asignación Propietario a Unidad</h1>
+
+    <!-- ========================= -->
+    <!-- FORMULARIO ASIGNACIÓN -->
+    <!-- ========================= -->
+
+    <section>
+        <h2>Asignar Propietario</h2>
+
+        <form id="unitOwnerForm">
+
+            <div>
+                <label>Unidad:</label><br>
+                <select id="unitSelect" required>
+                    <option value="">Seleccionar unidad</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Propietario:</label><br>
+                <select id="ownerSelect" required>
+                    <option value="">Seleccionar propietario</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Fecha Inicio:</label><br>
+                <input type="date" id="start_date" required>
+            </div>
+
+            <br>
+            <button type="submit">Asignar</button>
+
+        </form>
+    </section>
+
+    <hr>
+
+    <!-- ========================= -->
+    <!-- LISTADO POR UNIDAD -->
+    <!-- ========================= -->
+
+    <section>
+        <h2>Propietarios por Unidad</h2>
+
+        <div>
+            <label>Seleccionar Unidad:</label><br>
+            <select id="unitFilter">
+                <option value="">Seleccionar unidad</option>
+            </select>
+        </div>
+
+        <br>
+
+        <table border="1" width="100%" cellpadding="8">
+            <thead>
+                <tr>
+                    <th>Propietario</th>
+                    <th>Rol</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                </tr>
+            </thead>
+            <tbody id="ownershipTable">
+                <!-- dinámico -->
+            </tbody>
+        </table>
+    </section>
+
+</body>
+</html>

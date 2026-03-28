@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proveedores | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .sup-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+    .sup-tab {
+      padding:7px 16px; border-radius:8px; border:1px solid var(--border);
+      background:var(--card-bg); color:var(--text-secondary); font-size:.82rem;
+      font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    .sup-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .sup-panel { display:none; }
+    .sup-panel.active { display:block; }
+
+    /* ── Supplier cards ── */
+    .cat-badge {
+      display:inline-block; padding:2px 9px; border-radius:20px;
+      font-size:.7rem; font-weight:700; background:var(--accent-soft); color:var(--accent);
+    }
+    .supplier-card {
+      border:1px solid var(--border); border-radius:var(--radius-md);
+      padding:14px 16px; margin-bottom:8px; background:var(--card-bg);
+      cursor:pointer; transition:border-color .15s, box-shadow .15s;
+      display:flex; align-items:center; gap:14px;
+    }
+    .supplier-card:hover { border-color:var(--accent); box-shadow:var(--shadow-sm); }
+    .sup-avatar {
+      width:40px; height:40px; border-radius:10px; background:var(--accent);
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:800; font-size:.95rem; flex-shrink:0;
+    }
+    .sup-info { flex:1; min-width:0; }
+    .sup-info strong { font-size:.88rem; color:var(--text-primary); display:block; margin-bottom:2px; }
+    .sup-info span   { font-size:.76rem; color:var(--text-secondary); }
+    .sup-totals { text-align:right; font-size:.76rem; }
+    .sup-totals .paid    { color:var(--success); font-weight:700; }
+    .sup-totals .pending { color:var(--danger);  font-weight:700; }
+
+    /* ── Status badges ── */
+    .status-badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:.7rem; font-weight:700; }
+    .status-PAGADO    { background:#d1fae5; color:#065f46; }
+    .status-PENDIENTE { background:#fef3c7; color:#92400e; }
+    .status-APROBADA  { background:#d1fae5; color:#065f46; }
+    .status-RECHAZADA { background:#fee2e2; color:#991b1b; }
+
+    /* ── Modal detalle proveedor ── */
+    .modal-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(10,20,40,.48); z-index:500;
+      align-items:flex-start; justify-content:center;
+      backdrop-filter:blur(2px); padding:20px; overflow-y:auto;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--card-bg); border-radius:var(--radius-xl);
+      width:720px; max-width:98vw; box-shadow:var(--shadow-lg);
+      animation:modalIn .2s ease; margin:auto;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(.97) translateY(10px); }
+      to   { opacity:1; transform:scale(1)   translateY(0); }
+    }
+
+    .modal-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:20px 24px 16px; border-bottom:1px solid var(--border);
+    }
+    .modal-header h3 { font-size:1rem; font-weight:700; color:var(--text-primary); }
+    .modal-close {
+      background:transparent; border:none; font-size:1.1rem; cursor:pointer;
+      color:var(--text-muted); padding:4px 8px; border-radius:6px;
+      transition:background .12s; width:auto; margin-top:0;
+    }
+    .modal-close:hover { background:var(--border); }
+
+    .modal-body { padding:20px 24px; }
+
+    .detail-grid {
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:8px; margin-bottom:20px;
+    }
+    .detail-item .dl { font-size:.68rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--text-muted); margin-bottom:2px; }
+    .detail-item .dv { font-size:.88rem; color:var(--text-primary); font-weight:500; }
+
+    .detail-tabs { display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:0; }
+    .detail-tab {
+      padding:7px 14px; font-size:.8rem; font-weight:600; cursor:pointer;
+      border:none; background:transparent; color:var(--text-muted); font-family:inherit;
+      border-bottom:2px solid transparent; margin-bottom:-1px; width:auto; margin-top:0;
+      transition:color .12s;
+    }
+    .detail-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .detail-panel { display:none; }
+    .detail-panel.active { display:block; }
+
+    .sum-row {
+      display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;
+    }
+    .sum-chip {
+      padding:8px 14px; border-radius:var(--radius-md);
+      font-size:.78rem; font-weight:600; border:1px solid var(--border);
+    }
+    .sum-chip .sc-val { font-size:1rem; font-weight:800; display:block; margin-top:1px; }
+    .sum-chip.paid    { background:var(--success-bg); border-color:var(--success-brd); color:#065f46; }
+    .sum-chip.pending { background:var(--danger-bg);  border-color:var(--danger-brd);  color:#991b1b; }
+    .sum-chip.neutral { background:var(--accent-soft); border-color:var(--border); color:var(--accent); }
+
+    /* PDF upload */
+    .pdf-upload-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+    .pdf-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:3px 10px; border-radius:5px;
+      background:#fee2e2; color:#991b1b; font-size:.72rem; font-weight:700;
+      cursor:pointer; border:1px solid #fca5a5; text-decoration:none;
+    }
+    .pdf-badge:hover { opacity:.85; }
+    .pdf-badge.has-pdf { background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-truck" style="color:var(--accent);margin-right:8px;"></i>Proveedores</h1>
+    <p>Gestión de proveedores, pagos y cotizaciones</p>
+  </div>
+
+  <div class="sup-tabs">
+    <button class="sup-tab active" onclick="switchTab('lista')"><i class="fas fa-list"></i> Proveedores</button>
+    <button class="sup-tab" onclick="switchTab('pagos')"><i class="fas fa-money-bill-wave"></i> Pagos</button>
+    <button class="sup-tab" onclick="switchTab('cotizaciones')"><i class="fas fa-file-invoice"></i> Cotizaciones</button>
+  </div>
+
+  <!-- ══ LISTA ══ -->
+  <div class="sup-panel active" id="panel-lista">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-plus-circle"></i> <span id="form-title">Nuevo Proveedor</span></h3>
+            <button class="btn btn-muted btn-sm" id="btn-cancel" onclick="cancelEdit()" style="display:none;">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+          </div>
+          <div class="card-body">
+            <input type="hidden" id="sup-id">
+            <label class="field-label">Nombre *</label>
+            <input type="text" id="sup-name" placeholder="Ej: Fontanería López">
+            <label class="field-label">Categoría *</label>
+            <select id="sup-category"><option value="">Seleccione categoría</option></select>
+            <label class="field-label">RUC / Identificación fiscal</label>
+            <input type="text" id="sup-ruc" placeholder="Ej: 8-123-456">
+            <label class="field-label">Nombre de contacto</label>
+            <input type="text" id="sup-contact" placeholder="Persona de contacto">
+            <label class="field-label">Teléfono</label>
+            <input type="tel" id="sup-phone" placeholder="+507 6000-0000">
+            <label class="field-label">Correo electrónico</label>
+            <input type="email" id="sup-email" placeholder="correo@empresa.com">
+            <label class="field-label">Dirección</label>
+            <input type="text" id="sup-address" placeholder="Dirección del proveedor">
+            <label class="field-label">Notas</label>
+            <textarea id="sup-notes" rows="2" placeholder="Observaciones" style="resize:vertical;"></textarea>
+            <button onclick="saveSupplier()">
+              <i class="fas fa-save"></i> <span id="btn-label">Guardar Proveedor</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header">
+            <h3><i class="fas fa-list"></i> Proveedores</h3>
+            <span class="badge badge-primary" id="sup-count">0</span>
+          </div>
+          <div class="card-body" style="padding:12px;">
+            <input type="text" id="sup-search" placeholder="🔍 Buscar proveedor..."
+              oninput="filterSuppliers()" style="margin-bottom:12px;">
+            <div id="sup-list">
+              <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+                <i class="fas fa-spinner fa-spin"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGOS ══ -->
+  <div class="sup-panel" id="panel-pagos">
+    <div class="two-col">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header"><h3><i class="fas fa-plus-circle"></i> Registrar Pago</h3></div>
+        <div class="card-body">
+          <label class="field-label">Proveedor *</label>
+          <select id="pay-supplier-select" onchange="loadSupplierPayments()">
+            <option value="">Seleccione proveedor</option>
+          </select>
+          <label class="field-label">Descripción *</label>
+          <input type="text" id="pay-desc" placeholder="Ej: Reparación bomba de agua">
+          <label class="field-label">Monto *</label>
+          <input type="number" id="pay-amount" placeholder="0.00" step="0.01" min="0">
+          <label class="field-label">Fecha *</label>
+          <input type="date" id="pay-date">
+          <label class="field-label">Estado</label>
+          <select id="pay-status">
+            <option value="PAGADO">Pagado</option>
+            <option value="PENDIENTE">Pendiente</option>
+          </select>
+          <label class="field-label">Referencia</label>
+          <input type="text" id="pay-ref" placeholder="Número de referencia o cheque">
+          <button onclick="savePayment()"><i class="fas fa-save"></i> Registrar Pago</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3><i class="fas fa-history"></i> Historial</h3>
+          <span class="badge badge-primary" id="pay-count">0</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Proveedor</th><th>Descripción</th><th>Fecha</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="pay-table">
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecciona un proveedor</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ COTIZACIONES ══ -->
+  <div class="sup-panel" id="panel-cotizaciones">
+    <div class="two-col">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header"><h3><i class="fas fa-plus-circle"></i> Nueva Cotización</h3></div>
+        <div class="card-body">
+          <label class="field-label">Proveedor *</label>
+          <select id="quote-supplier-select" onchange="loadSupplierQuotes()">
+            <option value="">Seleccione proveedor</option>
+          </select>
+          <label class="field-label">Descripción del servicio *</label>
+          <input type="text" id="quote-desc" placeholder="Ej: Pintura área común piso 3">
+          <label class="field-label">Monto cotizado *</label>
+          <input type="number" id="quote-amount" placeholder="0.00" step="0.01" min="0">
+          <label class="field-label">Fecha *</label>
+          <input type="date" id="quote-date">
+          <label class="field-label">Válida hasta</label>
+          <input type="date" id="quote-valid">
+          <label class="field-label">Estado</label>
+          <select id="quote-status">
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="APROBADA">Aprobada</option>
+            <option value="RECHAZADA">Rechazada</option>
+          </select>
+          <label class="field-label">Notas</label>
+          <textarea id="quote-notes" rows="2" style="resize:vertical;"></textarea>
+          <button onclick="saveQuote()"><i class="fas fa-save"></i> Guardar Cotización</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3><i class="fas fa-file-invoice"></i> Cotizaciones</h3>
+          <span class="badge badge-primary" id="quote-count">0</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Proveedor</th><th>Descripción</th><th>Fecha</th><th>Monto</th><th>Estado</th><th>PDF</th><th></th></tr></thead>
+            <tbody id="quote-table">
+              <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecciona un proveedor</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL DETALLE PROVEEDOR ══ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-sup-name">—</h3>
+      <button class="modal-close" onclick="closeDetail()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <!-- Info básica -->
+      <div class="detail-grid" id="modal-detail-grid"></div>
+
+      <!-- Resumen financiero -->
+      <div class="sum-row" id="modal-sum-row"></div>
+
+      <!-- Tabs internos -->
+      <div class="detail-tabs">
+        <button class="detail-tab active" onclick="switchDetailTab('pagos',this)">
+          <i class="fas fa-money-bill-wave"></i> Pagos
+        </button>
+        <button class="detail-tab" onclick="switchDetailTab('cotizaciones',this)">
+          <i class="fas fa-file-invoice"></i> Cotizaciones
+        </button>
+      </div>
+
+      <!-- Panel pagos -->
+      <div class="detail-panel active" id="dp-pagos">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Descripción</th><th>Fecha</th><th>Monto</th><th>Estado</th><th>Ref.</th></tr></thead>
+            <tbody id="modal-pay-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel cotizaciones -->
+      <div class="detail-panel" id="dp-cotizaciones">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Descripción</th><th>Fecha</th><th>Monto</th><th>Válida hasta</th><th>Estado</th><th>PDF</th></tr></thead>
+            <tbody id="modal-quote-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Input oculto para upload PDF -->
+        <input type="file" id="pdf-upload-input" accept=".pdf" style="display:none"
+          onchange="uploadPdf(this)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderSidebar('suppliers');
+
+let allSuppliers   = [];
+let editingId      = null;
+let currentSupId   = null;  // para modal
+let pendingPdfQuoteId = null;
+
+// ── Init ──────────────────────────────────────
+async function init() {
+  const cats = await apiRequest('/suppliers/categories') || [];
+  const sel  = document.getElementById('sup-category');
+  cats.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+
+  document.getElementById('pay-date').value   = todayISO();
+  document.getElementById('quote-date').value = todayISO();
+  await loadSuppliers();
+}
+
+// ── Tabs ──────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.sup-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['lista','pagos','cotizaciones'][i] === tab);
+  });
+  document.querySelectorAll('.sup-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ── Proveedores ───────────────────────────────
+async function loadSuppliers() {
+  allSuppliers = await apiRequest('/suppliers') || [];
+  renderSupplierList(allSuppliers);
+  fillSupplierSelects();
+}
+
+function renderSupplierList(list) {
+  document.getElementById('sup-count').textContent = list.length;
+  const container = document.getElementById('sup-list');
+  if (!list.length) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <i class="fas fa-truck" style="font-size:1.8rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+      Sin proveedores registrados</div>`;
+    return;
+  }
+  container.innerHTML = list.map(s => `
+    <div class="supplier-card" onclick="openDetail(${s.id})">
+      <div class="sup-avatar">${s.name.charAt(0).toUpperCase()}</div>
+      <div class="sup-info">
+        <strong>${s.name}</strong>
+        <span><span class="cat-badge">${s.category}</span>
+          ${s.contact_name ? ` · ${s.contact_name}` : ''}
+          ${s.phone ? ` · ${s.phone}` : ''}
+        </span>
+      </div>
+      <div class="sup-totals">
+        <div class="paid">$${formatMoney(s.total_paid)}</div>
+        ${s.total_pending > 0 ? `<div class="pending">$${formatMoney(s.total_pending)} pendiente</div>` : ''}
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editSupplier(${s.id})" title="Editar">
+        <i class="fas fa-pencil-alt"></i>
+      </button>
+    </div>`).join('');
+}
+
+function filterSuppliers() {
+  const q = document.getElementById('sup-search').value.toLowerCase();
+  renderSupplierList(allSuppliers.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    s.category.toLowerCase().includes(q) ||
+    (s.contact_name||'').toLowerCase().includes(q)
+  ));
+}
+
+function fillSupplierSelects() {
+  ['pay-supplier-select','quote-supplier-select'].forEach(id => {
+    const sel = document.getElementById(id);
+    const val = sel.value;
+    sel.innerHTML = '<option value="">Seleccione proveedor</option>';
+    allSuppliers.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+    sel.value = val;
+  });
+}
+
+async function saveSupplier() {
+  const name     = document.getElementById('sup-name').value.trim();
+  const category = document.getElementById('sup-category').value;
+  if (!name || !category) { showToast('Nombre y categoría son obligatorios', 'error'); return; }
+  const data = {
+    name, category,
+    ruc:          document.getElementById('sup-ruc').value.trim()     || null,
+    contact_name: document.getElementById('sup-contact').value.trim() || null,
+    phone:        document.getElementById('sup-phone').value.trim()   || null,
+    email:        document.getElementById('sup-email').value.trim()   || null,
+    address:      document.getElementById('sup-address').value.trim() || null,
+    notes:        document.getElementById('sup-notes').value.trim()   || null,
+  };
+  let r;
+  if (editingId) {
+    r = await apiRequest(`/suppliers/${editingId}`, 'PUT', data);
+    if (r) showToast('Proveedor actualizado');
+  } else {
+    r = await apiRequest('/suppliers/', 'POST', data);
+    if (r) showToast('Proveedor creado');
+  }
+  if (r) { cancelEdit(); loadSuppliers(); }
+}
+
+function editSupplier(id) {
+  const s = allSuppliers.find(x => x.id === id);
+  if (!s) return;
+  editingId = id;
+  document.getElementById('sup-id').value          = id;
+  document.getElementById('sup-name').value         = s.name;
+  document.getElementById('sup-category').value     = s.category;
+  document.getElementById('sup-ruc').value          = s.ruc || '';
+  document.getElementById('sup-contact').value      = s.contact_name || '';
+  document.getElementById('sup-phone').value        = s.phone || '';
+  document.getElementById('sup-email').value        = s.email || '';
+  document.getElementById('sup-address').value      = s.address || '';
+  document.getElementById('sup-notes').value        = s.notes || '';
+  document.getElementById('form-title').textContent = 'Editar Proveedor';
+  document.getElementById('btn-label').textContent  = 'Actualizar';
+  document.getElementById('btn-cancel').style.display = '';
+  switchTab('lista');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  editingId = null;
+  ['sup-id','sup-name','sup-ruc','sup-contact','sup-phone','sup-email','sup-address','sup-notes']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sup-category').value     = '';
+  document.getElementById('form-title').textContent = 'Nuevo Proveedor';
+  document.getElementById('btn-label').textContent  = 'Guardar Proveedor';
+  document.getElementById('btn-cancel').style.display = 'none';
+}
+
+// ── Modal detalle ─────────────────────────────
+async function openDetail(supplierId) {
+  currentSupId = supplierId;
+  const data = await apiRequest(`/suppliers/${supplierId}/detail`);
+  if (!data) return;
+
+  document.getElementById('modal-sup-name').textContent = data.name;
+
+  // Info básica
+  const fields = [
+    ['Categoría', data.category],
+    ['RUC',       data.ruc || '—'],
+    ['Contacto',  data.contact_name || '—'],
+    ['Teléfono',  data.phone || '—'],
+    ['Email',     data.email || '—'],
+    ['Dirección', data.address || '—'],
+  ];
+  document.getElementById('modal-detail-grid').innerHTML = fields.map(([l,v]) => `
+    <div class="detail-item">
+      <div class="dl">${l}</div>
+      <div class="dv">${v}</div>
+    </div>`).join('');
+
+  // Resumen financiero
+  document.getElementById('modal-sum-row').innerHTML = `
+    <div class="sum-chip paid">
+      Total pagado<span class="sc-val">$${formatMoney(data.total_paid)}</span>
+    </div>
+    <div class="sum-chip pending">
+      Pendiente<span class="sc-val">$${formatMoney(data.total_pending)}</span>
+    </div>
+    <div class="sum-chip neutral">
+      Pagos<span class="sc-val">${data.payments.length}</span>
+    </div>
+    <div class="sum-chip neutral">
+      Cotizaciones<span class="sc-val">${data.quotes.length}</span>
+    </div>`;
+
+  // Tabla pagos
+  const payTbody = document.getElementById('modal-pay-tbody');
+  if (!data.payments.length) {
+    payTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Sin pagos registrados</td></tr>`;
+  } else {
+    payTbody.innerHTML = data.payments.map(p => `
+      <tr>
+        <td>${p.description}</td>
+        <td>${formatDate(p.payment_date)}</td>
+        <td><strong>$${formatMoney(p.amount)}</strong></td>
+        <td><span class="status-badge status-${p.status}">${p.status}</span></td>
+        <td style="color:var(--text-muted);font-size:.8rem;">${p.reference || '—'}</td>
+      </tr>`).join('');
+  }
+
+  // Tabla cotizaciones
+  const quoteTbody = document.getElementById('modal-quote-tbody');
+  if (!data.quotes.length) {
+    quoteTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Sin cotizaciones registradas</td></tr>`;
+  } else {
+    quoteTbody.innerHTML = data.quotes.map(q => `
+      <tr>
+        <td>${q.description}</td>
+        <td>${formatDate(q.quote_date)}</td>
+        <td><strong>$${formatMoney(q.amount)}</strong></td>
+        <td style="color:var(--text-muted);font-size:.8rem;">${q.valid_until ? formatDate(q.valid_until) : '—'}</td>
+        <td><span class="status-badge status-${q.status}">${q.status}</span></td>
+        <td>
+          ${q.pdf_path
+            ? `<a href="/api/suppliers/quotes/${q.id}/pdf" target="_blank" class="pdf-badge has-pdf">
+                <i class="fas fa-file-pdf"></i> Ver PDF
+               </a>`
+            : `<button class="pdf-badge" onclick="triggerPdfUpload(${q.id})" title="Subir PDF">
+                <i class="fas fa-upload"></i> Subir PDF
+               </button>`}
+        </td>
+      </tr>`).join('');
+  }
+
+  // Resetear tabs internos
+  switchDetailTab('pagos', document.querySelector('.detail-tab'));
+
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.remove('open');
+  currentSupId = null;
+}
+
+function switchDetailTab(tab, el) {
+  document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('dp-' + tab).classList.add('active');
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetail();
+});
+
+// ── Upload PDF ────────────────────────────────
+function triggerPdfUpload(quoteId) {
+  pendingPdfQuoteId = quoteId;
+  document.getElementById('pdf-upload-input').click();
+}
+
+async function uploadPdf(input) {
+  if (!input.files[0] || !pendingPdfQuoteId) return;
+  const file     = input.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const token    = Auth.token();
+    const headers  = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const response = await fetch(`/api/suppliers/quotes/${pendingPdfQuoteId}/upload-pdf`, {
+      method: 'POST', headers, body: formData
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      showToast(err.detail || 'Error al subir el PDF', 'error');
+    } else {
+      showToast('PDF adjuntado correctamente', 'success');
+      // Reabrir modal con datos actualizados
+      await openDetail(currentSupId);
+    }
+  } catch(e) {
+    showToast('Error al subir el PDF', 'error');
+  }
+  input.value = '';
+  pendingPdfQuoteId = null;
+}
+
+// ── Pagos tab ─────────────────────────────────
+async function loadSupplierPayments() {
+  const id = document.getElementById('pay-supplier-select').value;
+  if (!id) return;
+  const payments = await apiRequest(`/suppliers/${id}/payments`) || [];
+  document.getElementById('pay-count').textContent = payments.length;
+  const sup   = allSuppliers.find(s => s.id === parseInt(id));
+  const tbody = document.getElementById('pay-table');
+  if (!payments.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Sin pagos</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = payments.map(p => `
+    <tr>
+      <td><strong>${sup?.name || '—'}</strong></td>
+      <td>${p.description}</td>
+      <td>${formatDate(p.payment_date)}</td>
+      <td><strong>$${formatMoney(p.amount)}</strong></td>
+      <td><span class="status-badge status-${p.status}">${p.status}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="deletePayment(${p.id})" title="Eliminar">
+          <i class="fas fa-trash" style="color:var(--danger);"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function savePayment() {
+  const supId = document.getElementById('pay-supplier-select').value;
+  const desc  = document.getElementById('pay-desc').value.trim();
+  const amt   = parseFloat(document.getElementById('pay-amount').value);
+  const dt    = document.getElementById('pay-date').value;
+  if (!supId || !desc || !amt || !dt) { showToast('Completa todos los campos', 'error'); return; }
+  const r = await apiRequest(`/suppliers/${supId}/payments`, 'POST', {
+    description: desc, amount: amt, payment_date: dt,
+    status: document.getElementById('pay-status').value,
+    reference: document.getElementById('pay-ref').value.trim() || null,
+  });
+  if (r) {
+    showToast('Pago registrado');
+    ['pay-desc','pay-amount','pay-ref'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pay-date').value = todayISO();
+    loadSupplierPayments(); loadSuppliers();
+  }
+}
+
+async function deletePayment(id) {
+  if (!confirm('¿Eliminar este pago?')) return;
+  const r = await apiRequest(`/suppliers/payments/${id}`, 'DELETE');
+  if (r) { showToast('Pago eliminado'); loadSupplierPayments(); loadSuppliers(); }
+}
+
+// ── Cotizaciones tab ──────────────────────────
+async function loadSupplierQuotes() {
+  const id = document.getElementById('quote-supplier-select').value;
+  if (!id) return;
+  const quotes = await apiRequest(`/suppliers/${id}/quotes`) || [];
+  document.getElementById('quote-count').textContent = quotes.length;
+  const sup   = allSuppliers.find(s => s.id === parseInt(id));
+  const tbody = document.getElementById('quote-table');
+  if (!quotes.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Sin cotizaciones</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = quotes.map(q => `
+    <tr>
+      <td><strong>${sup?.name || '—'}</strong></td>
+      <td>${q.description}</td>
+      <td>${formatDate(q.quote_date)}</td>
+      <td><strong>$${formatMoney(q.amount)}</strong></td>
+      <td>
+        <select class="btn btn-ghost btn-sm"
+          style="border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:.78rem;"
+          onchange="updateQuoteStatus(${q.id}, this.value, ${id})">
+          <option value="PENDIENTE"  ${q.status==='PENDIENTE' ?'selected':''}>Pendiente</option>
+          <option value="APROBADA"   ${q.status==='APROBADA'  ?'selected':''}>Aprobada</option>
+          <option value="RECHAZADA"  ${q.status==='RECHAZADA' ?'selected':''}>Rechazada</option>
+        </select>
+      </td>
+      <td>
+        ${q.pdf_path
+          ? `<a href="/api/suppliers/quotes/${q.id}/pdf" target="_blank" class="pdf-badge has-pdf">
+              <i class="fas fa-file-pdf"></i> Ver</a>`
+          : `<label class="pdf-badge" style="cursor:pointer;">
+              <i class="fas fa-upload"></i> Subir
+              <input type="file" accept=".pdf" style="display:none"
+                onchange="uploadPdfInline(this, ${q.id}, ${id})">
+            </label>`}
+      </td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="deleteQuote(${q.id}, ${id})" title="Eliminar">
+          <i class="fas fa-trash" style="color:var(--danger);"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function saveQuote() {
+  const supId = document.getElementById('quote-supplier-select').value;
+  const desc  = document.getElementById('quote-desc').value.trim();
+  const amt   = parseFloat(document.getElementById('quote-amount').value);
+  const dt    = document.getElementById('quote-date').value;
+  if (!supId || !desc || !amt || !dt) { showToast('Completa todos los campos', 'error'); return; }
+  const r = await apiRequest(`/suppliers/${supId}/quotes`, 'POST', {
+    description: desc, amount: amt, quote_date: dt,
+    valid_until: document.getElementById('quote-valid').value  || null,
+    status:      document.getElementById('quote-status').value,
+    notes:       document.getElementById('quote-notes').value.trim() || null,
+  });
+  if (r) {
+    showToast('Cotización guardada');
+    ['quote-desc','quote-amount','quote-valid','quote-notes'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('quote-date').value   = todayISO();
+    document.getElementById('quote-status').value = 'PENDIENTE';
+    loadSupplierQuotes();
+  }
+}
+
+async function updateQuoteStatus(id, status, supId) {
+  const quotes = await apiRequest(`/suppliers/${supId}/quotes`) || [];
+  const q = quotes.find(x => x.id === id);
+  if (!q) return;
+  await apiRequest(`/suppliers/quotes/${id}`, 'PUT', {
+    description: q.description, amount: q.amount,
+    quote_date: q.quote_date, status,
+    valid_until: q.valid_until || null, notes: q.notes || null,
+  });
+  showToast('Estado actualizado');
+}
+
+async function deleteQuote(id, supId) {
+  if (!confirm('¿Eliminar esta cotización?')) return;
+  const r = await apiRequest(`/suppliers/quotes/${id}`, 'DELETE');
+  if (r) { showToast('Cotización eliminada'); loadSupplierQuotes(); }
+}
+
+// Upload PDF inline (desde tab cotizaciones)
+async function uploadPdfInline(input, quoteId, supId) {
+  if (!input.files[0]) return;
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  const token    = Auth.token();
+  const headers  = token ? { 'Authorization': `Bearer ${token}` } : {};
+  const response = await fetch(`/api/suppliers/quotes/${quoteId}/upload-pdf`, {
+    method: 'POST', headers, body: formData
+  });
+  if (!response.ok) {
+    showToast('Error al subir el PDF', 'error');
+  } else {
+    showToast('PDF adjuntado', 'success');
+    loadSupplierQuotes();
+  }
+  input.value = '';
+}
+
+init();
+</script>
+</body>
+</html>

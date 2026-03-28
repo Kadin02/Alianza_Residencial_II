@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unidades | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<header class="main-header" id="main-header"></header>
+
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-door-open" style="color:var(--accent);margin-right:8px;"></i>Unidades</h1>
+    <p>Gestiona los apartamentos, locales y oficinas de cada propiedad</p>
+  </div>
+
+  <div class="two-col">
+
+    <!-- Formulario -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle"></i> Nueva Unidad</h3>
+        </div>
+        <div class="card-body">
+          <label class="field-label">Propiedad</label>
+          <select id="property-select" onchange="filterUnits()">
+            <option value="">Todas las propiedades</option>
+          </select>
+
+          <label class="field-label">Número de unidad</label>
+          <input type="text" id="unit_number" placeholder="Ej: 4B, 12, Local-3">
+
+          <label class="field-label">Piso (opcional)</label>
+          <input type="text" id="floor" placeholder="Ej: 4, PB, Mezzanine">
+
+          <button onclick="createUnit()">
+            <i class="fas fa-plus"></i> Crear Unidad
+          </button>
+        </div>
+      </div>
+
+      <!-- Asignar propietario -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-user-plus"></i> Asignar Propietario</h3>
+        </div>
+        <div class="card-body">
+          <label class="field-label">Unidad</label>
+          <select id="assign-unit-select">
+            <option value="">Seleccione unidad</option>
+          </select>
+
+          <label class="field-label">Propietario</label>
+          <select id="assign-owner-select">
+            <option value="">Seleccione propietario</option>
+          </select>
+
+          <label class="field-label">Fecha de inicio</label>
+          <input type="date" id="start_date">
+
+          <button onclick="assignOwner()">
+            <i class="fas fa-link"></i> Asignar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-list"></i> Unidades Registradas</h3>
+        <span class="badge badge-primary" id="unit-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Unidad</th>
+              <th>Piso</th>
+              <th>Propiedad</th>
+              <th>Propietario Activo</th>
+              <th>Desde</th>
+            </tr>
+          </thead>
+          <tbody id="units-table">
+            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderHeader('units');
+
+let allUnits = [];
+let allProps = [];
+let allOwners = [];
+
+async function loadAll() {
+  const [units, props, owners] = await Promise.all([
+    apiRequest('/units'),
+    apiRequest('/properties'),
+    apiRequest('/owners'),
+  ]);
+
+  allUnits  = units  || [];
+  allProps  = props  || [];
+  allOwners = owners || [];
+
+  // Fill property select (form + filter)
+  const sel = document.getElementById('property-select');
+  sel.innerHTML = '<option value="">Todas las propiedades</option>';
+  allProps.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+
+  // Fill assign selects
+  const selU = document.getElementById('assign-unit-select');
+  selU.innerHTML = '<option value="">Seleccione unidad</option>';
+  allUnits.forEach(u => {
+    const p = allProps.find(x => x.id === u.property_id);
+    selU.innerHTML += `<option value="${u.id}">Apt. ${u.unit_number}${p ? ` — ${p.name}` : ''}</option>`;
+  });
+
+  const selO = document.getElementById('assign-owner-select');
+  selO.innerHTML = '<option value="">Seleccione propietario</option>';
+  allOwners.forEach(o => selO.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+
+  // Default start date
+  document.getElementById('start_date').value = todayISO();
+
+  await renderTable(allUnits);
+}
+
+async function renderTable(units) {
+  document.getElementById('unit-count').textContent = units.length;
+  const tbody = document.getElementById('units-table');
+
+  if (!units.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin unidades registradas</td></tr>`;
+    return;
+  }
+
+  // Load ownerships in parallel
+  const ownerships = await Promise.all(
+    units.map(u => apiRequest(`/unit-owners/by-unit/${u.id}`).then(r => ({ uid: u.id, data: r || [] })))
+  );
+  const ownerMap = {};
+  ownerships.forEach(o => ownerMap[o.uid] = o.data);
+
+  tbody.innerHTML = units.map(u => {
+    const prop    = allProps.find(p => p.id === u.property_id);
+    const active  = (ownerMap[u.id] || []).find(o => o.role === 'Propietario Actual');
+    return `<tr>
+      <td><strong>Apt. ${u.unit_number}</strong></td>
+      <td>${u.floor || '—'}</td>
+      <td style="color:var(--text-secondary);font-size:.83rem;">${prop?.name || '—'}</td>
+      <td>${active
+        ? `<span style="font-weight:600;">${active.owner_name}</span>`
+        : `<em style="color:var(--text-muted);">Sin asignar</em>`}</td>
+      <td style="font-size:.82rem;color:var(--text-secondary);">${active ? formatDate(active.start_date) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterUnits() {
+  const propId = parseInt(document.getElementById('property-select').value) || null;
+  const filtered = propId ? allUnits.filter(u => u.property_id === propId) : allUnits;
+  renderTable(filtered);
+}
+
+async function createUnit() {
+  const propId = parseInt(document.getElementById('property-select').value);
+  const number = document.getElementById('unit_number').value.trim();
+  const floor  = document.getElementById('floor').value.trim();
+
+  if (!propId) { showToast('Selecciona una propiedad', 'error'); return; }
+  if (!number) { showToast('Ingresa el número de unidad', 'error'); return; }
+
+  const result = await apiRequest('/units/', 'POST', {
+    property_id: propId,
+    unit_number: number,
+    floor: floor || null,
+  });
+
+  if (result) {
+    showToast('Unidad creada correctamente');
+    document.getElementById('unit_number').value = '';
+    document.getElementById('floor').value = '';
+    await loadAll();
+  }
+}
+
+async function assignOwner() {
+  const unitId  = parseInt(document.getElementById('assign-unit-select').value);
+  const ownerId = parseInt(document.getElementById('assign-owner-select').value);
+  const date    = document.getElementById('start_date').value;
+
+  if (!unitId || !ownerId || !date) {
+    showToast('Completa todos los campos', 'error'); return;
+  }
+
+  const result = await apiRequest('/unit-owners/', 'POST', {
+    unit_id: unitId, owner_id: ownerId, start_date: date,
+  });
+
+  if (result) {
+    showToast('Propietario asignado correctamente');
+    await loadAll();
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>

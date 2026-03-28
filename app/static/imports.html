@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar / Exportar | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    .imp-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+    .imp-tab {
+      padding:7px 16px; border-radius:8px; border:1px solid var(--border);
+      background:var(--card-bg); color:var(--text-secondary); font-size:.82rem;
+      font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    .imp-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .imp-panel { display:none; }
+    .imp-panel.active { display:block; }
+
+    .drop-zone {
+      border:2px dashed var(--border); border-radius:var(--radius-lg);
+      padding:2.5rem; text-align:center; cursor:pointer;
+      transition:border-color .15s, background .15s; margin-bottom:16px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color:var(--accent); background:var(--accent-soft); }
+    .drop-zone i { font-size:2.5rem; color:var(--accent); opacity:.4; display:block; margin-bottom:10px; }
+    .drop-zone p { font-size:.88rem; color:var(--text-muted); }
+    .drop-zone strong { color:var(--accent); }
+
+    .preview-table { max-height:300px; overflow-y:auto; }
+    .step-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:24px; height:24px; border-radius:50%; background:var(--accent);
+      color:#fff; font-size:.75rem; font-weight:700; margin-right:8px; flex-shrink:0;
+    }
+    .step-row { display:flex; align-items:flex-start; gap:0; margin-bottom:16px; }
+    .template-btn {
+      background:var(--success-bg); color:#065f46; border:1px solid var(--success-brd);
+      width:auto; margin-top:0; padding:7px 16px; font-size:.82rem;
+    }
+    .result-ok  { color:var(--success); }
+    .result-err { color:var(--danger); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-file-import" style="color:var(--accent);margin-right:8px;"></i>Importar / Exportar</h1>
+    <p>Carga masiva de propietarios, unidades y cargos desde Excel</p>
+  </div>
+
+  <div class="imp-tabs">
+    <button class="imp-tab active" onclick="switchTab('propietarios')"><i class="fas fa-users"></i> Propietarios</button>
+    <button class="imp-tab" onclick="switchTab('cargos')"><i class="fas fa-file-invoice"></i> Cargos</button>
+    <button class="imp-tab" onclick="switchTab('exportar')"><i class="fas fa-file-export"></i> Exportar</button>
+  </div>
+
+  <!-- ══ IMPORTAR PROPIETARIOS ══ -->
+  <div class="imp-panel active" id="panel-propietarios">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Instrucciones</h3>
+            <button class="btn template-btn" onclick="downloadTemplate('propietarios')">
+              <i class="fas fa-download"></i> Descargar plantilla
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="step-row"><span class="step-badge">1</span>
+              <p>Descarga la plantilla Excel y llena los datos.</p>
+            </div>
+            <div class="step-row"><span class="step-badge">2</span>
+              <p>Columnas: <strong>nombre_propietario, cedula, email, telefono, nombre_propiedad, numero_apartamento, piso</strong></p>
+            </div>
+            <div class="step-row"><span class="step-badge">3</span>
+              <p>El sistema crea propietarios, unidades y asignaciones automáticamente.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-building"></i> Propiedad destino</h3></div>
+          <div class="card-body">
+            <label class="field-label">Seleccionar propiedad (opcional)</label>
+            <select id="imp-prop-select">
+              <option value="">Se usará el campo nombre_propiedad del Excel</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-upload"></i> Subir archivo</h3></div>
+          <div class="card-body">
+            <div class="drop-zone" id="drop-owners" onclick="document.getElementById('file-owners').click()"
+              ondragover="event.preventDefault();this.classList.add('drag-over')"
+              ondragleave="this.classList.remove('drag-over')"
+              ondrop="handleDrop(event,'owners')">
+              <i class="fas fa-file-excel"></i>
+              <p>Arrastra tu archivo Excel aquí<br>o <strong>haz clic para seleccionar</strong></p>
+              <p style="font-size:.75rem;margin-top:6px;">.xlsx, .xls, .csv</p>
+            </div>
+            <input type="file" id="file-owners" accept=".xlsx,.xls,.csv" style="display:none"
+              onchange="handleFile(this,'owners')">
+            <div id="preview-owners"></div>
+            <div id="import-owners-actions" style="display:none;">
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <button onclick="executeImport('owners')" style="flex:1;background:var(--success);color:#fff;margin-top:0;">
+                  <i class="fas fa-check"></i> Importar <span id="owners-count">0</span> registros
+                </button>
+                <button onclick="clearImport('owners')" class="btn btn-muted" style="width:auto;margin-top:0;">
+                  <i class="fas fa-times"></i> Cancelar
+                </button>
+              </div>
+            </div>
+            <div id="import-owners-result"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ IMPORTAR CARGOS ══ -->
+  <div class="imp-panel" id="panel-cargos">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Instrucciones</h3>
+            <button class="btn template-btn" onclick="downloadTemplate('cargos')">
+              <i class="fas fa-download"></i> Descargar plantilla
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="step-row"><span class="step-badge">1</span>
+              <p>Descarga la plantilla Excel para cargos.</p>
+            </div>
+            <div class="step-row"><span class="step-badge">2</span>
+              <p>Columnas: <strong>numero_apartamento, descripcion, monto, fecha_creacion, fecha_vencimiento</strong></p>
+            </div>
+            <div class="step-row"><span class="step-badge">3</span>
+              <p>El monto debe ser numérico (ej: <strong>56.54</strong>). Las fechas en formato <strong>YYYY-MM-DD</strong>.</p>
+            </div>
+            <div class="step-row"><span class="step-badge">4</span>
+              <p>La columna <strong>nombre_propiedad</strong> es opcional si seleccionas la propiedad abajo.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-building"></i> Propiedad destino *</h3></div>
+          <div class="card-body">
+            <label class="field-label">Propiedad</label>
+            <select id="imp-charge-prop">
+              <option value="">Seleccione propiedad</option>
+            </select>
+            <p style="font-size:.78rem;color:var(--text-muted);margin-top:6px;">
+              Si el Excel tiene <code>nombre_propiedad</code> se usará automáticamente. Si no, selecciona aquí.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-upload"></i> Subir archivo</h3></div>
+          <div class="card-body">
+            <div class="drop-zone" id="drop-charges" onclick="document.getElementById('file-charges').click()"
+              ondragover="event.preventDefault();this.classList.add('drag-over')"
+              ondragleave="this.classList.remove('drag-over')"
+              ondrop="handleDrop(event,'charges')">
+              <i class="fas fa-file-excel"></i>
+              <p>Arrastra tu archivo Excel aquí<br>o <strong>haz clic para seleccionar</strong></p>
+            </div>
+            <input type="file" id="file-charges" accept=".xlsx,.xls,.csv" style="display:none"
+              onchange="handleFile(this,'charges')">
+            <div id="preview-charges"></div>
+            <div id="import-charges-actions" style="display:none;">
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <button onclick="executeImport('charges')" style="flex:1;background:var(--success);color:#fff;margin-top:0;">
+                  <i class="fas fa-check"></i> Importar <span id="charges-count">0</span> cargos
+                </button>
+                <button onclick="clearImport('charges')" class="btn btn-muted" style="width:auto;margin-top:0;">
+                  <i class="fas fa-times"></i> Cancelar
+                </button>
+              </div>
+            </div>
+            <div id="import-charges-result"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EXPORTAR ══ -->
+  <div class="imp-panel" id="panel-exportar">
+    <div style="max-width:600px;">
+      <div class="card">
+        <div class="card-header"><h3><i class="fas fa-file-export"></i> Exportar datos</h3></div>
+        <div class="card-body">
+          <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:20px;">
+            Descarga los datos del sistema en formato Excel para respaldo o análisis externo.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button onclick="exportData('propietarios')" style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);margin-top:0;">
+              <i class="fas fa-users"></i> Exportar Propietarios y Unidades (.xlsx)
+            </button>
+            <button onclick="exportData('cargos')" style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);margin-top:0;">
+              <i class="fas fa-file-invoice"></i> Exportar Todos los Cargos (.xlsx)
+            </button>
+            <button onclick="exportData('proveedores')" style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);margin-top:0;">
+              <i class="fas fa-truck"></i> Exportar Proveedores y Pagos (.xlsx)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderSidebar('imports');
+
+let parsedOwners  = [];
+let parsedCharges = [];
+let allProps      = [];
+let allUnits      = [];
+
+async function init() {
+  [allProps, allUnits] = await Promise.all([
+    apiRequest('/properties') || [],
+    apiRequest('/units')      || []
+  ]);
+  allProps = allProps || [];
+  allUnits = allUnits || [];
+
+  ['imp-prop-select','imp-charge-prop'].forEach(id => {
+    const sel = document.getElementById(id);
+    allProps.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+  });
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.imp-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['propietarios','cargos','exportar'][i] === tab);
+  });
+  document.querySelectorAll('.imp-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ── Helpers para leer valores de Excel de forma robusta ──
+function readStr(val) {
+  if (val === null || val === undefined) return '';
+  return String(val).trim();
+}
+
+/**
+ * Lee un número de una celda de Excel.
+ * SheetJS a veces entrega el número directamente como float,
+ * otras como string con coma o punto decimal.
+ * También puede entregar 0 si la celda tiene formato de texto.
+ */
+function readNum(val) {
+  if (val === null || val === undefined || val === '') return null;
+  // Si ya es número, úsalo directamente
+  if (typeof val === 'number') return val;
+  // Si es string, limpiar y parsear
+  const cleaned = String(val).replace(/,/g, '.').replace(/[^0-9.\-]/g, '').trim();
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Lee una fecha de Excel.
+ * Puede venir como: objeto Date, string "YYYY-MM-DD", número serial de Excel.
+ */
+function readDate(val) {
+  if (!val) return todayISO();
+  if (val instanceof Date) return val.toISOString().split('T')[0];
+  if (typeof val === 'number') {
+    // Número serial de Excel → convertir con SheetJS
+    const d = XLSX.SSF.parse_date_code(val);
+    if (d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  // String: puede ser "2026-03-01" o "01/03/2026"
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split('T')[0];
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+    const [d, m, y] = s.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  return s.split('T')[0];
+}
+
+// ── Manejo de archivos ────────────────────────
+function handleDrop(e, type) {
+  e.preventDefault();
+  document.getElementById('drop-' + (type==='owners'?'owners':'charges')).classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) parseExcel(e.dataTransfer.files[0], type);
+}
+function handleFile(input, type) {
+  if (input.files[0]) parseExcel(input.files[0], type);
+}
+
+function parseExcel(file, type) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      // raw:false → SheetJS convierte todo a string, evita problemas con fechas y números
+      // cellDates:true → convierte fechas de Excel a objetos Date
+      const wb   = XLSX.read(e.target.result, { type:'binary', cellDates:true, raw:false });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      // defval:'' → celdas vacías retornan '' en vez de undefined
+      const data = XLSX.utils.sheet_to_json(ws, { defval:'' });
+
+      if (!data.length) { showToast('El archivo está vacío o no tiene datos', 'error'); return; }
+
+      if (type === 'owners')  { parsedOwners = data;  previewData(data, 'owners'); }
+      if (type === 'charges') { parsedCharges = data; previewData(data, 'charges'); }
+    } catch(err) {
+      showToast('Error al leer el archivo: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function previewData(data, type) {
+  const cols      = Object.keys(data[0]);
+  const previewEl = document.getElementById('preview-' + type);
+  const actionsEl = document.getElementById('import-' + type + '-actions');
+  const countEl   = document.getElementById(type + '-count');
+
+  previewEl.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <span style="font-size:.82rem;color:var(--text-secondary);">
+        Vista previa: <strong>${data.length} registros</strong> encontrados
+      </span>
+    </div>
+    <div class="preview-table table-wrapper">
+      <table>
+        <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${data.slice(0,8).map(row=>`
+            <tr>${cols.map(c=>`<td style="font-size:.78rem;">${row[c]||'—'}</td>`).join('')}</tr>`).join('')}
+          ${data.length>8?`<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text-muted);font-size:.78rem;padding:8px;">... y ${data.length-8} registros más</td></tr>`:''}
+        </tbody>
+      </table>
+    </div>`;
+
+  if (countEl)   countEl.textContent = data.length;
+  if (actionsEl) actionsEl.style.display = '';
+}
+
+function clearImport(type) {
+  if (type === 'owners')  parsedOwners  = [];
+  if (type === 'charges') parsedCharges = [];
+  document.getElementById('preview-' + type).innerHTML = '';
+  document.getElementById('import-' + type + '-actions').style.display = 'none';
+  document.getElementById('import-' + type + '-result').innerHTML = '';
+  document.getElementById('file-' + type).value = '';
+}
+
+// ── Ejecutar importación ──────────────────────
+async function executeImport(type) {
+  if (type === 'owners')  await importOwners();
+  if (type === 'charges') await importCharges();
+}
+
+// ── Importar propietarios ─────────────────────
+async function importOwners() {
+  if (!parsedOwners.length) return;
+  const propId   = document.getElementById('imp-prop-select').value;
+  const resultEl = document.getElementById('import-owners-result');
+  let ok = 0, err = 0, errs = [];
+
+  resultEl.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text-muted);">
+    <i class="fas fa-spinner fa-spin"></i> Importando...</div>`;
+
+  // Refrescar owners y units desde la BD
+  const [owners, units] = await Promise.all([
+    apiRequest('/owners'), apiRequest('/units')
+  ]);
+  const localOwners = owners || [];
+  const localUnits  = units  || [];
+
+  for (const row of parsedOwners) {
+    try {
+      const name     = readStr(row['nombre_propietario'] || row['nombre']);
+      const cedula   = readStr(row['cedula'] || row['identificacion']);
+      const email    = readStr(row['email'])    || null;
+      const phone    = readStr(row['telefono']) || null;
+      const aptNum   = readStr(row['numero_apartamento'] || row['apartamento']);
+      const propName = readStr(row['nombre_propiedad']   || row['propiedad']);
+      const piso     = readStr(row['piso']) || null;
+
+      if (!name) { errs.push('Fila sin nombre de propietario'); err++; continue; }
+
+      // 1. Crear o encontrar propietario
+      let owner = (cedula ? localOwners.find(o => o.identification === cedula) : null)
+               || localOwners.find(o => o.full_name.toLowerCase() === name.toLowerCase());
+
+      if (!owner) {
+        owner = await apiRequest('/owners/', 'POST', {
+          full_name: name, identification: cedula || null, email, phone
+        });
+        if (!owner) { err++; errs.push(`Error creando propietario: ${name}`); continue; }
+        localOwners.push(owner);
+      }
+
+      // 2. Resolver propiedad
+      const targetPropId = propId
+        || allProps.find(p => p.name.toLowerCase() === propName.toLowerCase())?.id
+        || allProps.find(p => p.name.toLowerCase().includes(propName.toLowerCase()))?.id;
+
+      if (!targetPropId && aptNum) {
+        err++; errs.push(`Propiedad no encontrada para ${name} (${propName})`); continue;
+      }
+
+      // 3. Crear o encontrar unidad
+      if (aptNum && targetPropId) {
+        let unit = localUnits.find(u =>
+          u.unit_number === aptNum && u.property_id === parseInt(targetPropId)
+        );
+        if (!unit) {
+          unit = await apiRequest('/units/', 'POST', {
+            property_id: parseInt(targetPropId), unit_number: aptNum, floor: piso
+          });
+          if (!unit) { err++; errs.push(`Error creando unidad ${aptNum}`); continue; }
+          localUnits.push(unit);
+          allUnits.push(unit);
+        }
+
+        // 4. Asignar propietario a unidad
+        await apiRequest('/unit-owners/', 'POST', {
+          unit_id: unit.id, owner_id: owner.id, start_date: todayISO()
+        }).catch(() => null);
+      }
+
+      ok++;
+    } catch(e) {
+      err++; errs.push(`Error: ${e.message}`);
+    }
+  }
+
+  showResult('owners', ok, err, errs);
+  if (ok > 0) showToast(`${ok} propietarios importados`, 'success');
+}
+
+// ── Importar cargos ───────────────────────────
+async function importCharges() {
+  if (!parsedCharges.length) return;
+
+  const resultEl = document.getElementById('import-charges-result');
+  let ok = 0, err = 0, errs = [];
+
+  resultEl.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text-muted);">
+    <i class="fas fa-spinner fa-spin"></i> Importando ${parsedCharges.length} cargos...</div>`;
+
+  // Refrescar unidades
+  const units = await apiRequest('/units') || [];
+
+  for (const row of parsedCharges) {
+    try {
+      const aptNum   = readStr(row['numero_apartamento'] || row['apartamento']);
+      const desc     = readStr(row['descripcion']        || row['description']);
+      const amount   = readNum(row['monto']              || row['amount']     || row['Monto']);
+      const propName = readStr(row['nombre_propiedad']   || row['propiedad']  || '');
+
+      const dateCreated = readDate(row['fecha_creacion'] || row['fecha']);
+      const dueDate     = readDate(row['fecha_vencimiento'] || row['vencimiento'] || row['fecha_creacion'] || row['fecha']);
+
+      // Validaciones
+      if (!aptNum) { errs.push(`Fila sin número de apartamento`); err++; continue; }
+      if (!desc)   { errs.push(`Apt ${aptNum}: sin descripción`);  err++; continue; }
+      if (amount === null || amount <= 0) {
+        errs.push(`Apt ${aptNum} (${desc}): monto inválido → "${row['monto'] ?? row['amount']}"`);
+        err++; continue;
+      }
+
+      // Resolver propiedad
+      let targetPropId = readStr(document.getElementById('imp-charge-prop').value);
+
+      if (!targetPropId && propName) {
+        const found = allProps.find(p =>
+          p.name.toLowerCase() === propName.toLowerCase() ||
+          p.name.toLowerCase().includes(propName.toLowerCase())
+        );
+        if (found) targetPropId = String(found.id);
+      }
+
+      if (!targetPropId) {
+        errs.push(`Apt ${aptNum}: no se encontró propiedad "${propName}"`);
+        err++; continue;
+      }
+
+      // Encontrar unidad
+      const unit = units.find(u =>
+        u.unit_number === aptNum && u.property_id === parseInt(targetPropId)
+      );
+
+      if (!unit) {
+        errs.push(`Unidad "${aptNum}" no encontrada en la propiedad seleccionada`);
+        err++; continue;
+      }
+
+      // Crear cargo
+      const r = await apiRequest('/charges/', 'POST', {
+        unit_id:      unit.id,
+        description:  desc,
+        amount:       amount,
+        date_created: dateCreated,
+        due_date:     dueDate,
+      });
+
+      if (!r) { err++; errs.push(`Error del servidor creando cargo para apt ${aptNum}`); }
+      else ok++;
+
+    } catch(e) {
+      err++; errs.push(`Error inesperado: ${e.message}`);
+    }
+  }
+
+  showResult('charges', ok, err, errs);
+  if (ok > 0) showToast(`${ok} cargos creados correctamente`, 'success');
+}
+
+// ── Mostrar resultado ─────────────────────────
+function showResult(type, ok, err, errs) {
+  const resultEl = document.getElementById('import-' + type + '-result');
+  resultEl.innerHTML = `
+    <div style="margin-top:12px;padding:14px;border-radius:var(--radius-md);
+      background:${ok>0?'var(--success-bg)':'var(--danger-bg)'};
+      border:1px solid ${ok>0?'var(--success-brd)':'var(--danger-brd)'};">
+      <div class="result-ok"><i class="fas fa-check-circle"></i> <strong>${ok}</strong> registros importados correctamente</div>
+      ${err>0?`<div class="result-err" style="margin-top:4px;"><i class="fas fa-exclamation-circle"></i> <strong>${err}</strong> errores</div>`:''}
+      ${errs.slice(0,8).map(e=>`<div style="font-size:.76rem;color:var(--danger);margin-top:3px;">· ${e}</div>`).join('')}
+      ${errs.length>8?`<div style="font-size:.74rem;color:var(--text-muted);margin-top:4px;">... y ${errs.length-8} errores más</div>`:''}
+    </div>`;
+}
+
+// ── Descargar plantillas ──────────────────────
+function downloadTemplate(type) {
+  let headers, example, filename;
+  if (type === 'propietarios') {
+    headers = ['nombre_propietario','cedula','email','telefono','nombre_propiedad','numero_apartamento','piso'];
+    example = ['Juan Pérez','8-123-456','juan@email.com','+507 6000-0000','Torre Alianza I','101','1'];
+    filename = 'plantilla_propietarios.xlsx';
+  } else {
+    headers = ['numero_apartamento','descripcion','monto','fecha_creacion','fecha_vencimiento','nombre_propiedad'];
+    example = ['1-A','GAS Marzo 2026',56.54,'2026-03-01','2026-03-31','PARK VIEW'];
+    filename = 'plantilla_cargos.xlsx';
+  }
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+  XLSX.writeFile(wb, filename);
+}
+
+// ── Exportar datos ────────────────────────────
+async function exportData(type) {
+  showToast('Generando archivo...', 'success');
+  let rows = [], headers = [], filename = '';
+
+  if (type === 'propietarios') {
+    const [owners, unitOwners, units, props] = await Promise.all([
+      apiRequest('/owners'), apiRequest('/unit-owners/all'),
+      apiRequest('/units'),  apiRequest('/properties')
+    ]);
+    headers  = ['ID','Nombre','Cédula','Email','Teléfono','Unidad','Propiedad'];
+    rows     = (owners||[]).map(o => {
+      const uo = (unitOwners||[]).find(x => x.owner_id===o.id && x.is_active);
+      const u  = uo ? (units||[]).find(x=>x.id===uo.unit_id) : null;
+      const p  = u  ? (props||[]).find(x=>x.id===u.property_id) : null;
+      return [o.id, o.full_name, o.identification||'', o.email||'', o.phone||'',
+              u?`Apt. ${u.unit_number}`:'', p?p.name:''];
+    });
+    filename = 'propietarios_alianza.xlsx';
+  } else if (type === 'cargos') {
+    const charges = await apiRequest('/finance/charges') || [];
+    headers  = ['ID','Propietario','Unidad','Descripción','Vencimiento','Total','Saldo','Estado'];
+    rows     = charges.map(c=>[c.id,c.owner_name||'',c.unit_number||'',
+      c.description,c.due_date,c.amount,c.balance,c.status]);
+    filename = 'cargos_alianza.xlsx';
+  } else if (type === 'proveedores') {
+    const suppliers = await apiRequest('/suppliers') || [];
+    headers  = ['ID','Nombre','Categoría','RUC','Teléfono','Email','Total Pagado','Pendiente'];
+    rows     = suppliers.map(s=>[s.id,s.name,s.category,s.ruc||'',
+      s.phone||'',s.email||'',s.total_paid,s.total_pending]);
+    filename = 'proveedores_alianza.xlsx';
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+  XLSX.writeFile(wb, filename);
+  showToast('Archivo descargado', 'success');
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finanzas | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* =========================
+      ESTILOS EXISTENTES
+    ========================= */
+    .fin-tabs {
+      display: flex; gap: 6px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 6px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .fin-tab {
+      padding: 9px 20px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: flex; align-items: center; gap: 7px;
+    }
+
+    .fin-tab:hover  { background: var(--accent-soft); color: var(--accent); }
+    .fin-tab.active { background: var(--accent); color: #fff; }
+
+    .fin-panel { display: none; animation: fadeUp 0.2s ease; }
+    .fin-panel.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .charges-empty {
+      text-align: center; padding: 2rem;
+      color: var(--text-muted); font-size: 0.85rem;
+    }
+
+    .charges-empty i { font-size: 1.8rem; display: block; margin-bottom: 8px; opacity: .4; }
+
+    .total-preview {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--accent-soft);
+      border: 1px solid #c7d9f8;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin: 12px 0;
+    }
+
+    .total-preview span { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+    .total-preview strong { font-size: 1.2rem; color: var(--accent); font-weight: 800; }
+
+    /* =========================
+      🔥 BOTONES MEJORADOS
+    ========================= */
+
+    button,
+    .btn {
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* PRIMARY */
+    .btn-primary,
+    button:not(.fin-tab):not(.toggle-btn):not(.btn-secondary):not(.btn-muted) {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .btn-primary:hover,
+    button:not(.fin-tab):not(.toggle-btn):not(.btn-secondary):not(.btn-muted):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      opacity: 0.95;
+    }
+
+    /* SECONDARY */
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-soft);
+    }
+
+    /* MUTED */
+    .btn-muted {
+      background: #f1f5f9;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-muted:hover {
+      background: #e2e8f0;
+    }
+
+    /* TABS MÁS LIMPIOS */
+    .fin-tab {
+      border-radius: 8px;
+      padding: 8px 16px;
+    }
+
+    .fin-tab.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    /* TOGGLE */
+    .toggle-btn {
+      border-radius: 8px;
+      padding: 8px 14px;
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .toggle-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid #c7d9f8;
+    }
+
+    .toggle-btn:hover {
+      background: #f1f5f9;
+    }
+  </style>
+</head>
+<body>
+
+<header class="main-header" id="main-header"></header>
+
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-chart-line" style="color:var(--accent);margin-right:8px;"></i>Finanzas</h1>
+    <p>Cargos, pagos, facturación y estados de cuenta</p>
+  </div>
+
+  <!-- TABS DE NAVEGACIÓN -->
+  <div class="fin-tabs">
+    <button class="fin-tab active" onclick="switchTab('pagos')">
+      <i class="fas fa-money-bill-wave"></i> Registrar Pago
+    </button>
+    <button class="fin-tab" onclick="switchTab('cargos')">
+      <i class="fas fa-file-invoice"></i> Crear Cargo
+    </button>
+    <button class="fin-tab" onclick="switchTab('historial')">
+      <i class="fas fa-table"></i> Historial de Cargos
+    </button>
+    <button class="fin-tab" onclick="switchTab('estados')">
+      <i class="fas fa-file-alt"></i> Estados de Cuenta
+    </button>
+  </div>
+
+  <!-- ══════════════════ TAB: REGISTRAR PAGO ══════════════════ -->
+  <div class="fin-panel active" id="panel-pagos">
+    <div class="two-col">
+
+      <!-- Columna izquierda: selector + cargos -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-search"></i> Buscar por</h3>
+          </div>
+          <div class="card-body">
+            <div class="toggle-bar">
+              <button class="toggle-btn active" id="btn-owner" onclick="switchMode('owner')">
+                👤 Propietario
+              </button>
+              <button class="toggle-btn" id="btn-unit" onclick="switchMode('unit')">
+                🏠 Apartamento
+              </button>
+            </div>
+
+            <!-- Por propietario -->
+            <div id="panel-owner">
+              <label class="field-label">Propietario</label>
+              <select id="owner-select">
+                <option value="">Seleccione propietario</option>
+              </select>
+            </div>
+
+            <!-- Por unidad -->
+            <div id="panel-unit" style="display:none;">
+              <label class="field-label">Propiedad</label>
+              <select id="prop-pay-select" onchange="loadUnitsByProp()">
+                <option value="">Seleccione propiedad</option>
+              </select>
+              <label class="field-label">Apartamento</label>
+              <select id="unit-pay-select" onchange="loadUnitCharges()">
+                <option value="">Seleccione unidad</option>
+              </select>
+            </div>
+
+            <!-- Info propietario (visible cuando se busca por unidad) -->
+            <div class="info-box-blue" id="owner-info-box">
+              <i class="fas fa-user-circle"></i> <span id="owner-info-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cargos pendientes -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-list-check"></i> Cargos Pendientes</h3>
+          </div>
+          <div class="card-body">
+            <div id="charges-panel">
+              <div class="charges-empty">
+                <i class="fas fa-hand-point-up"></i>
+                Selecciona un propietario o apartamento
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna derecha: formulario de pago -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-pen-to-square"></i> Datos del Pago</h3>
+          </div>
+          <div class="card-body" id="payment-form-wrapper">
+            <div class="charges-empty" style="padding:2.5rem 1rem;">
+              <i class="fas fa-arrow-left"></i>
+              Selecciona los cargos a pagar primero
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel post-pago -->
+        <div class="post-pay-panel" id="post-pay-panel">
+          <h4><i class="fas fa-check-circle"></i> Pago registrado exitosamente</h4>
+          <div class="action-row">
+            <button class="btn btn-primary" onclick="openInvoiceModal()">
+              <i class="fas fa-receipt"></i> Ver Factura
+            </button>
+            <button class="btn btn-secondary" onclick="openStatementFromPay()">
+              <i class="fas fa-file-alt"></i> Estado de Cuenta
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ TAB: CREAR CARGO ══════════════════ -->
+  <div class="fin-panel" id="panel-cargos">
+    <div class="two-col">
+
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle"></i> Nuevo Cargo</h3>
+        </div>
+        <div class="card-body">
+          <label class="field-label">Propiedad</label>
+          <select id="charge-prop-select" onchange="loadChargeUnits()">
+            <option value="">Seleccione propiedad</option>
+          </select>
+
+          <label class="field-label">Unidad (opcional — si vacío aplica a todas)</label>
+          <select id="charge-unit-select">
+            <option value="">Todas las unidades</option>
+          </select>
+
+          <label class="field-label">Descripción *</label>
+          <input type="text" id="charge-desc" placeholder="Ej: Mantenimiento Marzo 2026">
+
+          <label class="field-label">Monto *</label>
+          <input type="number" id="charge-amount" placeholder="0.00" step="0.01" min="0"
+                 oninput="document.getElementById('amount-preview').textContent = parseFloat(this.value||0).toFixed(2)">
+
+          <label class="field-label">Fecha de creación</label>
+          <input type="date" id="charge-date">
+
+          <label class="field-label">Fecha de vencimiento *</label>
+          <input type="date" id="charge-due">
+
+          <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;color:var(--text-secondary);">
+            <i class="fas fa-info-circle" style="color:var(--accent);"></i>
+            Saldo inicial: $0.00 pagado / <strong>$<span id="amount-preview">0.00</span></strong> pendiente
+          </div>
+
+          <button onclick="createCharge()">
+            <i class="fas fa-plus"></i> Crear Cargo
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview: Unidades que recibirán el cargo -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3><i class="fas fa-eye"></i> Unidades Afectadas</h3>
+        </div>
+        <div class="card-body">
+          <div id="affected-units">
+            <div class="charges-empty">
+              <i class="fas fa-building"></i>
+              Selecciona una propiedad para ver las unidades
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════ TAB: HISTORIAL ══════════════════ -->
+  <div class="fin-panel" id="panel-historial">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-table"></i> Todos los Cargos</h3>
+        <span class="badge badge-primary" id="charges-count-badge">0</span>
+      </div>
+
+      <!-- Fila de filtros -->
+      <div class="card-body" style="padding-bottom:0;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+
+          <div style="display:flex;flex-direction:column;">
+            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Estado</label>
+            <select id="filter-status" onchange="filterChargesTable()" style="min-width:140px;margin-bottom:0;">
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="PARCIAL">Parcial</option>
+              <option value="PAGADO">Pagado</option>
+            </select>
+          </div>
+
+          <div style="display:flex;flex-direction:column;">
+            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Propietario</label>
+            <select id="filter-owner" onchange="filterChargesTable()" style="min-width:160px;margin-bottom:0;">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div style="display:flex;flex-direction:column;">
+            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Apartamento</label>
+            <select id="filter-unit" onchange="filterChargesTable()" style="min-width:130px;margin-bottom:0;">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div style="display:flex;flex-direction:column;">
+            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Descripción / Concepto</label>
+            <input type="text" id="filter-desc" placeholder="Buscar descripción..."
+              oninput="filterChargesTable()" style="min-width:200px;margin-bottom:0;">
+          </div>
+
+          <button class="btn btn-ghost" onclick="clearChargeFilters()"
+            style="width:auto;margin-top:0;padding:8px 14px;align-self:flex-end;">
+            <i class="fas fa-times"></i> Limpiar
+          </button>
+
+        </div>
+      </div>
+
+      <div class="table-wrapper" style="margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Propietario</th>
+              <th>Unidad</th>
+              <th>Descripción</th>
+              <th>Vence</th>
+              <th class="td-right">Total</th>
+              <th class="td-right">Pagado</th>
+              <th class="td-right">Saldo</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="charges-table-body">
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ TAB: ESTADOS DE CUENTA ══════════════════ -->
+  <div class="fin-panel" id="panel-estados">
+    <div class="card" style="max-width:480px;">
+      <div class="card-header">
+        <h3><i class="fas fa-file-alt"></i> Estado de Cuenta</h3>
+      </div>
+      <div class="card-body">
+        <label class="field-label">Propietario</label>
+        <select id="stmt-select">
+          <option value="">Seleccione propietario</option>
+        </select>
+        <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
+          Se abrirá una ventana con el historial completo, lista para imprimir o guardar como PDF.
+        </p>
+        <button class="btn btn-secondary btn-block" onclick="openStatementSelected()" style="padding:11px;">
+          <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══════════════════ MODAL FACTURA ══════════════════ -->
+<div class="modal-overlay" id="invoice-modal">
+  <div class="modal-box">
+    <h3>🧾 Generar Factura</h3>
+    <p>Si tienes un número de factura del facturero físico, ingrésalo aquí. Es opcional — puedes dejarlo en blanco.</p>
+    <label class="field-label">N° Factura Física (opcional)</label>
+    <input type="text" id="modal-fiscal" placeholder="Ej: 00542">
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeInvoiceModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmInvoice()">
+        <i class="fas fa-print"></i> Abrir Factura
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+// ══════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════
+let mode          = 'owner';
+let activeOwnerId = null;
+let lastPaymentId = null;
+let allChargesCache = [];
+let allPropsCache   = [];
+let allUnitsCache   = [];
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+async function init() {
+  
+
+  const [props, owners, units] = await Promise.all([
+    apiRequest('/properties'),
+    apiRequest('/owners'),
+    apiRequest('/units'),
+  ]);
+
+  allPropsCache = props  || [];
+  allUnitsCache = units  || [];
+
+  // Owner select (pago)
+  const ownerSel = document.getElementById('owner-select');
+  (owners || []).forEach(o =>
+    ownerSel.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+  ownerSel.addEventListener('change', () => {
+    const id = parseInt(ownerSel.value);
+    if (!id) { resetPayForm(); return; }
+    activeOwnerId = id;
+    document.getElementById('post-pay-panel').style.display = 'none';
+    loadOwnerCharges(id);
+  });
+
+  // Prop select (pago por unidad)
+  const propPaySel = document.getElementById('prop-pay-select');
+  allPropsCache.forEach(p =>
+    propPaySel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+
+  // Prop select (cargo)
+  const chargePropSel = document.getElementById('charge-prop-select');
+  allPropsCache.forEach(p =>
+    chargePropSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+
+  // Estado de cuenta select
+  const stmtSel = document.getElementById('stmt-select');
+  (owners || []).forEach(o =>
+    stmtSel.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+
+  // Fechas por defecto
+  document.getElementById('charge-date').value = todayISO();
+
+  // Cargar historial
+  await loadChargesTable();
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.fin-tab').forEach((b, i) => {
+    const ids = ['pagos','cargos','historial','estados'];
+    b.classList.toggle('active', ids[i] === tab);
+  });
+  document.querySelectorAll('.fin-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.add('active');
+
+  if (tab === 'historial') loadChargesTable();
+}
+
+// ══════════════════════════════════════════════
+// TOGGLE MODO PAGO
+// ══════════════════════════════════════════════
+function switchMode(m) {
+  mode = m;
+  activeOwnerId = null;
+  document.getElementById('btn-owner').classList.toggle('active', m === 'owner');
+  document.getElementById('btn-unit').classList.toggle('active',  m === 'unit');
+  document.getElementById('panel-owner').style.display = m === 'owner' ? '' : 'none';
+  document.getElementById('panel-unit').style.display  = m === 'unit'  ? '' : 'none';
+  document.getElementById('owner-select').value = '';
+  document.getElementById('prop-pay-select').value = '';
+  resetPayForm();
+}
+
+function resetPayForm() {
+  activeOwnerId = null;
+  lastPaymentId = null;
+  document.getElementById('owner-info-box').style.display = 'none';
+  document.getElementById('post-pay-panel').style.display = 'none';
+  document.getElementById('charges-panel').innerHTML = `
+    <div class="charges-empty">
+      <i class="fas fa-hand-point-up"></i>
+      Selecciona un propietario o apartamento
+    </div>`;
+  document.getElementById('payment-form-wrapper').innerHTML = `
+    <div class="charges-empty" style="padding:2.5rem 1rem;">
+      <i class="fas fa-arrow-left"></i>
+      Selecciona los cargos a pagar primero
+    </div>`;
+}
+
+// ══════════════════════════════════════════════
+// CARGAR UNIDADES POR PROPIEDAD (modo unidad)
+// ══════════════════════════════════════════════
+function loadUnitsByProp() {
+  const propId = parseInt(document.getElementById('prop-pay-select').value);
+  const sel = document.getElementById('unit-pay-select');
+  sel.innerHTML = '<option value="">Seleccione unidad</option>';
+  const filtered = propId ? allUnitsCache.filter(u => u.property_id === propId) : allUnitsCache;
+  filtered.forEach(u => sel.innerHTML += `<option value="${u.id}">Apt. ${u.unit_number}</option>`);
+  resetPayForm();
+}
+
+async function loadUnitCharges() {
+  const unitId = parseInt(document.getElementById('unit-pay-select').value);
+  if (!unitId) { resetPayForm(); return; }
+
+  const data = await apiRequest(`/finance/unit-statement/${unitId}`);
+  if (!data) return;
+
+  activeOwnerId = data.owner_id;
+  document.getElementById('post-pay-panel').style.display = 'none';
+
+  const infoBox = document.getElementById('owner-info-box');
+  if (data.owner_id) {
+    infoBox.style.display = 'block';
+    document.getElementById('owner-info-text').textContent =
+      `Propietario activo: ${data.owner_name}`;
+  } else {
+    infoBox.style.display = 'block';
+    document.getElementById('owner-info-text').textContent =
+      '⚠ Esta unidad no tiene propietario activo asignado.';
+  }
+
+  renderCharges(data.charges || []);
+}
+
+// ══════════════════════════════════════════════
+// CARGOS DEL PROPIETARIO
+// ══════════════════════════════════════════════
+async function loadOwnerCharges(ownerId) {
+  const charges = await apiRequest(`/finance/owner-statement/${ownerId}`);
+  renderCharges(charges || []);
+}
+
+function renderCharges(charges) {
+  const panel = document.getElementById('charges-panel');
+  const formW = document.getElementById('payment-form-wrapper');
+
+  const pendientes = charges.filter(c => c.status !== 'PAGADO');
+
+  if (!pendientes.length) {
+    panel.innerHTML = `
+      <div class="charges-empty">
+        <i class="fas fa-check-circle" style="color:var(--success)"></i>
+        Sin cargos pendientes
+      </div>`;
+    formW.innerHTML = `
+      <div class="charges-empty" style="padding:2.5rem 1rem;">
+        <i class="fas fa-check-circle" style="color:var(--success)"></i>
+        Este propietario no tiene deuda pendiente
+      </div>`;
+    return;
+  }
+
+  // Renderizar lista de cargos
+  let html = `<p style="font-weight:600;font-size:.85rem;margin-bottom:10px;color:var(--text-secondary);">
+    Selecciona los cargos a incluir en el pago:</p>`;
+
+  pendientes.forEach(c => {
+    html += `
+    <div class="charge-row">
+      <input type="checkbox" id="chk-${c.charge_id}" value="${c.charge_id}" onchange="recalcTotal()">
+      <label for="chk-${c.charge_id}">
+        <span class="cdesc">${c.description}</span>
+        <span class="cmeta">Vence: ${formatDate(c.due_date)} &nbsp;·&nbsp;
+          Total: $${formatMoney(c.total || c.amount)} &nbsp;·&nbsp;
+          <strong>Saldo: $${formatMoney(c.balance)}</strong></span>
+      </label>
+      <span class="badge badge-${c.status}">${c.status}</span>
+      <input type="number"
+             data-charge="${c.charge_id}"
+             data-max="${parseFloat(c.balance).toFixed(4)}"
+             value="${parseFloat(c.balance).toFixed(2)}"
+             step="0.01" min="0.01" max="${parseFloat(c.balance).toFixed(2)}"
+             style="width:110px;margin-bottom:0;text-align:right;"
+             oninput="recalcTotal()">
+    </div>`;
+  });
+
+  panel.innerHTML = html;
+
+  // Renderizar formulario de pago
+  formW.innerHTML = `
+    <label class="field-label">Total calculado</label>
+    <div class="total-preview">
+      <span>Monto a registrar</span>
+      <strong id="total-display">$0.00</strong>
+    </div>
+
+    <label class="field-label">Fecha de pago</label>
+    <input type="date" id="pay-date" value="${todayISO()}">
+
+    <label class="field-label">N° Factura física (opcional)</label>
+    <input type="text" id="pay-invoice" placeholder="Ej: 00542">
+
+    <label class="field-label">Referencia / N° Transferencia (opcional)</label>
+    <input type="text" id="pay-ref" placeholder="Ej: T-0098345">
+
+    <div id="pay-feedback"></div>
+
+    <button onclick="registerPayment()" style="width:100%;justify-content:center;margin-top:6px;">
+      <i class="fas fa-save"></i> Registrar Pago
+    </button>`;
+
+  recalcTotal();
+}
+
+function recalcTotal() {
+  let total = 0;
+  document.querySelectorAll('#charges-panel input[type=checkbox]:checked').forEach(cb => {
+    const inp = document.querySelector(`input[data-charge='${cb.value}']`);
+    if (inp) total += parseFloat(inp.value) || 0;
+  });
+  const el = document.getElementById('total-display');
+  if (el) el.textContent = `$${formatMoney(total)}`;
+}
+
+// ══════════════════════════════════════════════
+// REGISTRAR PAGO
+// ══════════════════════════════════════════════
+async function registerPayment() {
+  const fb = document.getElementById('pay-feedback');
+  if (fb) fb.innerHTML = '';
+
+  if (!activeOwnerId) {
+    showToast('No hay propietario seleccionado', 'error'); return;
+  }
+
+  const applications = [];
+  let error = null;
+
+  document.querySelectorAll('#charges-panel input[type=checkbox]:checked').forEach(cb => {
+    if (error) return;
+    const chargeId = parseInt(cb.value);
+    const inp      = document.querySelector(`input[data-charge='${chargeId}']`);
+    const max      = parseFloat(inp.dataset.max);
+    const amount   = parseFloat(inp.value);
+
+    if (!amount || amount <= 0) { error = 'El monto debe ser mayor a $0.00'; return; }
+    if (amount > max + 0.005)   { error = `$${amount.toFixed(2)} supera el saldo ($${max.toFixed(2)})`; return; }
+    applications.push({ charge_id: chargeId, amount: parseFloat(amount.toFixed(2)) });
+  });
+
+  if (error) {
+    if (fb) fb.innerHTML = `<div class="alert alert-error">${error}</div>`; return;
+  }
+  if (!applications.length) {
+    if (fb) fb.innerHTML = `<div class="alert alert-warning">Selecciona al menos un cargo</div>`; return;
+  }
+
+  const payDate = document.getElementById('pay-date')?.value;
+  if (!payDate) {
+    if (fb) fb.innerHTML = `<div class="alert alert-error">Ingresa la fecha del pago</div>`; return;
+  }
+
+  const total = applications.reduce((s, a) => s + a.amount, 0);
+
+  const result = await apiRequest('/finance/payment-complete', 'POST', {
+    owner_id:       activeOwnerId,
+    payment_date:   payDate,
+    amount:         parseFloat(total.toFixed(2)),
+    invoice_number: document.getElementById('pay-invoice')?.value || null,
+    reference:      document.getElementById('pay-ref')?.value     || null,
+    applications,
+  });
+
+  if (result) {
+    lastPaymentId = result.payment_id;
+    document.getElementById('post-pay-panel').style.display = 'block';
+    document.getElementById('pay-feedback').innerHTML =
+      `<div class="alert alert-success">✓ Pago #${lastPaymentId} registrado correctamente</div>`;
+
+    await loadChargesTable();
+
+    // Refrescar cargos
+    if (mode === 'owner') {
+      loadOwnerCharges(activeOwnerId);
+    } else {
+      const uid = parseInt(document.getElementById('unit-pay-select').value);
+      if (uid) loadUnitCharges(uid);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+// FACTURA
+// ══════════════════════════════════════════════
+function openInvoiceModal() {
+  document.getElementById('modal-fiscal').value = '';
+  document.getElementById('invoice-modal').classList.add('open');
+}
+
+function closeInvoiceModal() {
+  document.getElementById('invoice-modal').classList.remove('open');
+}
+
+async function confirmInvoice() {
+  closeInvoiceModal();
+  if (!lastPaymentId) return;
+  const fiscal = document.getElementById('modal-fiscal').value.trim();
+  if (fiscal) {
+    await apiRequest(`/finance/generate-invoice/payment/${lastPaymentId}?fiscal_number=${encodeURIComponent(fiscal)}`, 'POST');
+  }
+  window.open(`/static/factura.html?payment_id=${lastPaymentId}`, '_blank');
+}
+
+function openStatementFromPay() {
+  if (!activeOwnerId) return;
+  window.open(`/static/estado_cuenta.html?owner_id=${activeOwnerId}&t=${Date.now()}`, '_blank');
+}
+
+function openStatementSelected() {
+  const id = document.getElementById('stmt-select').value;
+  if (!id) { showToast('Selecciona un propietario', 'warning'); return; }
+  window.open(`/static/estado_cuenta.html?owner_id=${id}&t=${Date.now()}`, '_blank');
+}
+
+// ══════════════════════════════════════════════
+// CREAR CARGO
+// ══════════════════════════════════════════════
+function loadChargeUnits() {
+  const propId = parseInt(document.getElementById('charge-prop-select').value);
+  const sel = document.getElementById('charge-unit-select');
+  sel.innerHTML = '<option value="">Todas las unidades</option>';
+
+  const units = propId ? allUnitsCache.filter(u => u.property_id === propId) : allUnitsCache;
+  units.forEach(u => sel.innerHTML += `<option value="${u.id}">Apt. ${u.unit_number}</option>`);
+
+  // Preview unidades afectadas
+  const preview = document.getElementById('affected-units');
+  if (!propId) {
+    preview.innerHTML = `<div class="charges-empty"><i class="fas fa-building"></i>Selecciona una propiedad</div>`;
+    return;
+  }
+
+  if (!units.length) {
+    preview.innerHTML = `<div class="charges-empty"><i class="fas fa-info-circle"></i>Sin unidades en esta propiedad</div>`;
+    return;
+  }
+
+  preview.innerHTML = `
+    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:10px;">
+      Si no seleccionas unidad específica, el cargo se creará para estas ${units.length} unidades:
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${units.map(u => `<span class="badge badge-primary">Apt. ${u.unit_number}</span>`).join('')}
+    </div>`;
+}
+
+async function createCharge() {
+  const propId  = parseInt(document.getElementById('charge-prop-select').value);
+  const unitId  = parseInt(document.getElementById('charge-unit-select').value) || null;
+  const desc    = document.getElementById('charge-desc').value.trim();
+  const amount  = parseFloat(document.getElementById('charge-amount').value);
+  const created = document.getElementById('charge-date').value;
+  const due     = document.getElementById('charge-due').value;
+
+  if (!propId) { showToast('Selecciona una propiedad', 'error'); return; }
+  if (!desc)   { showToast('Ingresa la descripción', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+  if (!due)    { showToast('Ingresa la fecha de vencimiento', 'error'); return; }
+
+  let result;
+
+  if (unitId) {
+    // Cargo para una sola unidad
+    result = await apiRequest('/charges/', 'POST', {
+      unit_id: unitId, description: desc, amount,
+      date_created: created || todayISO(), due_date: due,
+    });
+  } else {
+    // Cargo general para toda la propiedad
+    result = await apiRequest(`/finance/general-charge/${propId}`, 'POST', {
+      description: desc, amount, due_date: due,
+    });
+  }
+
+  if (result) {
+    showToast(unitId
+      ? 'Cargo creado correctamente'
+      : `Cargos creados para todas las unidades`);
+    document.getElementById('charge-desc').value   = '';
+    document.getElementById('charge-amount').value = '';
+    document.getElementById('charge-due').value    = '';
+    document.getElementById('amount-preview').textContent = '0.00';
+    await loadChargesTable();
+  }
+}
+
+// ══════════════════════════════════════════════
+// TABLA HISTORIAL
+// ══════════════════════════════════════════════
+async function loadChargesTable() {
+  allChargesCache = await apiRequest('/finance/charges') || [];
+
+  // Llenar selects de filtro con valores únicos
+  const owners = [...new Set(allChargesCache.map(c => c.owner_name).filter(Boolean))].sort();
+  const units  = [...new Set(allChargesCache.map(c => c.unit_number).filter(Boolean))].sort();
+
+  const ownerSel = document.getElementById('filter-owner');
+  const unitSel  = document.getElementById('filter-unit');
+
+  if (ownerSel) {
+    const prev = ownerSel.value;
+    ownerSel.innerHTML = '<option value="">Todos</option>';
+    owners.forEach(o => ownerSel.innerHTML += `<option value="${o}">${o}</option>`);
+    ownerSel.value = prev;
+  }
+  if (unitSel) {
+    const prev = unitSel.value;
+    unitSel.innerHTML = '<option value="">Todos</option>';
+    units.forEach(u => unitSel.innerHTML += `<option value="${u}">Apt. ${u}</option>`);
+    unitSel.value = prev;
+  }
+
+  filterChargesTable();
+}
+
+function clearChargeFilters() {
+  ['filter-status','filter-owner','filter-unit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const descEl = document.getElementById('filter-desc');
+  if (descEl) descEl.value = '';
+  filterChargesTable();
+}
+
+function filterChargesTable() {
+  const status = document.getElementById('filter-status')?.value  || '';
+  const owner  = document.getElementById('filter-owner')?.value   || '';
+  const unit   = document.getElementById('filter-unit')?.value    || '';
+  const desc   = (document.getElementById('filter-desc')?.value   || '').toLowerCase().trim();
+
+  const list = allChargesCache.filter(c => {
+    if (status && c.status     !== status)                       return false;
+    if (owner  && c.owner_name !== owner)                        return false;
+    if (unit   && c.unit_number!== unit)                         return false;
+    if (desc   && !c.description?.toLowerCase().includes(desc))  return false;
+    return true;
+  });
+
+  // Actualizar badge
+  const badge = document.getElementById('charges-count-badge');
+  if (badge) badge.textContent = list.length;
+
+  const tbody = document.getElementById('charges-table-body');
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">
+      Sin cargos con los filtros aplicados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(c => {
+    const paid = parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+    return `<tr>
+      <td>${c.owner_name || '<em style="color:var(--text-muted)">Sin asignar</em>'}</td>
+      <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
+      <td><strong>${c.description}</strong></td>
+      <td style="font-size:.82rem;color:var(--text-secondary);">${formatDate(c.due_date)}</td>
+      <td class="td-right">$${formatMoney(c.amount)}</td>
+      <td class="td-right" style="color:var(--success);">$${formatMoney(paid)}</td>
+      <td class="td-right td-bold">$${formatMoney(c.balance)}</td>
+      <td><span class="badge badge-${c.status}">${c.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+renderSidebar('finances');
+init();
+</script>
+</body>
+</html>

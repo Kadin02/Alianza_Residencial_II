@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inicio | Alianza Residencial</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .agenda-item {
+      display:flex; align-items:flex-start; gap:12px;
+      padding:10px 0; border-bottom:1px solid var(--border-light);
+    }
+    .agenda-item:last-child { border-bottom:none; }
+    .agenda-type-dot {
+      width:10px; height:10px; border-radius:50%; margin-top:4px; flex-shrink:0;
+    }
+    .dot-CITA   { background:#3b82f6; }
+    .dot-EVENTO { background:#f59e0b; }
+    .dot-TAREA  { background:#10b981; }
+    .agenda-info { flex:1; }
+    .agenda-info strong { font-size:.85rem; display:block; color:var(--text-primary); }
+    .agenda-info span   { font-size:.75rem; color:var(--text-muted); }
+    .agenda-date { font-size:.75rem; font-weight:600; color:var(--accent); white-space:nowrap; }
+    .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem; }
+    @media(max-width:700px) { .dash-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="fas fa-building"></i></div>
+      <div class="stat-info"><h4>Propiedades</h4><div class="stat-value" id="stat-props">—</div><div class="stat-label">registradas</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fas fa-door-open"></i></div>
+      <div class="stat-info"><h4>Unidades</h4><div class="stat-value" id="stat-units">—</div><div class="stat-label">en el sistema</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange"><i class="fas fa-users"></i></div>
+      <div class="stat-info"><h4>Propietarios</h4><div class="stat-value" id="stat-owners">—</div><div class="stat-label">registrados</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red"><i class="fas fa-dollar-sign"></i></div>
+      <div class="stat-info"><h4>Por Cobrar</h4><div class="stat-value" id="stat-pending">—</div><div class="stat-label">saldo pendiente</div></div>
+    </div>
+  </div>
+
+  <!-- Módulos -->
+  <div class="modules-grid" style="margin-bottom:1.5rem;">
+    <a href="/static/properties.html"  class="module-card"><div class="module-icon"><i class="fas fa-building"></i></div><h3>Propiedades</h3><p>Edificios y conjuntos residenciales</p></a>
+    <a href="/static/units.html"       class="module-card"><div class="module-icon"><i class="fas fa-door-open"></i></div><h3>Unidades</h3><p>Apartamentos, locales y oficinas</p></a>
+    <a href="/static/owners.html"      class="module-card"><div class="module-icon"><i class="fas fa-users"></i></div><h3>Propietarios</h3><p>Registro e historial de propietarios</p></a>
+    <a href="/static/finances.html"    class="module-card"><div class="module-icon"><i class="fas fa-chart-line"></i></div><h3>Finanzas</h3><p>Cargos, pagos y facturación</p></a>
+    <a href="/static/suppliers.html"   class="module-card"><div class="module-icon"><i class="fas fa-truck"></i></div><h3>Proveedores</h3><p>Gestión de proveedores y pagos</p></a>
+    <a href="/static/agenda.html"      class="module-card"><div class="module-icon"><i class="fas fa-calendar-alt"></i></div><h3>Agenda</h3><p>Citas, eventos y tareas</p></a>
+    <a href="/static/reports.html"     class="module-card"><div class="module-icon"><i class="fas fa-chart-bar"></i></div><h3>Reportes</h3><p>Reportes financieros</p></a>
+    <a href="/static/imports.html"     class="module-card"><div class="module-icon"><i class="fas fa-file-import"></i></div><h3>Importar</h3><p>Carga masiva desde Excel</p></a>
+  </div>
+
+  <!-- Dashboard 2 columnas -->
+  <div class="dash-grid">
+
+    <!-- Cargos pendientes -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-clock"></i> Cargos Pendientes</h3>
+        <a href="/static/finances.html" class="btn btn-ghost btn-sm">Ver todos <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="activity-list" id="activity-list" style="padding:0 1.5rem;">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Cargando...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda de la semana -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-calendar-week"></i> Agenda de la Semana</h3>
+        <a href="/static/agenda.html" class="btn btn-ghost btn-sm">Ver todo <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="card-body" style="padding:0 1.5rem;">
+        <div id="agenda-list">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Cargando...</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="notification"></div>
+<script src="/static/js/main.js"></script>
+<script>
+renderSidebar('index');
+
+async function loadDashboard() {
+  const [props, units, owners, charges, agendaEvents] = await Promise.all([
+    apiRequest('/properties'),
+    apiRequest('/units'),
+    apiRequest('/owners'),
+    apiRequest('/finance/charges'),
+    apiRequest('/agenda/upcoming'),
+  ]);
+
+  document.getElementById('stat-props').textContent  = props?.length  ?? '—';
+  document.getElementById('stat-units').textContent  = units?.length  ?? '—';
+  document.getElementById('stat-owners').textContent = owners?.length ?? '—';
+
+  // Stats financieras
+  if (charges) {
+    const pending = charges.filter(c => c.status !== 'PAGADO').reduce((s,c) => s + parseFloat(c.balance||0), 0);
+    document.getElementById('stat-pending').textContent = `$${formatMoney(pending)}`;
+
+    const list = document.getElementById('activity-list');
+    const pendingCharges = charges.filter(c => c.status !== 'PAGADO').slice(0, 6);
+    if (!pendingCharges.length) {
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success)"></i><p>¡Sin cargos pendientes!</p></div>`;
+    } else {
+      list.innerHTML = pendingCharges.map(c => `
+        <div class="activity-item">
+          <span class="activity-dot" style="background:${c.status==='PARCIAL'?'var(--warning)':'var(--danger)'}"></span>
+          <div class="activity-content">
+            <div class="activity-title"><strong>${c.owner_name||'Sin propietario'}</strong>${c.unit_number?` · Apt. ${c.unit_number}`:''}</div>
+            <div class="activity-time">${c.description}</div>
+          </div>
+          <span class="badge badge-${c.status}">${c.status}</span>
+          <div class="activity-value">$${formatMoney(c.balance)}</div>
+        </div>`).join('');
+    }
+  }
+
+  // Agenda de la semana
+  const agList = document.getElementById('agenda-list');
+  if (!agendaEvents?.length) {
+    agList.innerHTML = `<div class="empty-state" style="padding:1.5rem;"><i class="fas fa-calendar-check" style="font-size:1.8rem;"></i><p>Sin eventos próximos esta semana</p></div>`;
+  } else {
+    const typeIcon = { CITA:'fa-handshake', EVENTO:'fa-landmark', TAREA:'fa-check-square' };
+    agList.innerHTML = agendaEvents.map(e => `
+      <div class="agenda-item">
+        <div class="agenda-type-dot dot-${e.event_type}"></div>
+        <div class="agenda-info">
+          <strong>${e.title}</strong>
+          <span>${e.event_type}${e.event_time?' · '+e.event_time:''}${e.location?' · '+e.location:''}</span>
+        </div>
+        <div class="agenda-date">${formatDate(e.event_date)}</div>
+      </div>`).join('');
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

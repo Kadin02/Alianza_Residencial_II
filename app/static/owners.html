@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Propietarios | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<header class="main-header" id="main-header"></header>
+
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-users" style="color:var(--accent);margin-right:8px;"></i>Propietarios</h1>
+    <p>Registro e historial de propietarios del sistema</p>
+  </div>
+
+  <div class="two-col">
+
+    <!-- Formulario -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-user-plus"></i> <span id="form-title">Nuevo Propietario</span></h3>
+          <button class="btn btn-muted btn-sm" id="btn-cancel" onclick="cancelEdit()" style="display:none;">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+        </div>
+        <div class="card-body">
+          <input type="hidden" id="owner-id">
+
+          <label class="field-label">Nombre completo *</label>
+          <input type="text" id="full_name" placeholder="Ej: Juan Pérez">
+
+          <label class="field-label">Identificación</label>
+          <input type="text" id="identification" placeholder="Cédula o pasaporte">
+
+          <label class="field-label">Correo electrónico</label>
+          <input type="email" id="email" placeholder="correo@email.com">
+
+          <label class="field-label">Teléfono</label>
+          <input type="tel" id="phone" placeholder="+507 6000-0000">
+
+          <button onclick="saveOwner()">
+            <i class="fas fa-save"></i> <span id="btn-label">Guardar Propietario</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Estado de cuenta rápido -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-file-invoice-dollar"></i> Estado de Cuenta</h3>
+        </div>
+        <div class="card-body">
+          <label class="field-label">Seleccionar propietario</label>
+          <select id="stmt-owner">
+            <option value="">Seleccione propietario</option>
+          </select>
+          <button onclick="openStatement()" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:4px;">
+            <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-list"></i> Propietarios Registrados</h3>
+        <span class="badge badge-primary" id="owner-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Identificación</th>
+              <th>Contacto</th>
+              <th>Unidad Activa</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="owners-table">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderHeader('owners');
+
+let editingId = null;
+let allOwnersCache = [];
+
+async function loadTable() {
+  const [owners, unitOwners, units] = await Promise.all([
+    apiRequest('/owners'),
+    apiRequest('/unit-owners/all').catch(() => null),
+    apiRequest('/units'),
+  ]);
+
+  allOwnersCache = owners || [];
+  document.getElementById('owner-count').textContent = allOwnersCache.length;
+
+  // Fill stmt select
+  const stmtSel = document.getElementById('stmt-owner');
+  stmtSel.innerHTML = '<option value="">Seleccione propietario</option>';
+  allOwnersCache.forEach(o => stmtSel.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+
+  const tbody = document.getElementById('owners-table');
+
+  if (!allOwnersCache.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin propietarios registrados</td></tr>`;
+    return;
+  }
+
+  // Build unit per owner from unit-owners
+  const unitMap = {};
+  if (unitOwners && Array.isArray(unitOwners)) {
+    unitOwners.filter(uo => uo.is_active).forEach(uo => {
+      const u = (units || []).find(x => x.id === uo.unit_id);
+      if (u) unitMap[uo.owner_id] = `Apt. ${u.unit_number}`;
+    });
+  }
+
+  tbody.innerHTML = allOwnersCache.map(o => `
+    <tr>
+      <td class="td-mono">${o.id}</td>
+      <td><strong>${o.full_name}</strong></td>
+      <td style="color:var(--text-secondary);font-size:.82rem;">${o.identification || '—'}</td>
+      <td style="font-size:.82rem;">
+        ${o.email ? `<div><i class="fas fa-envelope" style="opacity:.5;margin-right:4px;"></i>${o.email}</div>` : ''}
+        ${o.phone ? `<div><i class="fas fa-phone" style="opacity:.5;margin-right:4px;"></i>${o.phone}</div>` : ''}
+        ${!o.email && !o.phone ? '—' : ''}
+      </td>
+      <td>
+        ${unitMap[o.id]
+          ? `<span class="badge badge-success">${unitMap[o.id]}</span>`
+          : `<em style="color:var(--text-muted);font-size:.82rem;">Sin unidad</em>`}
+      </td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="editOwner(${o.id})">
+          <i class="fas fa-pencil-alt"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function saveOwner() {
+  const name = document.getElementById('full_name').value.trim();
+  if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+
+  const data = {
+    full_name:      name,
+    identification: document.getElementById('identification').value.trim() || null,
+    email:          document.getElementById('email').value.trim() || null,
+    phone:          document.getElementById('phone').value.trim() || null,
+  };
+
+  let result;
+  if (editingId) {
+    result = await apiRequest(`/owners/${editingId}`, 'PUT', data);
+    if (result) showToast('Propietario actualizado');
+  } else {
+    result = await apiRequest('/owners/', 'POST', data);
+    if (result) showToast('Propietario creado correctamente');
+  }
+
+  if (result) { cancelEdit(); loadTable(); }
+}
+
+function editOwner(id) {
+  const o = allOwnersCache.find(x => x.id === id);
+  if (!o) return;
+
+  editingId = id;
+  document.getElementById('owner-id').value        = id;
+  document.getElementById('full_name').value        = o.full_name;
+  document.getElementById('identification').value   = o.identification || '';
+  document.getElementById('email').value            = o.email || '';
+  document.getElementById('phone').value            = o.phone || '';
+  document.getElementById('form-title').textContent = 'Editar Propietario';
+  document.getElementById('btn-label').textContent  = 'Actualizar';
+  document.getElementById('btn-cancel').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  editingId = null;
+  ['owner-id','full_name','identification','email','phone'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('form-title').textContent = 'Nuevo Propietario';
+  document.getElementById('btn-label').textContent  = 'Guardar Propietario';
+  document.getElementById('btn-cancel').style.display = 'none';
+}
+
+function openStatement() {
+  const ownerId = document.getElementById('stmt-owner').value;
+  if (!ownerId) { showToast('Selecciona un propietario', 'warning'); return; }
+  window.open(`/static/estado_cuenta.html?owner_id=${ownerId}`, '_blank');
+}
+
+loadTable();
+</script>
+</body>
+</html>

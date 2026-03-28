@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .adm-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;
+      background:var(--card-bg); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:6px; }
+    .adm-tab {
+      padding:9px 20px; border-radius:var(--radius-md); border:none;
+      background:transparent; color:var(--text-secondary);
+      font-family:inherit; font-size:.85rem; font-weight:500; cursor:pointer;
+      display:flex; align-items:center; gap:7px; transition:all .18s;
+    }
+    .adm-tab:hover  { background:var(--accent-soft); color:var(--accent); }
+    .adm-tab.active { background:var(--accent); color:#fff; }
+    .adm-panel { display:none; }
+    .adm-panel.active { display:block; }
+
+    /* ── Tabla con acciones ── */
+    .action-btns { display:flex; gap:6px; }
+    .btn-edit { background:var(--accent-soft); color:var(--accent); border:1px solid var(--border); padding:4px 10px; font-size:.75rem; border-radius:5px; cursor:pointer; font-family:inherit; font-weight:600; }
+    .btn-edit:hover { background:var(--accent); color:#fff; }
+    .btn-del  { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:4px 10px; font-size:.75rem; border-radius:5px; cursor:pointer; font-family:inherit; font-weight:600; }
+    .btn-del:hover  { background:#dc2626; color:#fff; }
+
+    /* ── Badge rol ── */
+    .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+    .role-ADMIN { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .role-USER  { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .active-dot   { display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:4px; }
+    .inactive-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#dc2626; margin-right:4px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(10,20,40,.48); z-index:500;
+      align-items:center; justify-content:center;
+      backdrop-filter:blur(2px);
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--card-bg); border-radius:var(--radius-xl);
+      width:460px; max-width:96vw; box-shadow:var(--shadow-lg);
+      animation:modalIn .18s ease;
+    }
+    @keyframes modalIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px 14px; border-bottom:1px solid var(--border); }
+    .modal-header h3 { font-size:.95rem; font-weight:700; }
+    .modal-close { background:transparent; border:none; font-size:1rem; cursor:pointer; color:var(--text-muted); padding:4px 8px; border-radius:5px; width:auto; margin-top:0; }
+    .modal-close:hover { background:var(--border); }
+    .modal-body { padding:20px 22px; }
+    .modal-body button { margin-top:6px; }
+
+    /* Filtro pagos/cargos */
+    .pf-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px; }
+    .pf-row > div { display:flex; flex-direction:column; }
+    .pf-row label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:3px; }
+    .pf-row select, .pf-row input { width:auto; margin-bottom:0; min-width:140px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-shield-alt" style="color:var(--accent);margin-right:8px;"></i>Administración</h1>
+    <p>Gestión de usuarios, pagos y cargos — Solo Administrador</p>
+  </div>
+
+  <div id="access-denied" style="display:none;" class="card">
+    <div class="card-body" style="text-align:center;padding:3rem;">
+      <i class="fas fa-lock" style="font-size:2.5rem;color:var(--danger);opacity:.5;display:block;margin-bottom:1rem;"></i>
+      <h3>Acceso restringido</h3>
+      <p style="color:var(--text-muted);margin-top:.5rem;">Esta sección es solo para administradores.</p>
+    </div>
+  </div>
+
+  <div id="admin-content" style="display:none;">
+
+    <!-- Tabs -->
+    <div class="adm-tabs">
+      <button class="adm-tab active" onclick="switchTab('usuarios')">
+        <i class="fas fa-users-cog"></i> Usuarios
+      </button>
+      <button class="adm-tab" onclick="switchTab('pagos')">
+        <i class="fas fa-money-bill-wave"></i> Gestión de Pagos
+      </button>
+      <button class="adm-tab" onclick="switchTab('cargos')">
+        <i class="fas fa-file-invoice"></i> Gestión de Cargos
+      </button>
+    </div>
+
+    <!-- ══ USUARIOS ══ -->
+    <div class="adm-panel active" id="panel-usuarios">
+      <div class="two-col">
+
+        <!-- Formulario nuevo usuario -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header">
+            <h3><i class="fas fa-user-plus"></i> Nuevo Usuario</h3>
+          </div>
+          <div class="card-body">
+            <label class="field-label">Nombre de usuario *</label>
+            <input type="text" id="new-username" placeholder="Ej: operador1">
+
+            <label class="field-label">Contraseña *</label>
+            <input type="password" id="new-password" placeholder="Mínimo 6 caracteres">
+
+            <label class="field-label">Rol *</label>
+            <select id="new-role">
+              <option value="USER">Usuario (sin eliminar/editar pagos o cargos)</option>
+              <option value="ADMIN">Administrador (acceso total)</option>
+            </select>
+
+            <div style="background:var(--accent-soft);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.8rem;color:var(--text-secondary);">
+              <strong>Rol Usuario:</strong> puede registrar pagos, crear cargos, propietarios y propiedades, pero <strong>no puede eliminar ni editar</strong> pagos o cargos existentes.<br><br>
+              <strong>Rol Administrador:</strong> acceso total, incluyendo eliminar y editar pagos y cargos.
+            </div>
+
+            <button onclick="createUser()">
+              <i class="fas fa-save"></i> Crear Usuario
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de usuarios -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header">
+            <h3><i class="fas fa-list"></i> Usuarios del Sistema</h3>
+            <span class="badge badge-primary" id="users-count">0</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+              </thead>
+              <tbody id="users-tbody">
+                <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ PAGOS ══ -->
+    <div class="adm-panel" id="panel-pagos">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-money-bill-wave"></i> Todos los Pagos Registrados</h3>
+          <span class="badge badge-primary" id="payments-count">0</span>
+        </div>
+
+        <div class="card-body" style="padding-bottom:0;">
+          <div class="pf-row">
+            <div>
+              <label>Propietario</label>
+              <select id="pf-owner" onchange="filterPayments()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div>
+              <label>Apartamento</label>
+              <select id="pf-unit" onchange="filterPayments()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div>
+              <label>Buscar</label>
+              <input type="text" id="pf-search" placeholder="Factura, referencia..." oninput="filterPayments()" style="min-width:180px;">
+            </div>
+            <button class="btn btn-ghost" onclick="clearPaymentFilters()" style="width:auto;margin-top:0;align-self:flex-end;">
+              <i class="fas fa-times"></i> Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrapper" style="margin-top:8px;">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha</th>
+                <th>Propietario</th>
+                <th>Apto</th>
+                <th>Cargos pagados</th>
+                <th class="td-right">Monto</th>
+                <th>Factura</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="payments-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CARGOS ══ -->
+    <div class="adm-panel" id="panel-cargos">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-file-invoice"></i> Todos los Cargos</h3>
+          <span class="badge badge-primary" id="charges-count">0</span>
+        </div>
+
+        <div class="card-body" style="padding-bottom:0;">
+          <div class="pf-row">
+            <div>
+              <label>Estado</label>
+              <select id="cf-status" onchange="filterCharges()">
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="PARCIAL">Parcial</option>
+                <option value="PAGADO">Pagado</option>
+              </select>
+            </div>
+            <div>
+              <label>Propietario</label>
+              <select id="cf-owner" onchange="filterCharges()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div>
+              <label>Apartamento</label>
+              <select id="cf-unit" onchange="filterCharges()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div>
+              <label>Descripción</label>
+              <input type="text" id="cf-desc" placeholder="Buscar..." oninput="filterCharges()" style="min-width:160px;">
+            </div>
+            <button class="btn btn-ghost" onclick="clearChargeFilters()" style="width:auto;margin-top:0;align-self:flex-end;">
+              <i class="fas fa-times"></i> Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrapper" style="margin-top:8px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Propietario</th>
+                <th>Apto</th>
+                <th>Descripción</th>
+                <th>Vence</th>
+                <th class="td-right">Total</th>
+                <th class="td-right">Saldo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="charges-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /admin-content -->
+</div>
+
+<!-- ══ MODAL CAMBIO DE CONTRASEÑA ══ -->
+<div class="modal-overlay" id="pwd-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fas fa-key"></i> Cambiar Contraseña</h3>
+      <button class="modal-close" onclick="closePwdModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:14px;">
+        Cambiando contraseña de: <strong id="pwd-modal-user">—</strong>
+      </p>
+      <label class="field-label">Nueva contraseña *</label>
+      <input type="password" id="modal-new-pwd" placeholder="Mínimo 6 caracteres">
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button onclick="confirmPwdChange()" style="flex:1;margin-top:0;">
+          <i class="fas fa-save"></i> Guardar
+        </button>
+        <button onclick="closePwdModal()" class="btn btn-muted" style="width:auto;margin-top:0;">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR PAGO ══ -->
+<div class="modal-overlay" id="edit-payment-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fas fa-edit"></i> Editar Pago</h3>
+      <button class="modal-close" onclick="closeEditPayment()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-pay-id">
+      <label class="field-label">Fecha *</label>
+      <input type="date" id="edit-pay-date">
+      <label class="field-label">Monto *</label>
+      <input type="number" id="edit-pay-amount" step="0.01" min="0.01">
+      <label class="field-label">N° Factura física</label>
+      <input type="text" id="edit-pay-invoice" placeholder="Opcional">
+      <label class="field-label">Referencia</label>
+      <input type="text" id="edit-pay-ref" placeholder="Opcional">
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px;margin-bottom:12px;font-size:.8rem;color:#856404;">
+        <i class="fas fa-exclamation-triangle"></i>
+        Editar el monto de un pago no recalcula automáticamente los saldos de los cargos vinculados.
+        Úsalo solo para corregir datos de referencia o fecha.
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="confirmEditPayment()" style="flex:1;margin-top:0;"><i class="fas fa-save"></i> Guardar</button>
+        <button onclick="closeEditPayment()" class="btn btn-muted" style="width:auto;margin-top:0;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR CARGO ══ -->
+<div class="modal-overlay" id="edit-charge-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fas fa-edit"></i> Editar Cargo</h3>
+      <button class="modal-close" onclick="closeEditCharge()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-chg-id">
+      <input type="hidden" id="edit-chg-unit-id">
+      <label class="field-label">Descripción *</label>
+      <input type="text" id="edit-chg-desc">
+      <label class="field-label">Monto *</label>
+      <input type="number" id="edit-chg-amount" step="0.01" min="0.01">
+      <label class="field-label">Fecha creación *</label>
+      <input type="date" id="edit-chg-date-created">
+      <label class="field-label">Fecha vencimiento *</label>
+      <input type="date" id="edit-chg-due-date">
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button onclick="confirmEditCharge()" style="flex:1;margin-top:0;"><i class="fas fa-save"></i> Guardar</button>
+        <button onclick="closeEditCharge()" class="btn btn-muted" style="width:auto;margin-top:0;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderSidebar('admin');
+
+// Verificar que sea admin
+if (!Auth.isAdmin()) {
+  document.getElementById('access-denied').style.display = 'block';
+} else {
+  document.getElementById('admin-content').style.display = 'block';
+  init();
+}
+
+let allUsers    = [];
+let allPayments = [];
+let allCharges  = [];
+let pwdTargetId = null;
+
+// ── Init ──────────────────────────────────────────────────
+async function init() {
+  await Promise.all([loadUsers(), loadPayments(), loadCharges()]);
+}
+
+// ── Tabs ──────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.adm-tab').forEach((b, i) => {
+    b.classList.toggle('active', ['usuarios','pagos','cargos'][i] === tab);
+  });
+  document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ════════════ USUARIOS ════════════════════════════════════
+
+async function loadUsers() {
+  allUsers = await apiRequest('/auth/users') || [];
+  renderUsers();
+}
+
+function renderUsers() {
+  document.getElementById('users-count').textContent = allUsers.length;
+  const tbody = document.getElementById('users-tbody');
+  if (!allUsers.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin usuarios</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allUsers.map(u => `
+    <tr>
+      <td><strong>${u.username}</strong></td>
+      <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+      <td>
+        <span class="${u.is_active ? 'active-dot' : 'inactive-dot'}"></span>
+        ${u.is_active ? 'Activo' : 'Inactivo'}
+      </td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-edit" onclick="openPwdModal(${u.id}, '${u.username}')">
+            <i class="fas fa-key"></i> Contraseña
+          </button>
+          <button class="btn-edit" onclick="toggleUser(${u.id})"
+            style="${u.is_active ? 'background:#fef3c7;color:#92400e;' : 'background:#d1fae5;color:#065f46;'}">
+            <i class="fas fa-${u.is_active ? 'ban' : 'check'}"></i>
+            ${u.is_active ? 'Desactivar' : 'Activar'}
+          </button>
+          <button class="btn-del" onclick="deleteUser(${u.id}, '${u.username}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function createUser() {
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value;
+  const role     = document.getElementById('new-role').value;
+  if (!username || !password) { showToast('Completa usuario y contraseña', 'error'); return; }
+  if (password.length < 6)    { showToast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
+  const r = await apiRequest('/auth/users', 'POST', { username, password, role });
+  if (r) {
+    showToast(`Usuario ${username} creado`, 'success');
+    document.getElementById('new-username').value = '';
+    document.getElementById('new-password').value = '';
+    loadUsers();
+  }
+}
+
+async function toggleUser(id) {
+  const r = await apiRequest(`/auth/users/${id}/toggle`, 'PATCH', {});
+  if (r) { showToast(r.message); loadUsers(); }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm(`¿Eliminar el usuario "${username}"? Esta acción no se puede deshacer.`)) return;
+  const r = await apiRequest(`/auth/users/${id}`, 'DELETE');
+  if (r) { showToast('Usuario eliminado'); loadUsers(); }
+}
+
+function openPwdModal(id, username) {
+  pwdTargetId = id;
+  document.getElementById('pwd-modal-user').textContent = username;
+  document.getElementById('modal-new-pwd').value = '';
+  document.getElementById('pwd-modal').classList.add('open');
+}
+function closePwdModal() { document.getElementById('pwd-modal').classList.remove('open'); }
+
+async function confirmPwdChange() {
+  const pwd = document.getElementById('modal-new-pwd').value;
+  if (!pwd || pwd.length < 6) { showToast('Mínimo 6 caracteres', 'error'); return; }
+  const r = await apiRequest(`/auth/users/${pwdTargetId}/password`, 'PATCH', { new_password: pwd });
+  if (r) { showToast('Contraseña actualizada'); closePwdModal(); }
+}
+
+// ════════════ PAGOS ═══════════════════════════════════════
+
+async function loadPayments() {
+  allPayments = await apiRequest('/finance/all-payments') || [];
+
+  // Llenar selects de filtro
+  const owners = [...new Set(allPayments.map(p => p.owner_name).filter(Boolean))].sort();
+  const units  = [...new Set(allPayments.map(p => p.unit_number).filter(Boolean))].sort();
+  const pfOwner = document.getElementById('pf-owner');
+  const pfUnit  = document.getElementById('pf-unit');
+  pfOwner.innerHTML = '<option value="">Todos</option>';
+  pfUnit.innerHTML  = '<option value="">Todos</option>';
+  owners.forEach(o => pfOwner.innerHTML += `<option>${o}</option>`);
+  units.forEach(u  => pfUnit.innerHTML  += `<option value="${u}">Apt. ${u}</option>`);
+
+  filterPayments();
+}
+
+function filterPayments() {
+  const owner  = document.getElementById('pf-owner').value;
+  const unit   = document.getElementById('pf-unit').value;
+  const search = document.getElementById('pf-search').value.toLowerCase().trim();
+
+  const list = allPayments.filter(p => {
+    if (owner  && p.owner_name  !== owner) return false;
+    if (unit   && p.unit_number !== unit)  return false;
+    if (search) {
+      const txt = [p.invoice_number, p.reference, p.owner_name, String(p.amount)].join(' ').toLowerCase();
+      if (!txt.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('payments-count').textContent = list.length;
+  const tbody = document.getElementById('payments-tbody');
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td class="td-mono" style="font-size:.78rem;color:var(--text-muted);">#${p.payment_id}</td>
+      <td>${formatDate(p.fecha)}</td>
+      <td style="font-size:.83rem;">${p.owner_name}</td>
+      <td>Apt. ${p.unit_number}</td>
+      <td style="font-size:.78rem;color:var(--text-muted);">
+        ${p.cargos.map(c => `<div>${c.description} <strong>$${formatMoney(c.applied)}</strong></div>`).join('') || '—'}
+      </td>
+      <td class="td-right"><strong>$${formatMoney(p.amount)}</strong></td>
+      <td style="font-size:.78rem;color:var(--text-muted);">${p.invoice_number || '—'}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-edit" onclick="openEditPayment(${p.payment_id}, '${p.fecha}', ${p.amount}, '${p.invoice_number||''}', '${p.reference||''}')">
+            <i class="fas fa-edit"></i> Editar
+          </button>
+          <button class="btn-del" onclick="deletePayment(${p.payment_id})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function clearPaymentFilters() {
+  ['pf-owner','pf-unit','pf-search'].forEach(id => document.getElementById(id).value = '');
+  filterPayments();
+}
+
+function openEditPayment(id, fecha, amount, invoice, ref) {
+  document.getElementById('edit-pay-id').value      = id;
+  document.getElementById('edit-pay-date').value    = fecha;
+  document.getElementById('edit-pay-amount').value  = amount;
+  document.getElementById('edit-pay-invoice').value = invoice;
+  document.getElementById('edit-pay-ref').value     = ref;
+  document.getElementById('edit-payment-modal').classList.add('open');
+}
+function closeEditPayment() { document.getElementById('edit-payment-modal').classList.remove('open'); }
+
+async function confirmEditPayment() {
+  const id      = document.getElementById('edit-pay-id').value;
+  const date    = document.getElementById('edit-pay-date').value;
+  const amount  = parseFloat(document.getElementById('edit-pay-amount').value);
+  const invoice = document.getElementById('edit-pay-invoice').value.trim() || null;
+  const ref     = document.getElementById('edit-pay-ref').value.trim()     || null;
+  if (!date || !amount || amount <= 0) { showToast('Fecha y monto son obligatorios', 'error'); return; }
+  const r = await apiRequest(`/finance/payment/${id}`, 'PUT', { payment_date: date, amount, invoice_number: invoice, reference: ref });
+  if (r) { showToast('Pago actualizado'); closeEditPayment(); loadPayments(); }
+}
+
+async function deletePayment(id) {
+  if (!confirm(`¿Eliminar el pago #${id}?\n\nEsto revertirá los saldos de los cargos vinculados.`)) return;
+  const r = await apiRequest(`/finance/payment/${id}`, 'DELETE');
+  if (r) { showToast('Pago eliminado y saldos revertidos', 'success'); loadPayments(); loadCharges(); }
+}
+
+// ════════════ CARGOS ══════════════════════════════════════
+
+async function loadCharges() {
+  allCharges = await apiRequest('/finance/charges') || [];
+
+  const owners = [...new Set(allCharges.map(c => c.owner_name).filter(Boolean))].sort();
+  const units  = [...new Set(allCharges.map(c => c.unit_number).filter(Boolean))].sort();
+  const cfOwner = document.getElementById('cf-owner');
+  const cfUnit  = document.getElementById('cf-unit');
+  cfOwner.innerHTML = '<option value="">Todos</option>';
+  cfUnit.innerHTML  = '<option value="">Todos</option>';
+  owners.forEach(o => cfOwner.innerHTML += `<option>${o}</option>`);
+  units.forEach(u  => cfUnit.innerHTML  += `<option value="${u}">Apt. ${u}</option>`);
+
+  filterCharges();
+}
+
+function filterCharges() {
+  const status = document.getElementById('cf-status').value;
+  const owner  = document.getElementById('cf-owner').value;
+  const unit   = document.getElementById('cf-unit').value;
+  const desc   = document.getElementById('cf-desc').value.toLowerCase().trim();
+
+  const list = allCharges.filter(c => {
+    if (status && c.status      !== status) return false;
+    if (owner  && c.owner_name  !== owner)  return false;
+    if (unit   && c.unit_number !== unit)   return false;
+    if (desc   && !c.description?.toLowerCase().includes(desc)) return false;
+    return true;
+  });
+
+  document.getElementById('charges-count').textContent = list.length;
+  const tbody = document.getElementById('charges-tbody');
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(c => `
+    <tr>
+      <td style="font-size:.83rem;">${c.owner_name || '<em style="color:var(--text-muted)">Sin asignar</em>'}</td>
+      <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
+      <td><strong>${c.description}</strong></td>
+      <td style="font-size:.82rem;color:var(--text-secondary);">${formatDate(c.due_date)}</td>
+      <td class="td-right">$${formatMoney(c.amount)}</td>
+      <td class="td-right td-bold">$${formatMoney(c.balance)}</td>
+      <td><span class="badge badge-${c.status}">${c.status}</span></td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-edit" onclick="openEditCharge(${c.charge_id}, ${c.unit_id}, '${c.description}', ${c.amount}, '${c.date_created}', '${c.due_date}')">
+            <i class="fas fa-edit"></i> Editar
+          </button>
+          <button class="btn-del" onclick="deleteCharge(${c.charge_id}, '${c.description}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function clearChargeFilters() {
+  ['cf-status','cf-owner','cf-unit','cf-desc'].forEach(id => document.getElementById(id).value = '');
+  filterCharges();
+}
+
+function openEditCharge(id, unitId, desc, amount, dateCreated, dueDate) {
+  document.getElementById('edit-chg-id').value           = id;
+  document.getElementById('edit-chg-unit-id').value      = unitId;
+  document.getElementById('edit-chg-desc').value         = desc;
+  document.getElementById('edit-chg-amount').value       = amount;
+  document.getElementById('edit-chg-date-created').value = dateCreated;
+  document.getElementById('edit-chg-due-date').value     = dueDate;
+  document.getElementById('edit-charge-modal').classList.add('open');
+}
+function closeEditCharge() { document.getElementById('edit-charge-modal').classList.remove('open'); }
+
+async function confirmEditCharge() {
+  const id          = document.getElementById('edit-chg-id').value;
+  const unitId      = document.getElementById('edit-chg-unit-id').value;
+  const desc        = document.getElementById('edit-chg-desc').value.trim();
+  const amount      = parseFloat(document.getElementById('edit-chg-amount').value);
+  const dateCreated = document.getElementById('edit-chg-date-created').value;
+  const dueDate     = document.getElementById('edit-chg-due-date').value;
+  if (!desc || !amount || !dateCreated || !dueDate) { showToast('Completa todos los campos', 'error'); return; }
+  const r = await apiRequest(`/charges/${id}`, 'PUT', {
+    unit_id: parseInt(unitId), description: desc, amount, date_created: dateCreated, due_date: dueDate
+  });
+  if (r) { showToast('Cargo actualizado'); closeEditCharge(); loadCharges(); }
+}
+
+async function deleteCharge(id, desc) {
+  if (!confirm(`¿Eliminar el cargo "${desc}"?\n\nEsto eliminará también los registros de pago vinculados a este cargo.`)) return;
+  const r = await apiRequest(`/charges/${id}`, 'DELETE');
+  if (r) { showToast('Cargo eliminado', 'success'); loadCharges(); loadPayments(); }
+}
+
+// Cerrar modales al click fuera
+['pwd-modal','edit-payment-modal','edit-charge-modal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>
