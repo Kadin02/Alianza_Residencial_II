@@ -6,152 +6,118 @@
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Lato',sans-serif; background:#f4f4f4; color:#222; font-size:12.5px; }
 
-    body {
-      font-family: 'Lato', sans-serif;
-      background: #f4f4f4;
-      color: #222;
-      font-size: 12.5px;
-    }
-
-    /* ── Barra de herramientas ── */
     .print-bar {
-      background: #1a1a2e;
-      padding: 10px 24px;
-      display: flex; align-items: center; gap: 10px; justify-content: center;
+      background:#1a1a2e; padding:10px 24px;
+      display:flex; align-items:center; gap:10px; justify-content:center;
     }
     .print-bar button {
-      padding: 7px 20px; border: none; border-radius: 5px;
-      font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+      padding:7px 20px; border:none; border-radius:5px;
+      font-family:inherit; font-size:.82rem; font-weight:700; cursor:pointer;
     }
-    .btn-print { background: #fff; color: #1a1a2e; }
-    .btn-back  { background: transparent; color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.3) !important; }
-    .btn-print:hover, .btn-back:hover { opacity:.85; }
+    .btn-print { background:#fff; color:#1a1a2e; }
+    .btn-back  { background:transparent; color:rgba(255,255,255,.8); border:1px solid rgba(255,255,255,.3)!important; }
+    .btn-print:hover,.btn-back:hover { opacity:.85; }
 
-    /* ── Página ── */
     .page {
-      width: 210mm;
-      min-height: 277mm;
-      margin: 20px auto;
-      background: #fff;
-      padding: 12mm 14mm 14mm;
-      box-shadow: 0 2px 20px rgba(0,0,0,.1);
+      width:210mm; min-height:277mm; margin:20px auto;
+      background:#fff; padding:12mm 14mm 14mm;
+      box-shadow:0 2px 20px rgba(0,0,0,.1);
     }
 
-    /* ── Header ── */
     .doc-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 18px;
-      padding-bottom: 14px;
-      border-bottom: 2px solid #1a1a2e;
+      display:flex; justify-content:space-between; align-items:flex-start;
+      margin-bottom:18px; padding-bottom:14px; border-bottom:2px solid #1a1a2e;
     }
-    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand { display:flex; align-items:center; gap:10px; }
     .brand-logo {
-      width: 48px; height: 48px; background: #1a1a2e;
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 900; font-size: .95rem; letter-spacing: -1px; overflow: hidden;
+      width:48px; height:48px; background:#1a1a2e; border-radius:8px;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:900; font-size:.95rem; overflow:hidden;
     }
-    .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
-    .brand-name h1  { font-size: 1rem; font-weight: 900; color: #1a1a2e; letter-spacing: .03em; }
-    .brand-name p   { font-size: .7rem; color: #888; margin-top: 2px; line-height: 1.5; }
-    .doc-title { text-align: right; }
-    .doc-title h2 { font-size: 1.1rem; font-weight: 900; color: #1a1a2e; text-transform: uppercase; letter-spacing: .08em; }
-    .doc-title .doc-date { font-size: .72rem; color: #888; margin-top: 3px; }
+    .brand-logo img { width:100%; height:100%; object-fit:contain; }
+    .brand-name h1 { font-size:1rem; font-weight:900; color:#1a1a2e; }
+    .brand-name p  { font-size:.7rem; color:#888; margin-top:2px; line-height:1.5; }
+    .doc-title { text-align:right; }
+    .doc-title h2 { font-size:1.1rem; font-weight:900; color:#1a1a2e; text-transform:uppercase; letter-spacing:.08em; }
+    .doc-title .doc-date { font-size:.72rem; color:#888; margin-top:3px; }
 
-    /* ── Info del propietario ── */
-    .owner-section {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px; margin-bottom: 16px;
-    }
-    .owner-cell .lbl {
-      font-size: .62rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .08em; color: #999; margin-bottom: 3px;
-    }
-    .owner-cell .val { font-size: .88rem; font-weight: 700; color: #1a1a2e; }
+    .owner-section { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+    .owner-cell .lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#999; margin-bottom:3px; }
+    .owner-cell .val { font-size:.88rem; font-weight:700; color:#1a1a2e; }
 
-    /* ── Resumen financiero ── */
     .fin-summary {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 0; margin-bottom: 18px;
-      border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;
+      display:grid; grid-template-columns:1fr 1fr 1fr;
+      gap:0; margin-bottom:18px;
+      border:1px solid #e0e0e0; border-radius:6px; overflow:hidden;
     }
-    .fin-cell { padding: 10px 14px; border-right: 1px solid #e0e0e0; }
-    .fin-cell:last-child { border-right: none; }
-    .fin-cell .fc-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #999; margin-bottom: 4px; }
-    .fin-cell .fc-val { font-size: 1.05rem; font-weight: 900; color: #1a1a2e; }
-    .fin-cell.is-pending .fc-val { color: #c0392b; }
-    .fin-cell.is-paid    .fc-val { color: #27ae60; }
+    .fin-cell { padding:10px 14px; border-right:1px solid #e0e0e0; }
+    .fin-cell:last-child { border-right:none; }
+    .fin-cell .fc-lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#999; margin-bottom:4px; }
+    .fin-cell .fc-val { font-size:1.05rem; font-weight:900; color:#1a1a2e; }
+    .fin-cell.is-pending .fc-val { color:#c0392b; }
+    .fin-cell.is-paid    .fc-val { color:#27ae60; }
 
-    /* ── Tabla ── */
-    .section-title {
-      font-size: .62rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .1em; color: #999; margin-bottom: 8px;
-    }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: .82rem; }
-    thead tr { border-bottom: 2px solid #1a1a2e; }
-    thead th { padding: 6px 10px; text-align: left; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #1a1a2e; }
-    thead th.r { text-align: right; }
-    tbody tr { border-bottom: 1px solid #f0f0f0; }
-    tbody tr:last-child { border-bottom: none; }
-    tbody td { padding: 7px 10px; color: #333; vertical-align: middle; }
-    tbody td.r { text-align: right; }
-    tbody td.b { font-weight: 700; }
-    tbody td.muted { color: #999; }
+    .section-title { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#999; margin-bottom:8px; }
 
-    /* ── Badges estado ── */
-    .st { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
-    .st-PAGADO    { background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; }
-    .st-PARCIAL   { background: #fef9e7; color: #b7950b; border: 1px solid #f9e79f; }
-    .st-PENDIENTE { background: #fdedec; color: #c0392b; border: 1px solid #f1948a; }
+    table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:.82rem; }
+    thead tr { border-bottom:2px solid #1a1a2e; }
+    thead th { padding:6px 10px; text-align:left; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#1a1a2e; }
+    thead th.r { text-align:right; }
+    tbody tr { border-bottom:1px solid #f0f0f0; }
+    tbody tr:last-child { border-bottom:none; }
+    tbody td { padding:7px 10px; color:#333; vertical-align:middle; }
+    tbody td.r { text-align:right; }
+    tbody td.b { font-weight:700; }
+    tbody td.muted { color:#999; }
 
-    /* ── Sub-filas de pagos ── */
-    .pay-detail-row td { padding: 0 10px 5px 30px; border-bottom: none; }
+    .st { display:inline-block; padding:2px 8px; border-radius:3px; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+    .st-PAGADO    { background:#eafaf1; color:#1e8449; border:1px solid #a9dfbf; }
+    .st-PARCIAL   { background:#fef9e7; color:#b7950b; border:1px solid #f9e79f; }
+    .st-PENDIENTE { background:#fdedec; color:#c0392b; border:1px solid #f1948a; }
+
+    /* Sub-filas de pagos */
+    .pay-detail-row td { padding:0 10px 5px 30px; border-bottom:none; }
     .pay-detail-inner {
-      background: #f9f9f9; border-left: 2px solid #ddd;
-      border-radius: 0 4px 4px 0; padding: 4px 10px;
-      font-size: .75rem; color: #666;
+      background:#f9f9f9; border-left:2px solid #ddd;
+      border-radius:0 4px 4px 0; padding:5px 10px;
+      font-size:.75rem; color:#666;
+      display:flex; align-items:center; flex-wrap:wrap; gap:10px;
     }
-    .pay-detail-inner span { margin-right: 12px; }
-    .pay-detail-inner strong { color: #333; }
+    .pay-detail-inner span { white-space:nowrap; }
+    .pay-detail-inner strong { color:#333; }
+    .btn-factura-mini {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 10px; border-radius:4px; font-size:.68rem; font-weight:700;
+      background:#e8f0fe; color:#1a73e8; border:1px solid #c5d8fc;
+      cursor:pointer; text-decoration:none; white-space:nowrap;
+    }
+    .btn-factura-mini:hover { background:#d2e3fc; }
 
-    /* ── Footer ── */
-    .doc-footer {
-      margin-top: 20px; padding-top: 12px;
-      border-top: 1px solid #e0e0e0;
-      display: flex; justify-content: space-between; align-items: flex-end;
-    }
-    .doc-footer-left { font-size: .67rem; color: #aaa; line-height: 1.8; }
-    .firma-line {
-      border-top: 1px solid #bbb; margin-top: 36px; padding-top: 5px;
-      font-size: .67rem; color: #aaa; text-align: center; min-width: 140px;
-    }
-
-    /* ── Aviso legal ── */
     .legal-notice {
-      margin-top: 16px;
-      padding: 10px 14px;
-      background: #f8f8f8;
-      border: 1px solid #e8e8e8;
-      border-left: 3px solid #1a1a2e;
-      border-radius: 0 4px 4px 0;
+      margin-top:16px; padding:10px 14px;
+      background:#f8f8f8; border:1px solid #e8e8e8;
+      border-left:3px solid #1a1a2e; border-radius:0 4px 4px 0;
     }
-    .legal-notice p {
-      font-size: .64rem;
-      color: #777;
-      line-height: 1.7;
-      margin: 0;
-    }
-    .legal-notice strong { color: #555; }
+    .legal-notice p { font-size:.64rem; color:#777; line-height:1.7; margin:0; }
+    .legal-notice strong { color:#555; }
 
-    #loading { text-align: center; padding: 60px; color: #999; font-size: .9rem; }
+    .doc-footer {
+      margin-top:20px; padding-top:12px; border-top:1px solid #e0e0e0;
+      display:flex; justify-content:space-between; align-items:flex-end;
+    }
+    .doc-footer-left { font-size:.67rem; color:#aaa; line-height:1.8; }
+    .firma-line { border-top:1px solid #bbb; margin-top:36px; padding-top:5px; font-size:.67rem; color:#aaa; text-align:center; min-width:140px; }
+
+    #loading { text-align:center; padding:60px; color:#999; font-size:.9rem; }
 
     @media print {
-      body { background: #fff; }
-      .print-bar { display: none; }
-      .page { margin: 0; box-shadow: none; padding: 8mm 12mm; width: 100%; min-height: auto; }
-      @page { size: A4; margin: 0; }
+      body { background:#fff; }
+      .print-bar { display:none; }
+      .btn-factura-mini { display:none; }  /* ocultar botones en impresión */
+      .page { margin:0; box-shadow:none; padding:8mm 12mm; width:100%; min-height:auto; }
+      @page { size:A4; margin:0; }
     }
   </style>
 </head>
@@ -166,7 +132,6 @@
 
 <div class="page" id="stmt-page" style="display:none;">
 
-  <!-- Header -->
   <div class="doc-head">
     <div class="brand">
       <div class="brand-logo" id="stmt-logo">AR</div>
@@ -181,7 +146,6 @@
     </div>
   </div>
 
-  <!-- Datos del propietario -->
   <div class="owner-section">
     <div class="owner-cell">
       <div class="lbl">Propietario</div>
@@ -197,7 +161,6 @@
     </div>
   </div>
 
-  <!-- Resumen financiero -->
   <div class="fin-summary">
     <div class="fin-cell">
       <div class="fc-lbl">Total facturado</div>
@@ -213,7 +176,6 @@
     </div>
   </div>
 
-  <!-- Tabla de cargos -->
   <div class="section-title">Historial de cargos</div>
   <table>
     <thead>
@@ -229,7 +191,6 @@
     <tbody id="stmt-tbody"></tbody>
   </table>
 
-  <!-- Aviso legal -->
   <div class="legal-notice">
     <p>
       <strong>DOCUMENTO NO FISCAL —</strong>
@@ -241,7 +202,6 @@
     </p>
   </div>
 
-  <!-- Footer -->
   <div class="doc-footer">
     <div class="doc-footer-left">
       Alianza Residencial &bull; Sistema de Administración de Propiedades<br>
@@ -253,7 +213,7 @@
 </div>
 
 <script>
-const fmoney = v => parseFloat(v||0).toLocaleString('es-PA', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const fmoney = v => parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fdate  = s => {
   if (!s) return '—';
   try {
@@ -266,22 +226,21 @@ const fdate  = s => {
 (async () => {
   const params  = new URLSearchParams(location.search);
   const ownerId = params.get('owner_id');
-  if (!ownerId) { document.getElementById('loading').textContent = 'No se especificó un propietario.'; return; }
+  if (!ownerId) { document.getElementById('loading').textContent='No se especificó un propietario.'; return; }
 
   try {
     const token   = localStorage.getItem('access_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers = token ? {'Authorization':`Bearer ${token}`} : {};
 
-    const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`, { headers })
+    const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`,{headers})
       .then(r => { if (!r.ok) throw new Error('No encontrado'); return r.json(); });
 
     const logoEl = document.getElementById('stmt-logo');
     const img    = new Image();
-    img.onload   = () => { logoEl.innerHTML = `<img src="/static/logo.png" alt="Logo">`; };
+    img.onload   = () => { logoEl.innerHTML=`<img src="/static/logo.png" alt="Logo">`; };
     img.src      = '/static/logo.png';
 
-    const today = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
-
+    const today = new Date().toLocaleDateString('es-PA',{year:'numeric',month:'long',day:'numeric'});
     document.getElementById('stmt-date').textContent      = today;
     document.getElementById('gen-date').textContent       = today;
     document.getElementById('s-owner').textContent        = data.owner_name    || '—';
@@ -290,9 +249,8 @@ const fdate  = s => {
     document.getElementById('stmt-prop-addr').textContent = data.property_address || 'Administración de Propiedades';
 
     const stmt = data.statement || [];
-    let tFact = 0, tPaid = 0, tPend = 0;
-    stmt.forEach(c => { tFact += c.amount||0; tPaid += c.paid||0; tPend += c.balance||0; });
-
+    let tFact=0, tPaid=0, tPend=0;
+    stmt.forEach(c => { tFact+=c.amount||0; tPaid+=c.paid||0; tPend+=c.balance||0; });
     document.getElementById('sum-total').textContent = `$${fmoney(tFact)}`;
     document.getElementById('sum-paid').textContent  = `$${fmoney(tPaid)}`;
     document.getElementById('sum-pend').textContent  = `$${fmoney(tPend)}`;
@@ -314,15 +272,26 @@ const fdate  = s => {
           </tr>`;
 
         if (c.payments?.length) {
+          // Mostrar cada pago con su # referencia/factura y botón Ver Factura
+          const pagosHtml = c.payments.map(p => {
+            const ref = p.fiscal_invoice_number
+              ? `<span>Factura: <strong>${p.fiscal_invoice_number}</strong></span>`
+              : (p.reference ? `<span>Ref: <strong>${p.reference}</strong></span>` : '');
+            const btnFactura = p.payment_id
+              ? `<a href="/static/factura.html?payment_id=${p.payment_id}" target="_blank" class="btn-factura-mini">
+                   <i class="fas fa-receipt" style="font-size:.65rem;"></i> Ver Factura
+                 </a>`
+              : '';
+            return `
+              <span>✓ <strong>$${fmoney(p.applied_amount)}</strong></span>
+              <span>${fdate(p.payment_date)}</span>
+              ${ref}
+              ${btnFactura}`;
+          }).join('<span style="color:#ccc;margin:0 4px;">|</span>');
+
           tbody.innerHTML += `<tr class="pay-detail-row">
             <td colspan="6">
-              <div class="pay-detail-inner">
-                ${c.payments.map(p => `
-                  <span>✓ <strong>$${fmoney(p.applied_amount)}</strong></span>
-                  <span>${fdate(p.payment_date)}</span>
-                  ${p.fiscal_invoice_number ? `<span>Factura: ${p.fiscal_invoice_number}</span>` : ''}
-                `).join(' &nbsp;·&nbsp; ')}
-              </div>
+              <div class="pay-detail-inner">${pagosHtml}</div>
             </td>
           </tr>`;
         }

@@ -1,11 +1,13 @@
 """
 app/main.py — Aplicación principal FastAPI
+Versión Railway: maneja proxy HTTPS y crea admin por defecto
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 import os
 
 from app.database import engine, Base, SessionLocal
@@ -17,19 +19,38 @@ Base.metadata.create_all(bind=engine)
 
 
 # ── Crear usuario admin por defecto ──────────
-#def _seed_admin():
-    #from app.services.auth_service import create_default_admin
-    #db = SessionLocal()
-    #try:
-        #"create_default_admin(db)
-    #finally:
-        #db.close()
+def _seed_admin():
+    from app.services.auth_service import create_default_admin
+    db = SessionLocal()
+    try:
+        create_default_admin(db)
+    finally:
+        db.close()
 
-#_seed_admin()
+_seed_admin()
+
+
+# ── Crear carpetas necesarias ─────────────────
+for folder in ["database", "logs", "invoices", "supplier_docs"]:
+    os.makedirs(folder, exist_ok=True)
 
 
 # ── App principal ────────────────────────────
 app = FastAPI(title="Alianza Residencial", version="1.0.0")
+
+# ── Middleware para proxy HTTPS (Railway) ─────
+# Railway termina SSL en el proxy y reenvía como HTTP internamente.
+# Este middleware lee los headers del proxy para que FastAPI
+# sepa que está detrás de HTTPS y no genere URLs con http://.
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+@app.middleware("http")
+async def https_redirect_middleware(request: Request, call_next):
+    # Si viene del proxy de Railway, marcar como HTTPS
+    if request.headers.get("x-forwarded-proto") == "https":
+        request.scope["scheme"] = "https"
+    response = await call_next(request)
+    return response
 
 app.add_middleware(
     CORSMiddleware,

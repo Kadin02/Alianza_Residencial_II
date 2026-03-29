@@ -91,6 +91,7 @@ const NAV_PAGES = [
   { href: '/static/imports.html',    label: 'Importar/Exp.',  icon: 'fa-file-import',  id: 'imports'    },
   { href: '/static/historial.html',  label: 'Historial',      icon: 'fa-history',      id: 'historial'  },
   { href: '/static/admin.html',      label: 'Administración', icon: 'fa-shield-alt',   id: 'admin', adminOnly: true },
+  { href: '/static/garita.html',     label: 'Garita',         icon: 'fa-shield-alt',   id: 'garita', garitaVisible: true },
 ];
 
 function renderSidebar(activePage) {
@@ -153,7 +154,11 @@ function renderSidebar(activePage) {
   // Llenar nav — filtrar páginas adminOnly si no es admin
   const nav = document.getElementById('_sidebar_nav');
   nav.innerHTML = NAV_PAGES
-    .filter(p => !p.adminOnly || isAdmin)
+    filter(p => {
+      if (p.adminOnly && !isAdmin) return false;
+      // Garita: visible para ADMIN, USER y GARITA — no para otros roles que no existen aún
+      return true;
+    })
     .map(p => `
       <a href="${p.href}" class="${activePage === p.id ? 'active' : ''}">
         <i class="fas ${p.icon}"></i>

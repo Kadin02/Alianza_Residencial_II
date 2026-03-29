@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Garita | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    .garita-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;
+      background:var(--card-bg); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:6px; }
+    .garita-tab {
+      padding:9px 20px; border-radius:var(--radius-md); border:none;
+      background:transparent; color:var(--text-secondary);
+      font-family:inherit; font-size:.85rem; font-weight:500; cursor:pointer;
+      display:flex; align-items:center; gap:7px; transition:all .18s;
+    }
+    .garita-tab:hover  { background:var(--accent-soft); color:var(--accent); }
+    .garita-tab.active { background:var(--accent); color:#fff; }
+    .garita-panel { display:none; }
+    .garita-panel.active { display:block; }
+
+    /* ── Tarjeta grande de registro ── */
+    .visit-form-card {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ── Badge de código de visita ── */
+    .visit-code-box {
+      background: linear-gradient(135deg, #1a1a2e 0%, #0a2c5e 100%);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      text-align: center;
+      margin-bottom: 18px;
+      color: #fff;
+    }
+    .visit-code-box .vc-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; opacity:.7; margin-bottom:8px; }
+    .visit-code-box .vc-num   { font-size: 2.2rem; font-weight:900; letter-spacing:.15em; font-family:monospace; }
+    .visit-code-box .vc-apt   { font-size:.85rem; opacity:.8; margin-top:4px; }
+
+    /* ── Columna de estado en tabla ── */
+    .status-INGRESO  { background:#d1fae5; color:#065f46; }
+    .status-SALIDA   { background:#fee2e2; color:#991b1b; }
+    .status-ESPERADO { background:#fef3c7; color:#92400e; }
+
+    /* ── Filtros de registros ── */
+    .reg-filters { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px; }
+    .reg-filters > div { display:flex; flex-direction:column; }
+    .reg-filters label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:3px; }
+    .reg-filters input, .reg-filters select { width:auto; margin-bottom:0; min-width:140px; }
+
+    /* ── Código de pre-registro ── */
+    .pre-code-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 12px; border-radius:20px;
+      background:#e8f0fe; color:#1a73e8; font-weight:700;
+      font-size:.8rem; font-family:monospace; letter-spacing:.1em;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header">
+    <h1><i class="fas fa-shield-alt" style="color:var(--accent);margin-right:8px;"></i>Control de Garita</h1>
+    <p>Registro de visitas al edificio</p>
+  </div>
+
+  <div class="garita-tabs">
+    <button class="garita-tab active" onclick="switchTab('registrar')">
+      <i class="fas fa-user-plus"></i> Registrar Visita
+    </button>
+    <button class="garita-tab" onclick="switchTab('historial')">
+      <i class="fas fa-list"></i> Historial
+    </button>
+    <button class="garita-tab" onclick="switchTab('preregistro')">
+      <i class="fas fa-qrcode"></i> Pre-registros
+    </button>
+  </div>
+
+  <!-- ══ REGISTRAR VISITA ══ -->
+  <div class="garita-panel active" id="panel-registrar">
+    <div class="visit-form-card">
+
+      <!-- Buscar por código de pre-registro -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-search"></i> Buscar por Código de Visita</h3>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;gap:10px;align-items:flex-end;">
+            <div style="flex:1;">
+              <label class="field-label">Código (si el propietario lo compartió)</label>
+              <input type="text" id="codigo-buscar" placeholder="Ej: VIS-2394"
+                style="text-transform:uppercase;letter-spacing:.1em;font-family:monospace;margin-bottom:0;"
+                oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <button onclick="buscarPorCodigo()" style="width:auto;margin-top:0;margin-bottom:0;">
+              <i class="fas fa-search"></i> Buscar
+            </button>
+          </div>
+          <div id="codigo-resultado" style="margin-top:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Formulario de registro manual -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-pen"></i> Datos de la Visita</h3>
+        </div>
+        <div class="card-body">
+          <input type="hidden" id="visit-preregistro-id">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label class="field-label">Nombre del visitante *</label>
+              <input type="text" id="visit-nombre" placeholder="Nombre completo">
+            </div>
+            <div>
+              <label class="field-label">Identificación</label>
+              <input type="text" id="visit-cedula" placeholder="Cédula o pasaporte">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label class="field-label">Apartamento a visitar *</label>
+              <select id="visit-apto">
+                <option value="">Seleccione apartamento</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Tipo de visita</label>
+              <select id="visit-tipo">
+                <option value="Personal">Personal</option>
+                <option value="Delivery">Delivery / Encomienda</option>
+                <option value="Servicio">Servicio / Técnico</option>
+                <option value="Proveedor">Proveedor</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="field-label">Motivo de la visita *</label>
+          <input type="text" id="visit-motivo" placeholder="Ej: Visita familiar, entrega de pedido, reparación...">
+
+          <label class="field-label">Placa del vehículo (si aplica)</label>
+          <input type="text" id="visit-placa" placeholder="Ej: ABC-1234"
+            style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+
+          <label class="field-label">Observaciones</label>
+          <textarea id="visit-obs" rows="2" placeholder="Notas adicionales" style="resize:vertical;"></textarea>
+
+          <div style="display:flex;gap:10px;margin-top:4px;">
+            <button onclick="registrarIngreso()" style="flex:1;background:var(--success);color:#fff;margin-top:0;">
+              <i class="fas fa-sign-in-alt"></i> Registrar Ingreso
+            </button>
+            <button onclick="limpiarFormulario()" class="btn btn-muted" style="width:auto;margin-top:0;">
+              <i class="fas fa-times"></i> Limpiar
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ HISTORIAL DE VISITAS ══ -->
+  <div class="garita-panel" id="panel-historial">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-list"></i> Registro de Visitas</h3>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="exportarHistorial()" style="width:auto;margin-top:0;">
+            <i class="fas fa-file-excel"></i> Exportar
+          </button>
+          <button class="btn btn-ghost" onclick="limpiarFiltrosHistorial()" style="width:auto;margin-top:0;">
+            <i class="fas fa-times"></i> Limpiar
+          </button>
+        </div>
+      </div>
+      <div class="card-body" style="padding-bottom:0;">
+        <div class="reg-filters">
+          <div>
+            <label>Apartamento</label>
+            <select id="hf-apto" onchange="filtrarHistorial()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select id="hf-tipo" onchange="filtrarHistorial()">
+              <option value="">Todos</option>
+              <option value="Personal">Personal</option>
+              <option value="Delivery">Delivery</option>
+              <option value="Servicio">Servicio</option>
+              <option value="Proveedor">Proveedor</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>Desde</label>
+            <input type="date" id="hf-desde" onchange="filtrarHistorial()">
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input type="date" id="hf-hasta" onchange="filtrarHistorial()">
+          </div>
+          <div>
+            <label>Buscar</label>
+            <input type="text" id="hf-search" placeholder="Nombre, cédula, motivo..."
+              oninput="filtrarHistorial()" style="min-width:180px;">
+          </div>
+        </div>
+      </div>
+      <div class="table-wrapper" style="margin-top:8px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha / Hora</th>
+              <th>Visitante</th>
+              <th>Cédula</th>
+              <th>Apartamento</th>
+              <th>Motivo</th>
+              <th>Tipo</th>
+              <th>Placa</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="hist-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">
+              <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.4;"></i>
+              Cargando...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PRE-REGISTROS ══ -->
+  <div class="garita-panel" id="panel-preregistro">
+    <div class="two-col">
+
+      <!-- Crear pre-registro -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle"></i> Nuevo Pre-registro</h3>
+        </div>
+        <div class="card-body">
+          <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
+            El propietario puede generar un código para su visita esperada.
+            La garita escanea el código para agilizar el ingreso.
+          </p>
+
+          <label class="field-label">Apartamento *</label>
+          <select id="pre-apto">
+            <option value="">Seleccione apartamento</option>
+          </select>
+
+          <label class="field-label">Nombre del visitante esperado</label>
+          <input type="text" id="pre-nombre" placeholder="Opcional">
+
+          <label class="field-label">Fecha esperada de visita</label>
+          <input type="date" id="pre-fecha">
+
+          <label class="field-label">Motivo</label>
+          <input type="text" id="pre-motivo" placeholder="Ej: Visita familiar">
+
+          <label class="field-label">Notas</label>
+          <textarea id="pre-notas" rows="2" style="resize:vertical;"></textarea>
+
+          <button onclick="crearPreregistro()" style="margin-top:4px;">
+            <i class="fas fa-qrcode"></i> Generar Código de Visita
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de pre-registros activos -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3><i class="fas fa-list"></i> Códigos Activos</h3>
+          <span class="badge badge-primary" id="pre-count">0</span>
+        </div>
+        <div id="pre-lista" style="padding:12px;">
+          <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+            <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.4;"></i>
+            Cargando...
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+<div id="notification"></div>
+<script src="js/main.js"></script>
+<script>
+renderSidebar('garita');
+
+// ── Estado ────────────────────────────────────────────
+let allUnits        = [];
+let allVisitas      = [];
+let allPreregistros = [];
+let filteredVisitas = [];
+
+// ── Init ──────────────────────────────────────────────
+async function init() {
+  allUnits = await apiRequest('/units') || [];
+
+  // Llenar selects de apartamentos
+  ['visit-apto','pre-apto','hf-apto'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const isFilter = id === 'hf-apto';
+    if (isFilter) sel.innerHTML = '<option value="">Todos</option>';
+    else          sel.innerHTML = '<option value="">Seleccione apartamento</option>';
+    [...allUnits].sort((a,b) => a.unit_number.localeCompare(b.unit_number))
+      .forEach(u => sel.innerHTML += `<option value="${u.id}" data-num="${u.unit_number}">Apt. ${u.unit_number}</option>`);
+  });
+
+  // Fecha de hoy por defecto
+  document.getElementById('pre-fecha').value = todayISO();
+  document.getElementById('hf-desde').value  = todayISO();
+
+  await Promise.all([cargarVisitas(), cargarPreregistros()]);
+}
+
+// ══ VISITAS ══════════════════════════════════════════
+
+async function cargarVisitas() {
+  allVisitas = await apiRequest('/garita/visitas') || [];
+  filtrarHistorial();
+}
+
+function filtrarHistorial() {
+  const apto   = document.getElementById('hf-apto').value;
+  const tipo   = document.getElementById('hf-tipo').value;
+  const desde  = document.getElementById('hf-desde').value;
+  const hasta  = document.getElementById('hf-hasta').value;
+  const search = document.getElementById('hf-search').value.toLowerCase().trim();
+
+  filteredVisitas = allVisitas.filter(v => {
+    if (apto  && String(v.unit_id) !== String(apto)) return false;
+    if (tipo  && v.tipo_visita     !== tipo)          return false;
+    if (desde && v.fecha_ingreso   < desde)           return false;
+    if (hasta && v.fecha_ingreso   > hasta + 'T23:59') return false;
+    if (search) {
+      const txt = [v.nombre_visitante, v.cedula, v.motivo, v.unit_number, v.placa||''].join(' ').toLowerCase();
+      if (!txt.includes(search)) return false;
+    }
+    return true;
+  });
+
+  renderHistorial();
+}
+
+function limpiarFiltrosHistorial() {
+  document.getElementById('hf-apto').value   = '';
+  document.getElementById('hf-tipo').value   = '';
+  document.getElementById('hf-desde').value  = todayISO();
+  document.getElementById('hf-hasta').value  = '';
+  document.getElementById('hf-search').value = '';
+  filtrarHistorial();
+}
+
+function renderHistorial() {
+  const tbody = document.getElementById('hist-tbody');
+  if (!filteredVisitas.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">
+      Sin registros con los filtros aplicados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filteredVisitas.map(v => {
+    const fecha    = v.fecha_ingreso ? new Date(v.fecha_ingreso).toLocaleString('es-PA') : '—';
+    const statusCls= `status-${v.estado}`;
+    const salida   = v.estado === 'INGRESO'
+      ? `<button onclick="registrarSalida(${v.id})"
+           style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;
+                  padding:3px 10px;font-size:.72rem;border-radius:5px;cursor:pointer;
+                  font-family:inherit;font-weight:600;width:auto;margin:0;">
+           <i class="fas fa-sign-out-alt"></i> Salida
+         </button>` : '—';
+    return `<tr>
+      <td style="font-size:.78rem;white-space:nowrap;">${fecha}</td>
+      <td><strong>${v.nombre_visitante}</strong></td>
+      <td style="font-size:.78rem;color:var(--text-muted);">${v.cedula||'—'}</td>
+      <td>Apt. ${v.unit_number||'—'}</td>
+      <td style="font-size:.82rem;">${v.motivo}</td>
+      <td><span class="badge" style="font-size:.7rem;">${v.tipo_visita}</span></td>
+      <td style="font-size:.78rem;color:var(--text-muted);">${v.placa||'—'}</td>
+      <td><span class="badge ${statusCls}" style="font-size:.7rem;">${v.estado}</span></td>
+      <td>${salida}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function registrarIngreso() {
+  const nombre = document.getElementById('visit-nombre').value.trim();
+  const aptoSel= document.getElementById('visit-apto');
+  const unitId = aptoSel.value;
+  const motivo = document.getElementById('visit-motivo').value.trim();
+
+  if (!nombre) { showToast('Ingresa el nombre del visitante', 'error'); return; }
+  if (!unitId) { showToast('Selecciona el apartamento', 'error'); return; }
+  if (!motivo) { showToast('Ingresa el motivo de la visita', 'error'); return; }
+
+  const preId  = document.getElementById('visit-preregistro-id').value || null;
+  const unitNum= aptoSel.options[aptoSel.selectedIndex]?.getAttribute('data-num') || '';
+
+  const data = {
+    nombre_visitante: nombre,
+    cedula:           document.getElementById('visit-cedula').value.trim() || null,
+    unit_id:          parseInt(unitId),
+    unit_number:      unitNum,
+    motivo:           motivo,
+    tipo_visita:      document.getElementById('visit-tipo').value,
+    placa:            document.getElementById('visit-placa').value.trim() || null,
+    observaciones:    document.getElementById('visit-obs').value.trim()   || null,
+    preregistro_id:   preId ? parseInt(preId) : null,
+    fecha_ingreso:    new Date().toISOString(),
+    estado:           'INGRESO',
+  };
+
+  const r = await apiRequest('/garita/visitas', 'POST', data);
+  if (r) {
+    showToast(`✓ Ingreso registrado para Apt. ${unitNum}`, 'success');
+    limpiarFormulario();
+    cargarVisitas();
+    // Marcar pre-registro como usado si aplica
+    if (preId) {
+      await apiRequest(`/garita/preregistros/${preId}/usar`, 'PATCH', {});
+      cargarPreregistros();
+    }
+  }
+}
+
+async function registrarSalida(visitaId) {
+  const r = await apiRequest(`/garita/visitas/${visitaId}/salida`, 'PATCH', {
+    fecha_salida: new Date().toISOString(),
+    estado: 'SALIDA',
+  });
+  if (r) { showToast('Salida registrada', 'success'); cargarVisitas(); }
+}
+
+function limpiarFormulario() {
+  ['visit-nombre','visit-cedula','visit-motivo','visit-placa','visit-obs'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('visit-apto').value = '';
+  document.getElementById('visit-tipo').value = 'Personal';
+  document.getElementById('visit-preregistro-id').value = '';
+  document.getElementById('codigo-buscar').value = '';
+  document.getElementById('codigo-resultado').innerHTML = '';
+}
+
+// ── Buscar por código ─────────────────────────────────
+async function buscarPorCodigo() {
+  const codigo = document.getElementById('codigo-buscar').value.trim().toUpperCase();
+  if (!codigo) { showToast('Ingresa un código', 'warning'); return; }
+
+  const r = await apiRequest(`/garita/preregistros/codigo/${codigo}`);
+  const el = document.getElementById('codigo-resultado');
+
+  if (!r || r.error) {
+    el.innerHTML = `<div style="padding:10px;background:#fee2e2;border-radius:6px;font-size:.83rem;color:#991b1b;">
+      <i class="fas fa-times-circle"></i> Código no encontrado o ya utilizado
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="padding:12px;background:#d1fae5;border-radius:6px;font-size:.83rem;color:#065f46;border:1px solid #a7f3d0;">
+    <i class="fas fa-check-circle"></i> <strong>Código válido</strong><br>
+    Apartamento: <strong>Apt. ${r.unit_number}</strong><br>
+    ${r.nombre_visitante ? `Visitante esperado: <strong>${r.nombre_visitante}</strong><br>` : ''}
+    ${r.motivo ? `Motivo: ${r.motivo}` : ''}
+  </div>`;
+
+  // Prellenar formulario
+  document.getElementById('visit-preregistro-id').value = r.id;
+  if (r.nombre_visitante) document.getElementById('visit-nombre').value = r.nombre_visitante;
+  if (r.motivo)           document.getElementById('visit-motivo').value = r.motivo;
+  // Seleccionar el apartamento
+  const sel = document.getElementById('visit-apto');
+  for (const opt of sel.options) {
+    if (opt.value === String(r.unit_id)) { sel.value = opt.value; break; }
+  }
+}
+
+// ══ PRE-REGISTROS ═════════════════════════════════════
+
+async function cargarPreregistros() {
+  allPreregistros = await apiRequest('/garita/preregistros?activos=true') || [];
+  document.getElementById('pre-count').textContent = allPreregistros.length;
+  renderPreregistros();
+}
+
+function renderPreregistros() {
+  const el = document.getElementById('pre-lista');
+  if (!allPreregistros.length) {
+    el.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      Sin pre-registros activos</div>`;
+    return;
+  }
+  el.innerHTML = allPreregistros.map(p => `
+    <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px;background:var(--card-bg);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;">
+            Apt. ${p.unit_number}
+            ${p.nombre_visitante ? `· <span style="font-weight:400;color:var(--text-secondary);">${p.nombre_visitante}</span>` : ''}
+          </div>
+          <span class="pre-code-badge">
+            <i class="fas fa-key" style="font-size:.7rem;"></i>
+            ${p.codigo}
+          </span>
+          ${p.fecha_esperada ? `<span style="font-size:.75rem;color:var(--text-muted);margin-left:8px;">${formatDate(p.fecha_esperada)}</span>` : ''}
+          ${p.motivo ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:4px;">${p.motivo}</div>` : ''}
+        </div>
+        <button onclick="cancelarPreregistro(${p.id})"
+          style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;
+                 padding:3px 8px;font-size:.72rem;border-radius:5px;cursor:pointer;
+                 font-family:inherit;font-weight:600;width:auto;margin:0;flex-shrink:0;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+async function crearPreregistro() {
+  const unitId = document.getElementById('pre-apto').value;
+  if (!unitId) { showToast('Selecciona el apartamento', 'error'); return; }
+
+  const sel     = document.getElementById('pre-apto');
+  const unitNum = sel.options[sel.selectedIndex]?.getAttribute('data-num') || '';
+
+  // Generar código aleatorio VIS-XXXX
+  const codigo = 'VIS-' + Math.floor(1000 + Math.random() * 9000);
+
+  const data = {
+    unit_id:          parseInt(unitId),
+    unit_number:      unitNum,
+    codigo:           codigo,
+    nombre_visitante: document.getElementById('pre-nombre').value.trim() || null,
+    fecha_esperada:   document.getElementById('pre-fecha').value   || null,
+    motivo:           document.getElementById('pre-motivo').value.trim() || null,
+    notas:            document.getElementById('pre-notas').value.trim()  || null,
+    activo:           true,
+  };
+
+  const r = await apiRequest('/garita/preregistros', 'POST', data);
+  if (r) {
+    showToast(`Código ${codigo} generado para Apt. ${unitNum}`, 'success');
+    ['pre-nombre','pre-motivo','pre-notas'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pre-apto').value   = '';
+    document.getElementById('pre-fecha').value  = todayISO();
+    cargarPreregistros();
+  }
+}
+
+async function cancelarPreregistro(id) {
+  if (!confirm('¿Cancelar este pre-registro?')) return;
+  const r = await apiRequest(`/garita/preregistros/${id}`, 'DELETE');
+  if (r) { showToast('Pre-registro cancelado'); cargarPreregistros(); }
+}
+
+// ── Exportar historial ────────────────────────────────
+function exportarHistorial() {
+  if (!filteredVisitas.length) { showToast('Sin datos para exportar', 'warning'); return; }
+  const headers = ['Fecha Ingreso','Fecha Salida','Visitante','Cédula','Apartamento','Motivo','Tipo','Placa','Estado','Observaciones'];
+  const rows    = filteredVisitas.map(v => [
+    v.fecha_ingreso ? new Date(v.fecha_ingreso).toLocaleString('es-PA') : '',
+    v.fecha_salida  ? new Date(v.fecha_salida).toLocaleString('es-PA')  : '',
+    v.nombre_visitante, v.cedula||'', `Apt. ${v.unit_number||''}`,
+    v.motivo, v.tipo_visita, v.placa||'', v.estado, v.observaciones||''
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:18},{wch:18},{wch:22},{wch:12},{wch:10},{wch:25},{wch:12},{wch:10},{wch:10},{wch:25}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
+  XLSX.writeFile(wb, `visitas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Exportado', 'success');
+}
+
+// ── Tabs ──────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.garita-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['registrar','historial','preregistro'][i] === tab);
+  });
+  document.querySelectorAll('.garita-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+init();
+</script>
+</body>
+</html>

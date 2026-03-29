@@ -382,10 +382,18 @@ def list_charges_with_status(db: Session):
                 owner_name = owner.full_name
                 owner_id   = owner.id
 
+        last_app = (
+            db.query(PaymentApplication)
+            .filter(PaymentApplication.charge_id == charge.id)
+            .order_by(PaymentApplication.id.desc())
+            .first()
+        )
+        last_payment_id = last_app.payment_id if last_app else None
+
         result.append({
-            "id":          charge.id,
+            "id":          charge.id,       # alias para compatibilidad
             "charge_id":   charge.id,
-            "unit_id":     charge.unit_id,
+            "unit_id":     charge.unit_id,  # necesario para editar desde admin
             "unit_number": unit.unit_number if unit else None,
             "owner_name":  owner_name,
             "owner_id":    owner_id,
@@ -395,10 +403,11 @@ def list_charges_with_status(db: Session):
             "status":      status,
             "due_date":    str(charge.due_date),
             "date_created": str(charge.date_created),
-            "unit_number": unit.unit_number if unit else None,
+            "payment_id":  last_payment_id,  # para el botón Ver Factura
         })
 
-    return result
+
+        return result
 
 
 # ──────────────────────────────────────────────
@@ -573,10 +582,12 @@ def generate_owner_statement(db: Session, owner_id: int):
             inv = db.query(Invoice).filter(Invoice.payment_id == app.payment_id).first()
             pmt = db.query(Payment).filter(Payment.id == app.payment_id).first()
             payments_info.append({
+                "payment_id":            app.payment_id,          # ← NUEVO: para botón Ver Factura
                 "payment_date":          str(pmt.payment_date) if pmt else None,
                 "applied_amount":        float(app.applied_amount),
                 "fiscal_invoice_number": inv.fiscal_invoice_number if inv else None,
-            })
+                "reference":             pmt.reference if pmt else None,  # ← NUEVO: # referencia
+        })
 
         statement_data.append({
             "description": charge.description,

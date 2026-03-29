@@ -29,9 +29,9 @@ except ImportError:
     print("Falta requests.  Ejecuta: pip install requests"); sys.exit(1)
 
 # ── Configuración ──────────────────────────────────────────
-BASE_URL  = "http://localhost:8000/api"
-USERNAME  = "admin"
-PASSWORD  = "Admin123"
+BASE_URL = "https://alianzaresidencial-production.up.railway.app/api"
+USERNAME  = "Kadin02"
+PASSWORD  = "Panama123*"
 
 DEFAULT_FILE = "plantilla_historial_pagos.xlsx"
 

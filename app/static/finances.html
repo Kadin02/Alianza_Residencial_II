@@ -392,6 +392,7 @@
               <th class="td-right">Pagado</th>
               <th class="td-right">Saldo</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="charges-table-body">
@@ -854,7 +855,6 @@ async function createCharge() {
 async function loadChargesTable() {
   allChargesCache = await apiRequest('/finance/charges') || [];
 
-  // Llenar selects de filtro con valores únicos
   const owners = [...new Set(allChargesCache.map(c => c.owner_name).filter(Boolean))].sort();
   const units  = [...new Set(allChargesCache.map(c => c.unit_number).filter(Boolean))].sort();
 
@@ -894,27 +894,50 @@ function filterChargesTable() {
   const desc   = (document.getElementById('filter-desc')?.value   || '').toLowerCase().trim();
 
   const list = allChargesCache.filter(c => {
-    if (status && c.status     !== status)                       return false;
-    if (owner  && c.owner_name !== owner)                        return false;
-    if (unit   && c.unit_number!== unit)                         return false;
+    if (status && c.status      !== status)                      return false;
+    if (owner  && c.owner_name  !== owner)                       return false;
+    if (unit   && c.unit_number !== unit)                        return false;
     if (desc   && !c.description?.toLowerCase().includes(desc))  return false;
     return true;
   });
 
-  // Actualizar badge
   const badge = document.getElementById('charges-count-badge');
   if (badge) badge.textContent = list.length;
 
   const tbody = document.getElementById('charges-table-body');
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">
       Sin cargos con los filtros aplicados</td></tr>`;
     return;
   }
 
   tbody.innerHTML = list.map(c => {
     const paid = parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+
+    // Botón de factura para cargos PAGADOS
+    // c.payment_id viene del endpoint /finance/charges
+    let accionBtn = '—';
+    if (c.status === 'PAGADO' && c.payment_id) {
+      accionBtn = `
+        <button onclick="verFacturaDesdeHistorial(${c.payment_id})"
+          style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--border);
+                 padding:4px 10px;font-size:.75rem;border-radius:5px;cursor:pointer;
+                 font-family:inherit;font-weight:600;display:inline-flex;align-items:center;gap:4px;
+                 margin:0;width:auto;">
+          <i class="fas fa-receipt"></i> Ver Factura
+        </button>`;
+    } else if (c.status === 'PARCIAL' && c.payment_id) {
+      accionBtn = `
+        <button onclick="verFacturaDesdeHistorial(${c.payment_id})"
+          style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;
+                 padding:4px 10px;font-size:.75rem;border-radius:5px;cursor:pointer;
+                 font-family:inherit;font-weight:600;display:inline-flex;align-items:center;gap:4px;
+                 margin:0;width:auto;">
+          <i class="fas fa-receipt"></i> Ver Recibo
+        </button>`;
+    }
+
     return `<tr>
       <td>${c.owner_name || '<em style="color:var(--text-muted)">Sin asignar</em>'}</td>
       <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
@@ -924,9 +947,15 @@ function filterChargesTable() {
       <td class="td-right" style="color:var(--success);">$${formatMoney(paid)}</td>
       <td class="td-right td-bold">$${formatMoney(c.balance)}</td>
       <td><span class="badge badge-${c.status}">${c.status}</span></td>
+      <td>${accionBtn}</td>
     </tr>`;
   }).join('');
 }
+// Nueva función para ver factura desde el historial
+function verFacturaDesdeHistorial(paymentId) {
+  window.open(`/static/factura.html?payment_id=${paymentId}`, '_blank');
+}
+
 renderSidebar('finances');
 init();
 </script>
