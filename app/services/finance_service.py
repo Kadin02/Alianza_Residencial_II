@@ -410,7 +410,7 @@ def list_charges_with_status(db: Session):
         })
 
 
-        return result
+    return result
 
 
 # ──────────────────────────────────────────────
