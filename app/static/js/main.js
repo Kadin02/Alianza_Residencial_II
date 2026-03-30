@@ -154,7 +154,7 @@ function renderSidebar(activePage) {
   // Llenar nav — filtrar páginas adminOnly si no es admin
   const nav = document.getElementById('_sidebar_nav');
   nav.innerHTML = NAV_PAGES
-    filter(p => {
+    .filter(p => {
       if (p.adminOnly && !isAdmin) return false;
       // Garita: visible para ADMIN, USER y GARITA — no para otros roles que no existen aún
       return true;
