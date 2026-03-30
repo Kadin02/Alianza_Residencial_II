@@ -382,28 +382,31 @@ def list_charges_with_status(db: Session):
                 owner_name = owner.full_name
                 owner_id   = owner.id
 
+       # Obtener el último pago asociado
         last_app = (
             db.query(PaymentApplication)
             .filter(PaymentApplication.charge_id == charge.id)
             .order_by(PaymentApplication.id.desc())
             .first()
         )
-        last_payment_id = last_app.payment_id if last_app else None
 
+        last_payment_id = last_app.payment_id if last_app else None
+        # Si queremos más detalles del pago, podríamos hacer otra consulta aquí para obtener la fecha o referencia del pago.
+        # Pero por ahora solo incluimos el ID del último pago para que el frontend pueda usarlo para mostrar detalles o la factura.
         result.append({
-            "id":          charge.id,       # alias para compatibilidad
-            "charge_id":   charge.id,
-            "unit_id":     charge.unit_id,  # necesario para editar desde admin
-            "unit_number": unit.unit_number if unit else None,
-            "owner_name":  owner_name,
-            "owner_id":    owner_id,
-            "description": charge.description,
-            "amount":      float(bd["total_amount"]),
-            "balance":     float(bd["balance"]),
-            "status":      status,
-            "due_date":    str(charge.due_date),
+            "id":           charge.id,
+            "charge_id":    charge.id,
+            "unit_id":      charge.unit_id,
+            "unit_number":  unit.unit_number if unit else None,
+            "owner_name":   owner_name,
+            "owner_id":     owner_id,
+            "description":  charge.description,
+            "amount":       float(bd["total_amount"]),
+            "balance":      float(bd["balance"]),
+            "status":       status,
+            "due_date":     str(charge.due_date),
             "date_created": str(charge.date_created),
-            "payment_id":  last_payment_id,  # para el botón Ver Factura
+            "payment_id":   last_payment_id,
         })
 
 
@@ -582,11 +585,11 @@ def generate_owner_statement(db: Session, owner_id: int):
             inv = db.query(Invoice).filter(Invoice.payment_id == app.payment_id).first()
             pmt = db.query(Payment).filter(Payment.id == app.payment_id).first()
             payments_info.append({
-                "payment_id":            app.payment_id,          # ← NUEVO: para botón Ver Factura
-                "payment_date":          str(pmt.payment_date) if pmt else None,
-                "applied_amount":        float(app.applied_amount),
-                "fiscal_invoice_number": inv.fiscal_invoice_number if inv else None,
-                "reference":             pmt.reference if pmt else None,  # ← NUEVO: # referencia
+            "payment_id":            app.payment_id,
+            "payment_date":          str(pmt.payment_date) if pmt else None,
+            "applied_amount":        float(app.applied_amount),
+            "fiscal_invoice_number": inv.fiscal_invoice_number if inv else None,
+            "reference":             pmt.reference if pmt else None,
         })
 
         statement_data.append({

@@ -396,7 +396,7 @@
             </tr>
           </thead>
           <tbody id="charges-table-body">
-            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -853,7 +853,12 @@ async function createCharge() {
 // TABLA HISTORIAL
 // ══════════════════════════════════════════════
 async function loadChargesTable() {
-  allChargesCache = await apiRequest('/finance/charges') || [];
+  allChargesCache = await apiRequest('/finance/charges');
+
+  if (!Array.isArray(allChargesCache)) {
+    console.error("ERROR API /finance/charges:", allChargesCache);
+    allChargesCache = [];
+  }
 
   const owners = [...new Set(allChargesCache.map(c => c.owner_name).filter(Boolean))].sort();
   const units  = [...new Set(allChargesCache.map(c => c.unit_number).filter(Boolean))].sort();
