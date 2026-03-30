@@ -236,10 +236,11 @@
             <th>Propietario</th>
             <th>Concepto</th>
             <th class="td-right">Monto</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="hist-tbody">
-          <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted);">
+          <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted);">
             <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.4;"></i>
             Cargando historial...
           </td></tr>
@@ -328,11 +329,11 @@ async function init() {
   const pagos = await apiRequest('/finance/payments-history');
 
   if (!pagos) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--danger);">Error al cargar el historial.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--danger);">Error al cargar el historial.</td></tr>`;
     return;
   }
   if (!pagos.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted);">
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted);">
       <i class="fas fa-inbox" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
       No hay pagos registrados.<br><small>Usa el importador de historial para cargar registros.</small>
     </td></tr>`;
@@ -407,7 +408,7 @@ function renderTabla() {
   document.getElementById('total-count').textContent = filtrados.length;
   const tbody = document.getElementById('hist-tbody');
   if (!filtrados.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted);">Sin resultados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted);">Sin resultados</td></tr>`;
     document.getElementById('page-info').textContent = '';
     return;
   }
@@ -420,6 +421,17 @@ function renderTabla() {
       <td style="font-size:.83rem;">${p.owner_name}</td>
       <td>${razonTag(p.concepto)}</td>
       <td class="td-right"><strong>$${formatMoney(p.monto)}</strong></td>
+      <td>
+        ${p.payment_id ? `
+          <button onclick="verFacturaDesdeHistorial(${p.payment_id})"
+            style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--border);
+                   padding:4px 10px;font-size:.75rem;border-radius:5px;cursor:pointer;
+                   font-family:inherit;font-weight:600;display:inline-flex;align-items:center;gap:4px;
+                   margin:0;width:auto;">
+            <i class="fas fa-receipt"></i> Ver Factura
+          </button>
+        ` : `<span style="color:var(--text-muted);">�</span>`}
+      </td>
     </tr>`).join('');
   document.getElementById('page-info').textContent =
     filtrados.length > 500
@@ -427,6 +439,9 @@ function renderTabla() {
       : `${filtrados.length} registro${filtrados.length !== 1 ? 's' : ''}`;
 }
 
+function verFacturaDesdeHistorial(paymentId) {
+  window.open(`/static/factura.html?payment_id=${paymentId}`, '_blank');
+}
 /* ── Resumen chips ───────────────────────────────────── */
 function renderResumen() {
   const chips = document.getElementById('summary-chips');
@@ -664,3 +679,6 @@ init();
 </script>
 </body>
 </html>
+
+
+

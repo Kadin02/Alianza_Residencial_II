@@ -13,6 +13,7 @@ import os
 from app.database import engine, Base, SessionLocal
 from app.routers import property, unit, owner, unit_owner, finance, charges, auth
 from app.routers import suppliers, agenda
+from app.routers import garita
 
 # ── Crear tablas ─────────────────────────────
 Base.metadata.create_all(bind=engine)
@@ -72,6 +73,7 @@ api_app.include_router(charges.router)
 api_app.include_router(auth.router)
 api_app.include_router(suppliers.router)
 api_app.include_router(agenda.router)
+api_app.include_router(garita.router)
 
 app.mount("/api", api_app)
 
