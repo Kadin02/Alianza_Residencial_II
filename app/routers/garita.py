@@ -2,61 +2,23 @@
 app/routers/garita.py
 Router para el módulo de control de garita.
 Incluye: visitas y pre-registros.
-
-Agrega a app/main.py:
-  from app.routers import garita
-  api_app.include_router(garita.router)
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import Session, relationship
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
-from app.database import Base, get_db
+from app.database import get_db
+from app.models.garita_visita import Visita
+from app.models.garita_preregistro import PreRegistro
 from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/garita", tags=["Garita"])
 
 
-# ══ Modelos SQLAlchemy ════════════════════════════════
 
-class Visita(Base):
-    __tablename__ = "garita_visitas"
-
-    id               = Column(Integer, primary_key=True, index=True)
-    nombre_visitante = Column(String, nullable=False)
-    cedula           = Column(String, nullable=True)
-    unit_id          = Column(Integer, nullable=False)
-    unit_number      = Column(String, nullable=False)
-    motivo           = Column(String, nullable=False)
-    tipo_visita      = Column(String, default="Personal")
-    placa            = Column(String, nullable=True)
-    observaciones    = Column(String, nullable=True)
-    preregistro_id   = Column(Integer, nullable=True)
-    fecha_ingreso    = Column(String, nullable=False)   # ISO string
-    fecha_salida     = Column(String, nullable=True)
-    estado           = Column(String, default="INGRESO")  # INGRESO | SALIDA
-
-
-class PreRegistro(Base):
-    __tablename__ = "garita_preregistros"
-
-    id               = Column(Integer, primary_key=True, index=True)
-    unit_id          = Column(Integer, nullable=False)
-    unit_number      = Column(String, nullable=False)
-    codigo           = Column(String, unique=True, nullable=False, index=True)
-    nombre_visitante = Column(String, nullable=True)
-    fecha_esperada   = Column(String, nullable=True)
-    motivo           = Column(String, nullable=True)
-    notas            = Column(String, nullable=True)
-    activo           = Column(Boolean, default=True)
-    created_at       = Column(String, default=lambda: datetime.utcnow().isoformat())
-
-
-# ══ Schemas ═══════════════════════════════════════════
 
 class VisitaCreate(BaseModel):
     nombre_visitante: str
@@ -93,9 +55,8 @@ class PreRegistroCreate(BaseModel):
 @router.get("/visitas")
 def list_visitas(db: Session = Depends(get_db)):
     """Lista todas las visitas, las más recientes primero."""
-    # Asegurar que la tabla existe
-    Base.metadata.create_all(bind=db.bind)
     visitas = db.query(Visita).order_by(Visita.id.desc()).all()
+
     return [
         {
             "id":               v.id,
