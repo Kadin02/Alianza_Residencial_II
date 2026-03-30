@@ -435,6 +435,34 @@ def get_payment_detail(db: Session, payment_id: int):
     }
 
 
+def _resolve_payment_context(db: Session, payment, applications):
+    owner = db.query(Owner).filter(Owner.id == payment.owner_id).first() if payment.owner_id else None
+    unit = None
+    property_obj = None
+
+    if applications:
+        first_charge = db.query(Charge).filter(Charge.id == applications[0].charge_id).first()
+        unit = db.query(Unit).filter(Unit.id == first_charge.unit_id).first() if first_charge else None
+        property_obj = db.query(Property).filter(Property.id == unit.property_id).first() if unit else None
+
+        if not owner and unit:
+            ownership = db.query(UnitOwner).filter(
+                UnitOwner.unit_id == unit.id,
+                UnitOwner.is_active == True
+            ).first()
+            owner = db.query(Owner).filter(Owner.id == ownership.owner_id).first() if ownership else None
+
+    if not unit and owner:
+        ownership = db.query(UnitOwner).filter(
+            UnitOwner.owner_id == owner.id,
+            UnitOwner.is_active == True
+        ).first()
+        unit = ownership.unit if ownership else None
+        property_obj = unit.property if unit else None
+
+    return owner, unit, property_obj
+
+
 def get_payment_detail_full(db: Session, payment_id: int):
     """Obtiene detalle completo de un pago para factura"""
     from app.models import Payment, Owner, UnitOwner, Unit, Property, Invoice, PaymentApplication, Charge
@@ -442,18 +470,7 @@ def get_payment_detail_full(db: Session, payment_id: int):
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
-    
-    # Propietario
-    owner = db.query(Owner).filter(Owner.id == payment.owner_id).first()
-    
-    # Unidad activa del propietario
-    ownership = db.query(UnitOwner).filter(
-        UnitOwner.owner_id == payment.owner_id,
-        UnitOwner.is_active == True
-    ).first()
-    unit = ownership.unit if ownership else None
-    property_obj = unit.property if unit else None
-    
+
     # Factura
     invoice = db.query(Invoice).filter(Invoice.payment_id == payment_id).first()
     
@@ -461,6 +478,7 @@ def get_payment_detail_full(db: Session, payment_id: int):
     applications = db.query(PaymentApplication).filter(
         PaymentApplication.payment_id == payment_id
     ).all()
+    owner, unit, property_obj = _resolve_payment_context(db, payment, applications)
     
     apps_detail = []
     for app in applications:
@@ -510,7 +528,6 @@ def create_invoice_for_payment(db: Session, payment_id: int, fiscal_number: str 
         raise HTTPException(status_code=400, detail="Este pago ya tiene factura")
 
     invoice_number = generate_invoice_number(db)
-    owner          = db.query(Owner).filter(Owner.id == payment.owner_id).first()
 
     applications = db.query(PaymentApplication).filter(
         PaymentApplication.payment_id == payment.id
@@ -518,9 +535,7 @@ def create_invoice_for_payment(db: Session, payment_id: int, fiscal_number: str 
     if not applications:
         raise HTTPException(status_code=400, detail="El pago no tiene cargos aplicados")
 
-    first_charge = db.query(Charge).filter(Charge.id == applications[0].charge_id).first()
-    unit         = db.query(Unit).filter(Unit.id == first_charge.unit_id).first() if first_charge else None
-    property_obj = db.query(Property).filter(Property.id == unit.property_id).first() if unit else None
+    owner, unit, property_obj = _resolve_payment_context(db, payment, applications)
 
     charges_detail = []
     for app in applications:
