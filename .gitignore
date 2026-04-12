@@ -1,40 +1,9 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-.eggs/
-
-# Entorno virtual — NO subir al servidor
-venv/
-env/
-.env/
-
-# Base de datos local — Railway usa su propio volumen
-database/*.db
-database/*.db-shm
-database/*.db-wal
-
-# Archivos del launcher de escritorio — no necesarios en servidor
-launcher.py
-build.bat
-*.exe
-*.spec
-dist/
-assets/
-
-# Logs
-*.log
+```
+.env
+database/
+*.db
 logs/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
+invoices/
+__pycache__/
+*.pyc
+```

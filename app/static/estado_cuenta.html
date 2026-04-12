@@ -277,11 +277,7 @@ const fdate  = s => {
             const ref = p.fiscal_invoice_number
               ? `<span>Factura: <strong>${p.fiscal_invoice_number}</strong></span>`
               : (p.reference ? `<span>Ref: <strong>${p.reference}</strong></span>` : '');
-            const btnFactura = p.payment_id
-              ? `<a href="/static/factura.html?payment_id=${p.payment_id}" target="_blank" class="btn-factura-mini">
-                   <i class="fas fa-receipt" style="font-size:.65rem;"></i> Ver Factura
-                 </a>`
-              : '';
+            
             return `
               <span>✓ <strong>$${fmoney(p.applied_amount)}</strong></span>
               <span>${fdate(p.payment_date)}</span>

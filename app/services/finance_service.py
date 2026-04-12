@@ -289,7 +289,20 @@ def get_payment_balance(db: Session, payment_id: int) -> float:
 # ✅ CORREGIDO: un solo commit al final — todo o nada
 # ✅ CORREGIDO: Decimal en todas las comparaciones
 # ──────────────────────────────────────────────
-def create_payment_with_applications(db: Session, payment_data):
+# nueva función 8b — Crear pago con aplicaciones (corrección de bugs y mejoras)
+def create_payment_with_applications(db, payment_data):
+    """
+    FIX: Ahora también guarda receipt_number si el modelo Payment lo soporta.
+    """
+    from decimal import Decimal
+    from fastapi import HTTPException
+    from app.models.payment import Payment
+    from app.models.payment_application import PaymentApplication
+    from app.models.charge import Charge
+
+    def _to_dec(v):
+        return Decimal(str(v)) if v is not None else Decimal("0.00")
+
     total_to_apply = _to_dec(sum(app.amount for app in payment_data.applications))
     payment_amount = _to_dec(payment_data.amount)
 
@@ -300,16 +313,19 @@ def create_payment_with_applications(db: Session, payment_data):
         )
 
     payment = Payment(
-        owner_id=payment_data.owner_id,
-        payment_date=payment_data.payment_date,
-        amount=payment_amount,
-        invoice_number=getattr(payment_data, "invoice_number", None),
-        reference=getattr(payment_data, "reference", None),
+        owner_id       = payment_data.owner_id,
+        payment_date   = payment_data.payment_date,
+        amount         = payment_amount,
+        invoice_number = getattr(payment_data, "invoice_number", None),
+        reference      = getattr(payment_data, "reference", None),
     )
+    # Guardar receipt_number si el modelo lo tiene
+    if hasattr(payment, 'receipt_number'):
+        payment.receipt_number = getattr(payment_data, 'receipt_number', None)
 
     try:
         db.add(payment)
-        db.flush()  # ← obtiene payment.id sin cerrar la transacción
+        db.flush()
 
         for app in payment_data.applications:
             app_amount = _to_dec(app.amount)
@@ -343,7 +359,7 @@ def create_payment_with_applications(db: Session, payment_data):
                 charge.balance = new_balance
                 charge.status  = "PARCIAL"
 
-        db.commit()          # ← único commit: todo o nada
+        db.commit()
         db.refresh(payment)
 
     except HTTPException:
@@ -354,7 +370,6 @@ def create_payment_with_applications(db: Session, payment_data):
         raise HTTPException(status_code=500, detail=f"Error al registrar pago: {str(e)}")
 
     return payment
-
 
 # ──────────────────────────────────────────────
 # Función 9 — Listar todos los cargos con estado
@@ -462,24 +477,67 @@ def _resolve_payment_context(db: Session, payment, applications):
 
     return owner, unit, property_obj
 
+# nueva función 10b — Detalle completo de un pago para factura (corrección de bugs en owner/unit/property)
+def get_payment_detail_full(db, payment_id: int):
+    """
+    Obtiene detalle completo de un pago para factura.
+    FIX: Incluye owner, unit, property y receipt_number correctamente.
+    """
+    from fastapi import HTTPException
+    from app.models.payment import Payment
+    from app.models.owner import Owner
+    from app.models.unit_owner import UnitOwner
+    from app.models.unit import Unit
+    from app.models.property import Property
+    from app.models.invoice import Invoice
+    from app.models.payment_application import PaymentApplication
+    from app.models.charge import Charge
 
-def get_payment_detail_full(db: Session, payment_id: int):
-    """Obtiene detalle completo de un pago para factura"""
-    from app.models import Payment, Owner, UnitOwner, Unit, Property, Invoice, PaymentApplication, Charge
-    
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
 
-    # Factura
+    # Factura vinculada
     invoice = db.query(Invoice).filter(Invoice.payment_id == payment_id).first()
-    
+
     # Aplicaciones
     applications = db.query(PaymentApplication).filter(
         PaymentApplication.payment_id == payment_id
     ).all()
-    owner, unit, property_obj = _resolve_payment_context(db, payment, applications)
-    
+
+    # ── Resolver propietario ───────────────────────────────
+    owner = db.query(Owner).filter(Owner.id == payment.owner_id).first() if payment.owner_id else None
+
+    # ── Resolver unidad desde las aplicaciones ─────────────
+    unit         = None
+    property_obj = None
+
+    if applications:
+        first_charge = db.query(Charge).filter(Charge.id == applications[0].charge_id).first()
+        unit = db.query(Unit).filter(Unit.id == first_charge.unit_id).first() if first_charge else None
+        if unit:
+            property_obj = db.query(Property).filter(Property.id == unit.property_id).first()
+
+        # Si aun no tenemos owner, buscarlo desde la unidad
+        if not owner and unit:
+            ownership = db.query(UnitOwner).filter(
+                UnitOwner.unit_id == unit.id,
+                UnitOwner.is_active == True
+            ).first()
+            if ownership:
+                owner = db.query(Owner).filter(Owner.id == ownership.owner_id).first()
+
+    # ── Si todavía no tenemos unidad, buscarla desde el owner ─
+    if not unit and owner:
+        ownership = db.query(UnitOwner).filter(
+            UnitOwner.owner_id == owner.id,
+            UnitOwner.is_active == True
+        ).first()
+        if ownership:
+            unit = db.query(Unit).filter(Unit.id == ownership.unit_id).first()
+            if unit:
+                property_obj = db.query(Property).filter(Property.id == unit.property_id).first()
+
     apps_detail = []
     for app in applications:
         charge = db.query(Charge).filter(Charge.id == app.charge_id).first()
@@ -488,18 +546,24 @@ def get_payment_detail_full(db: Session, payment_id: int):
             "description": charge.description if charge else f"Cargo #{app.charge_id}",
             "applied_amount": float(app.applied_amount),
         })
-    
+
     return {
-        "payment_id": payment.id,
-        "payment_date": str(payment.payment_date),
-        "amount": float(payment.amount),
-        "reference": payment.reference,
-        "invoice_number": invoice.invoice_number if invoice else None,
+        "payment_id":            payment.id,
+        "payment_date":          str(payment.payment_date),
+        "amount":                float(payment.amount),
+        "reference":             payment.reference,
+        "invoice_number":        invoice.invoice_number if invoice else None,
         "fiscal_invoice_number": invoice.fiscal_invoice_number if invoice else None,
-        "owner_name": owner.full_name if owner else None,
-        "unit_number": unit.unit_number if unit else None,
-        "property_name": property_obj.name if property_obj else None,
-        "applications": apps_detail,
+        # Número de recibo físico (campo opcional en Payment)
+        "receipt_number":        getattr(payment, 'receipt_number', None),
+        # Datos del propietario — antes podían venir vacíos (BUG corregido)
+        "owner_name":            owner.full_name if owner else "—",
+        "owner_id":              owner.id if owner else None,
+        # Datos de la unidad — antes podían venir vacíos (BUG corregido)
+        "unit_number":           unit.unit_number if unit else "—",
+        "property_name":         property_obj.name if property_obj else "—",
+        "property_address":      property_obj.address if property_obj else "—",
+        "applications":          apps_detail,
     }
 
 # ──────────────────────────────────────────────

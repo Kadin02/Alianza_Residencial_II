@@ -13,68 +13,55 @@ from app.config import settings
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
+# ── Roles válidos del sistema ──────────────────────────────────
+# ADMIN   → acceso total
+# USER    → acceso estándar (registrar pagos, propietarios, etc.)
+# GARITA  → solo puede ver y registrar visitas en el módulo de garita
+VALID_ROLES = ("ADMIN", "USER", "GARITA")
+
+
 @router.post("/token", response_model=LoginResponse)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """
-    Endpoint estándar OAuth2 para obtener token.
-    Accepta form-data con username y password.
-    """
     user = authenticate_user(db, form_data.username, form_data.password)
-    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role},
         expires_delta=access_token_expires
     )
-    
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "username": user.username,
         "role": user.role
     }
+
 
 @router.post("/login", response_model=LoginResponse)
 async def login_json(
     login_data: dict,
     db: Session = Depends(get_db)
 ):
-    """
-    Endpoint alternativo que acepta JSON para login.
-    """
     username = login_data.get("username")
     password = login_data.get("password")
-    
     if not username or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username y password son requeridos"
-        )
-    
+        raise HTTPException(status_code=400, detail="Username y password son requeridos")
     user = authenticate_user(db, username, password)
-    
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario o contraseña incorrectos"
-        )
-    
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role},
         expires_delta=access_token_expires
     )
-    
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -82,25 +69,21 @@ async def login_json(
         "role": user.role
     }
 
+
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
-    """Obtiene información del usuario actual"""
     current_user = get_current_user(token, db)
     return current_user
 
-# Dependencia para verificar si el usuario es admin
-def get_current_admin(
-    current_user: User = Depends(get_current_user)
-):
+
+def get_current_admin(current_user: User = Depends(get_current_user)):
     if current_user.role != "ADMIN":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Se requieren privilegios de administrador"
-        )
+        raise HTTPException(status_code=403, detail="Se requieren privilegios de administrador")
     return current_user
+
 
 from pydantic import BaseModel as _BaseModel
 from typing import Optional as _Optional
@@ -109,7 +92,7 @@ from typing import Optional as _Optional
 class UserCreate(_BaseModel):
     username: str
     password: str
-    role: str = "USER"   # ADMIN | USER
+    role: str = "USER"   # ADMIN | USER | GARITA
 
 
 class UserPasswordChange(_BaseModel):
@@ -143,8 +126,8 @@ def create_user(
 ):
     from app.services.security import hash_password
 
-    if data.role not in ("ADMIN", "USER"):
-        raise HTTPException(status_code=400, detail="Rol inválido. Usa ADMIN o USER")
+    if data.role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Rol inválido. Usa: {', '.join(VALID_ROLES)}")
 
     exists = db.query(User).filter(User.username == data.username).first()
     if exists:
@@ -174,7 +157,6 @@ def toggle_user(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if user.username == current_user.username:
         raise HTTPException(status_code=400, detail="No puedes desactivarte a ti mismo")
-
     user.is_active = not user.is_active
     db.commit()
     return {"message": f"Usuario {'activado' if user.is_active else 'desactivado'}", "is_active": user.is_active}
@@ -189,13 +171,11 @@ def change_user_password(
     db: Session = Depends(get_db),
 ):
     from app.services.security import hash_password
-
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if not data.new_password or len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
-
     user.password_hash = hash_password(data.new_password)
     db.commit()
     return {"message": "Contraseña actualizada correctamente"}
@@ -213,7 +193,6 @@ def delete_user(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if user.username == current_user.username:
         raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta")
-
     db.delete(user)
     db.commit()
     return {"message": "Usuario eliminado"}

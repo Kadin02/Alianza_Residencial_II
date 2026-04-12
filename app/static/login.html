@@ -14,25 +14,21 @@
             min-height: 100vh;
             background: linear-gradient(135deg, var(--accent) 0%, #1e4a8c 100%);
         }
-        
         .login-container {
             width: 100%;
             max-width: 400px;
             padding: 2rem;
         }
-        
         .login-card {
             background: white;
             border-radius: var(--radius-xl);
             padding: 2.5rem 2rem;
             box-shadow: var(--shadow-lg);
         }
-        
         .logo-area {
             text-align: center;
             margin-bottom: 2rem;
         }
-        
         .logo-icon {
             width: 64px;
             height: 64px;
@@ -46,22 +42,18 @@
             font-size: 1.8rem;
             font-weight: 800;
         }
-        
         .logo-area h1 {
             font-size: 1.4rem;
             color: var(--text-primary);
             margin-bottom: 0.2rem;
         }
-        
         .logo-area p {
             color: var(--text-secondary);
             font-size: 0.85rem;
         }
-        
         .form-group {
             margin-bottom: 1.25rem;
         }
-        
         .form-group label {
             display: block;
             margin-bottom: 0.4rem;
@@ -70,11 +62,9 @@
             color: var(--text-secondary);
             text-transform: uppercase;
         }
-        
         .input-with-icon {
             position: relative;
         }
-        
         .input-with-icon i {
             position: absolute;
             left: 12px;
@@ -83,12 +73,10 @@
             color: var(--text-muted);
             font-size: 1rem;
         }
-        
         .input-with-icon input {
             padding-left: 38px;
             margin-bottom: 0;
         }
-        
         .login-btn {
             width: 100%;
             padding: 12px;
@@ -102,11 +90,7 @@
             transition: opacity 0.15s;
             margin-top: 0.5rem;
         }
-        
-        .login-btn:hover {
-            opacity: 0.9;
-        }
-        
+        .login-btn:hover { opacity: 0.9; }
         .alert {
             padding: 12px 16px;
             border-radius: var(--radius-sm);
@@ -116,29 +100,13 @@
             gap: 8px;
             font-size: 0.85rem;
         }
-        
-        .alert-error {
-            background: var(--danger-bg);
-            color: #991b1b;
-            border: 1px solid var(--danger-brd);
-        }
-        
-        .alert-success {
-            background: var(--success-bg);
-            color: #065f46;
-            border: 1px solid var(--success-brd);
-        }
-        
+        .alert-error   { background: var(--danger-bg);  color: #991b1b; border: 1px solid var(--danger-brd); }
+        .alert-success { background: var(--success-bg); color: #065f46; border: 1px solid var(--success-brd); }
         .footer {
             text-align: center;
             margin-top: 2rem;
             color: rgba(255,255,255,0.7);
             font-size: 0.8rem;
-        }
-        
-        .footer a {
-            color: white;
-            text-decoration: underline;
         }
     </style>
 </head>
@@ -150,12 +118,12 @@
                 <h1>ALIANZA RESIDENCIAL</h1>
                 <p>Sistema de Administración de Propiedades</p>
             </div>
-            
+
             <div id="alertMessage" class="alert alert-error">
                 <i class="fas fa-exclamation-circle"></i>
                 <span id="alertText"></span>
             </div>
-            
+
             <form id="loginForm">
                 <div class="form-group">
                     <label>Usuario</label>
@@ -164,7 +132,6 @@
                         <input type="text" id="username" placeholder="Ingresa tu usuario" required>
                     </div>
                 </div>
-                
                 <div class="form-group">
                     <label>Contraseña</label>
                     <div class="input-with-icon">
@@ -172,87 +139,102 @@
                         <input type="password" id="password" placeholder="Ingresa tu contraseña" required>
                     </div>
                 </div>
-                
                 <button type="submit" class="login-btn" id="loginBtn">
                     <span>Iniciar Sesión</span>
                     <i class="fas fa-arrow-right"></i>
                 </button>
             </form>
         </div>
-        
+
         <div class="footer">
             © 2026 Alianza Residencial — Mercedes Bienes Raíces
         </div>
     </div>
-    
+
     <div id="notification"></div>
-    
+
     <script>
+        // ── Claves de localStorage (deben coincidir con Auth en main.js) ──
+        const TOKEN_KEY = 'alianza_token';
+        const USER_KEY  = 'alianza_user';
+        const ROLE_KEY  = 'alianza_role';
+
+        // ── Redirección según rol ──────────────────────────────────────────
+        function redirectByRole(role) {
+            if (role === 'GARITA') {
+                window.location.href = '/static/garita.html';
+            } else {
+                window.location.href = '/static/index.html';
+            }
+        }
+
+        // ── Si ya hay sesión activa, redirigir directo ────────────────────
+        const existingToken = localStorage.getItem(TOKEN_KEY);
+        const existingRole  = localStorage.getItem(ROLE_KEY);
+        if (existingToken && existingRole) {
+            redirectByRole(existingRole);
+        }
+
+        // ── Formulario de login ───────────────────────────────────────────
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const alertEl = document.getElementById('alertMessage');
+
+            const username  = document.getElementById('username').value.trim();
+            const password  = document.getElementById('password').value;
+            const alertEl   = document.getElementById('alertMessage');
             const alertText = document.getElementById('alertText');
-            const loginBtn = document.getElementById('loginBtn');
-            
-            // Validación básica
+            const loginBtn  = document.getElementById('loginBtn');
+
             if (!username || !password) {
                 alertText.innerText = 'Usuario y contraseña son requeridos';
+                alertEl.className   = 'alert alert-error';
                 alertEl.style.display = 'flex';
                 return;
             }
-            
-            // Mostrar loading
+
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
-            
+            alertEl.style.display = 'none';
+
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (!response.ok) {
-                    throw new Error(data.detail || 'Error al iniciar sesión');
+                    throw new Error(data.detail || 'Usuario o contraseña incorrectos');
                 }
-                
-                // Guardar token
-                localStorage.setItem('access_token', data.access_token);
-                localStorage.setItem('username', data.username);
-                localStorage.setItem('role', data.role);
-                
-                // Mostrar éxito
+
+                // ── Guardar con las mismas claves que usa Auth en main.js ──
+                localStorage.setItem(TOKEN_KEY, data.access_token);
+                localStorage.setItem(USER_KEY,  data.username);
+                localStorage.setItem(ROLE_KEY,  data.role || 'USER');
+
+                // ── Mostrar mensaje de éxito ───────────────────────────────
                 alertEl.className = 'alert alert-success';
-                alertText.innerText = '¡Login exitoso! Redirigiendo...';
+                const roleLabel = data.role === 'GARITA' ? 'Seguridad Garita'
+                                : data.role === 'ADMIN'  ? 'Administrador'
+                                : 'Usuario';
+                alertText.innerText = `¡Bienvenido, ${data.username}! (${roleLabel}) Redirigiendo...`;
                 alertEl.style.display = 'flex';
-                
-                // Redirigir al dashboard
+
+                // ── Redirigir según el rol ─────────────────────────────────
                 setTimeout(() => {
-                    window.location.href = '/static/index.html';
-                }, 1000);
-                
+                    redirectByRole(data.role);
+                }, 900);
+
             } catch (error) {
                 alertEl.className = 'alert alert-error';
                 alertText.innerText = error.message;
                 alertEl.style.display = 'flex';
-                
-                // Restaurar botón
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<span>Iniciar Sesión</span> <i class="fas fa-arrow-right"></i>';
             }
         });
-        
-        // Si ya hay token, redirigir al dashboard
-        if (localStorage.getItem('access_token')) {
-            window.location.href = '/static/index.html';
-        }
     </script>
 </body>
 </html>

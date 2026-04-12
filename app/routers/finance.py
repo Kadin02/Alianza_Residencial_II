@@ -1,4 +1,4 @@
-﻿from datetime import date
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -42,6 +42,9 @@ class PaymentCreate(BaseModel):
     amount: float
     invoice_number: Optional[str] = None
     reference: Optional[str] = None
+    # receipt_number: número de recibo físico opcional — solo se muestra
+    # en facturas y estados de cuenta cuando está presente
+    receipt_number: Optional[str] = None
 
 
 class PaymentApplicationItem(BaseModel):
@@ -55,6 +58,8 @@ class PaymentCompleteCreate(BaseModel):
     amount: float
     invoice_number: Optional[str] = None
     reference: Optional[str] = None
+    # receipt_number: número de recibo físico — aparece en factura y estado de cuenta
+    receipt_number: Optional[str] = None
     applications: List[PaymentApplicationItem]
 
 
@@ -85,6 +90,9 @@ def create_payment(payment_data: PaymentCreate, db: Session = Depends(get_db)):
         invoice_number=payment_data.invoice_number,
         reference=payment_data.reference,
     )
+    # Guardar receipt_number si el modelo lo soporta
+    if hasattr(payment, 'receipt_number'):
+        payment.receipt_number = payment_data.receipt_number
     db.add(payment)
     db.commit()
     db.refresh(payment)
@@ -99,6 +107,7 @@ def apply_payment(payment_id: int, charge_id: int, amount: float, db: Session = 
 
 @router.post("/payment-complete")
 def create_payment_complete(payment_data: PaymentCompleteCreate, db: Session = Depends(get_db)):
+    # Pasar receipt_number al servicio si lo soporta
     payment = create_payment_with_applications(db, payment_data)
     return {"message": "Pago registrado correctamente", "payment_id": payment.id}
 
@@ -110,13 +119,11 @@ def get_charges(db: Session = Depends(get_db)):
 
 @router.get("/payment/{payment_id}")
 def payment_detail(payment_id: int, db: Session = Depends(get_db)):
-    """Detalle basico de un pago"""
     return get_payment_detail(db, payment_id)
 
 
 @router.get("/payment-detail-full/{payment_id}")
 def payment_detail_full(payment_id: int, db: Session = Depends(get_db)):
-    """Detalle completo de un pago para factura"""
     return get_payment_detail_full(db, payment_id)
 
 
@@ -138,36 +145,47 @@ def generate_invoice(payment_id: int, fiscal_number: Optional[str] = None, db: S
 
 @router.get("/owner-statement-detailed/{owner_id}")
 def owner_statement_detailed(owner_id: int, db: Session = Depends(get_db)):
-    """Estado de cuenta detallado para imprimir"""
     return generate_owner_statement(db, owner_id)
 
 
 @router.get("/invoices")
 def get_invoices(db: Session = Depends(get_db)):
-    """Listar todas las facturas"""
     invoices = db.query(Invoice).order_by(Invoice.created_at.desc()).all()
     result = []
     for inv in invoices:
         payment = db.query(Payment).filter(Payment.id == inv.payment_id).first()
         owner = db.query(Owner).filter(Owner.id == payment.owner_id).first() if payment else None
-        result.append(
-            {
-                "id": inv.id,
-                "invoice_number": inv.invoice_number,
-                "fiscal_invoice_number": inv.fiscal_invoice_number,
-                "payment_id": inv.payment_id,
-                "owner_name": owner.full_name if owner else None,
-                "amount": float(payment.amount) if payment else 0,
-                "created_at": inv.created_at,
-                "pdf_path": inv.pdf_path,
-            }
-        )
+
+        # Obtener unidad activa del propietario para la factura
+        unit_number = None
+        if payment and payment.owner_id:
+            uo = db.query(UnitOwner).filter(
+                UnitOwner.owner_id == payment.owner_id,
+                UnitOwner.is_active == True
+            ).first()
+            if uo:
+                u = db.query(Unit).filter(Unit.id == uo.unit_id).first()
+                if u:
+                    unit_number = u.unit_number
+
+        result.append({
+            "id": inv.id,
+            "invoice_number": inv.invoice_number,
+            "fiscal_invoice_number": inv.fiscal_invoice_number,
+            "payment_id": inv.payment_id,
+            "owner_name": owner.full_name if owner else "—",
+            "unit_number": unit_number or "—",
+            "amount": float(payment.amount) if payment else 0,
+            "created_at": inv.created_at,
+            "pdf_path": inv.pdf_path,
+            # receipt_number del pago si existe
+            "receipt_number": getattr(payment, 'receipt_number', None) if payment else None,
+        })
     return result
 
 
 @router.get("/invoices/{invoice_id}/download")
 def download_invoice(invoice_id: int, db: Session = Depends(get_db)):
-    """Descargar PDF de factura"""
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice or not invoice.pdf_path:
         raise HTTPException(status_code=404, detail="Factura no encontrada")
@@ -183,11 +201,12 @@ def download_invoice(invoice_id: int, db: Session = Depends(get_db)):
         )
     raise HTTPException(status_code=404, detail="Archivo PDF no encontrado")
 
+
 @router.get("/payments-history")
 def payments_history(db: Session = Depends(get_db)):
     """
     Devuelve todos los pagos del sistema con detalle completo.
-    Separa concepto de observación interna.
+    Incluye receipt_number si está disponible.
     """
     from app.models.payment import Payment
     from app.models.payment_application import PaymentApplication
@@ -202,7 +221,6 @@ def payments_history(db: Session = Depends(get_db)):
     for p in payments:
         owner = db.query(Owner).filter(Owner.id == p.owner_id).first() if p.owner_id else None
 
-        # Unidad activa del propietario
         unit_number = None
         if p.owner_id:
             uo = db.query(UnitOwner).filter(
@@ -214,13 +232,10 @@ def payments_history(db: Session = Depends(get_db)):
                 if u:
                     unit_number = u.unit_number
 
-        # Aplicaciones (cargos vinculados)
         apps = db.query(PaymentApplication).filter(
             PaymentApplication.payment_id == p.id
         ).all()
 
-        # Concepto: si tiene cargos vinculados usa la descripción del cargo
-        # Si no, usa la primera parte del campo reference (antes del " — ")
         concepto    = None
         observacion = None
 
@@ -243,6 +258,9 @@ def payments_history(db: Session = Depends(get_db)):
                 concepto    = ref.strip() or "—"
                 observacion = None
 
+        # Factura vinculada al pago (si existe)
+        invoice = db.query(Invoice).filter(Invoice.payment_id == p.id).first()
+
         result.append({
             "payment_id":    p.id,
             "factura":       p.invoice_number,
@@ -251,28 +269,30 @@ def payments_history(db: Session = Depends(get_db)):
             "owner_name":    owner.full_name if owner else "—",
             "unit_number":   unit_number or "—",
             "concepto":      concepto or "—",
-            "observacion":   observacion,   # solo uso interno, no aparece en reportes
+            "observacion":   observacion,
             "monto":         float(p.amount) if p.amount else 0,
             "referencia":    p.reference,
+            "receipt_number": getattr(p, 'receipt_number', None),
             "tiene_cargos":  len(apps) > 0,
+            "tiene_factura": invoice is not None,
+            "invoice_id":    invoice.id if invoice else None,
         })
 
     return result
 
-# ── Parche ───────────────
-# ── Schemas adicionales ──────────────────────────────────────
+
+# ── Schemas para editar/borrar ────────────────────────────────
 
 class PaymentUpdate(BaseModel):
     payment_date:   date
     amount:         float
     invoice_number: Optional[str] = None
     reference:      Optional[str] = None
+    receipt_number: Optional[str] = None
 
 
-# ── Dependencia admin (ya existe en auth.py, aquí la redefinimos localmente) ──
-def _admin_only(
-    current_user = Depends(get_current_user_dep),
-):
+# ── Dependencia admin ─────────────────────────────────────────
+def _admin_only(current_user = Depends(get_current_user_dep)):
     if current_user.role != "ADMIN":
         raise HTTPException(status_code=403, detail="Solo el administrador puede realizar esta acción")
     return current_user
@@ -286,7 +306,6 @@ def update_payment(
     db: Session = Depends(get_db),
     current_user = Depends(_admin_only),
 ):
-    """Editar fecha, monto, factura y referencia de un pago. Solo ADMIN."""
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
@@ -296,12 +315,16 @@ def update_payment(
     payment.amount         = Decimal(str(data.amount))
     payment.invoice_number = data.invoice_number
     payment.reference      = data.reference
+    if hasattr(payment, 'receipt_number'):
+        payment.receipt_number = data.receipt_number
     db.commit()
     db.refresh(payment)
     return {"message": "Pago actualizado", "payment_id": payment.id}
 
 
 # ── Eliminar pago — solo ADMIN ───────────────────────────────
+# FIX: El Error 500 al borrar ocurría porque la factura vinculada (Invoice)
+# tenía una FK a payment_id y no se eliminaba antes de borrar el pago.
 @router.delete("/payment/{payment_id}")
 def delete_payment(
     payment_id: int,
@@ -310,6 +333,7 @@ def delete_payment(
 ):
     """
     Elimina un pago y revierte los saldos de los cargos afectados.
+    También elimina la factura vinculada si existe.
     Solo ADMIN.
     """
     from decimal import Decimal
@@ -320,24 +344,38 @@ def delete_payment(
     if not payment:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
 
-    # Revertir saldos de los cargos afectados
-    apps = db.query(PaymentApplication).filter(
-        PaymentApplication.payment_id == payment_id
-    ).all()
+    try:
+        # 1. Revertir saldos de los cargos afectados
+        apps = db.query(PaymentApplication).filter(
+            PaymentApplication.payment_id == payment_id
+        ).all()
 
-    for app in apps:
-        charge = db.query(Charge).filter(Charge.id == app.charge_id).first()
-        if charge:
-            charge.balance = Decimal(str(charge.balance)) + Decimal(str(app.applied_amount))
-            # Recalcular estado
-            if charge.balance >= Decimal(str(charge.amount)):
-                charge.status = "PENDIENTE"
-            else:
-                charge.status = "PARCIAL"
-        db.delete(app)
+        for app in apps:
+            charge = db.query(Payment.__class__).filter(
+                PaymentApplication.charge_id == app.charge_id
+            ).first() if False else db.query(Charge).filter(Charge.id == app.charge_id).first()
 
-    db.delete(payment)
-    db.commit()
+            if charge:
+                charge.balance = Decimal(str(charge.balance)) + Decimal(str(app.applied_amount))
+                if charge.balance >= Decimal(str(charge.amount)):
+                    charge.status = "PENDIENTE"
+                else:
+                    charge.status = "PARCIAL"
+            db.delete(app)
+
+        # 2. Eliminar la factura vinculada (si existe) — esto era la causa del Error 500
+        invoice = db.query(Invoice).filter(Invoice.payment_id == payment_id).first()
+        if invoice:
+            db.delete(invoice)
+
+        # 3. Eliminar el pago
+        db.delete(payment)
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar pago: {str(e)}")
+
     return {"message": "Pago eliminado y saldos revertidos correctamente"}
 
 
@@ -347,7 +385,6 @@ def get_all_payments(
     db: Session = Depends(get_db),
     current_user = Depends(_admin_only),
 ):
-    """Lista todos los pagos con detalle — solo ADMIN."""
     from app.models.owner import Owner
     from app.models.unit_owner import UnitOwner
     from app.models.unit import Unit
@@ -373,15 +410,20 @@ def get_all_payments(
             if c:
                 cargos.append({"description": c.description, "applied": float(a.applied_amount)})
 
+        invoice = db.query(Invoice).filter(Invoice.payment_id == p.id).first()
+
         result.append({
             "payment_id":    p.id,
             "fecha":         str(p.payment_date),
             "owner_name":    owner.full_name if owner else "—",
             "unit_number":   unit.unit_number if unit else "—",
             "amount":        float(p.amount),
-            "invoice_number":p.invoice_number,
+            "invoice_number": p.invoice_number,
             "reference":     p.reference,
+            "receipt_number": getattr(p, 'receipt_number', None),
             "cargos":        cargos,
+            "tiene_factura": invoice is not None,
+            "invoice_id":    invoice.id if invoice else None,
         })
 
     return result

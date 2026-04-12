@@ -1,58 +1,101 @@
-/* ═══════════════════════════════════════════════════════
-   ALIANZA RESIDENCIAL — main.js  v4.1
-   Fix: isAdmin() normaliza rol, renderSidebar compatible
-   con páginas que tienen <header class="main-header">
-   ═══════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   main.js  — Alianza Residencial
+   CAMBIOS:
+   · Auth.role() ahora expone el rol del token JWT
+   · Auth.isGarita() para detectar rol GARITA
+   · renderSidebar() filtra menú según rol:
+       ADMIN  → todo el menú
+       USER   → todo excepto Administración
+       GARITA → solo Garita (sin acceso a nada más)
+   · Protección de páginas: si el rol no tiene acceso, redirige a garita.html
+   · rolLabel muestra "Seguridad Garita" para el rol GARITA
+   · Protección de rutas en cada página sensible
+════════════════════════════════════════════════════════════════ */
 
-const API_BASE = '/api';
-
-/* ─── Auth ───────────────────────────────────── */
+/* ─── Auth ────────────────────────────────────────────────── */
 const Auth = {
-  token()    { return localStorage.getItem('access_token'); },
-  user()     { return localStorage.getItem('username') || 'admin'; },
-  role()     { return (localStorage.getItem('role') || '').toUpperCase(); },
-  isAdmin()  { return this.role() === 'ADMIN'; },
-  loggedIn() { return !!this.token(); },
+  _key: 'alianza_token',
+  _user: 'alianza_user',
+  _role: 'alianza_role',
+
   save(token, username, role) {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('username',     username);
-    localStorage.setItem('role',         (role || '').toUpperCase());
+    localStorage.setItem(this._key,  token);
+    localStorage.setItem(this._user, username);
+    localStorage.setItem(this._role, role || 'USER');
   },
+
+  token()   { return localStorage.getItem(this._key);  },
+  user()    { return localStorage.getItem(this._user) || ''; },
+  role()    { return localStorage.getItem(this._role) || 'USER'; },
+
+  isAdmin()  { return this.role() === 'ADMIN';  },
+  isGarita() { return this.role() === 'GARITA'; },
+
   clear() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('role');
+    localStorage.removeItem(this._key);
+    localStorage.removeItem(this._user);
+    localStorage.removeItem(this._role);
   },
+
+  // Requiere sesión activa — redirige a login si no hay token
   require() {
-    if (!this.loggedIn()) { window.location.href = '/login'; return false; }
+    if (!this.token()) {
+      window.location.href = '/login';
+      return false;
+    }
     return true;
-  }
+  },
+
+  // Requiere que el rol tenga acceso a esta área
+  // Si es GARITA y está en una página que no es garita.html → redirige
+  requireNotGarita() {
+    if (this.isGarita()) {
+      window.location.href = '/static/garita.html';
+      return false;
+    }
+    return true;
+  },
 };
 
-/* ─── API Request ────────────────────────────── */
-async function apiRequest(endpoint, method = 'GET', data = null) {
+/* ─── API ─────────────────────────────────────────────────── */
+async function apiRequest(endpoint, method = 'GET', body = null) {
+  const token = Auth.token();
   const headers = { 'Content-Type': 'application/json' };
-  if (Auth.token()) headers['Authorization'] = `Bearer ${Auth.token()}`;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+
   try {
-    const opts = { method, headers };
-    if (data) opts.body = JSON.stringify(data);
-    const res = await fetch(`${API_BASE}${endpoint}`, opts);
-    if (res.status === 401) { Auth.clear(); window.location.href = '/login'; return null; }
-    if (!res.ok) {
-      let msg = `Error ${res.status}`;
-      try { msg = (await res.json()).detail || msg; } catch (_) {}
-      showToast(msg, 'error');
+    const res = await fetch(`/api${endpoint}`, opts);
+
+    if (res.status === 401) {
+      Auth.clear();
+      window.location.href = '/login';
       return null;
     }
-    const ct = res.headers.get('content-type') || '';
-    return ct.includes('application/json') ? await res.json() : null;
-  } catch (err) {
+
+    if (res.status === 403) {
+      showToast('No tienes permiso para realizar esta acción', 'error');
+      return null;
+    }
+
+    if (!res.ok) {
+      let detail = `Error ${res.status}`;
+      try { detail = (await res.json()).detail || detail; } catch (_) {}
+      showToast(detail, 'error');
+      return null;
+    }
+
+    if (res.status === 204) return {};
+    return await res.json();
+  } catch (e) {
     showToast('Error de conexión con el servidor', 'error');
     return null;
   }
 }
 
-/* ─── Toasts ─────────────────────────────────── */
+/* ─── Toasts ─────────────────────────────────────────────── */
 function showToast(msg, type = 'success') {
   const icons = { success: '✓', error: '✕', warning: '⚠' };
   const el = document.createElement('div');
@@ -64,7 +107,7 @@ function showToast(msg, type = 'success') {
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; setTimeout(() => el.remove(), 400); }, 3500);
 }
 
-/* ─── Formato ────────────────────────────────── */
+/* ─── Formato ────────────────────────────────────────────── */
 function formatMoney(v) {
   return parseFloat(v || 0).toLocaleString('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -78,35 +121,61 @@ function todayLong() {
   return new Date().toLocaleDateString('es-PA', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-/* ─── Sidebar ────────────────────────────────── */
+/* ─── Sidebar ────────────────────────────────────────────── */
+
+// Definición de páginas del menú
+// roles: array de roles que pueden ver este ítem
+//   ['ADMIN', 'USER', 'GARITA'] = todos
+//   ['ADMIN', 'USER']           = no garita
+//   ['ADMIN']                   = solo admin
 const NAV_PAGES = [
-  { href: '/static/index.html',      label: 'Inicio',         icon: 'fa-home',         id: 'index'      },
-  { href: '/static/properties.html', label: 'Propiedades',    icon: 'fa-building',     id: 'properties' },
-  { href: '/static/units.html',      label: 'Unidades',       icon: 'fa-door-open',    id: 'units'      },
-  { href: '/static/owners.html',     label: 'Propietarios',   icon: 'fa-users',        id: 'owners'     },
-  { href: '/static/finances.html',   label: 'Finanzas',       icon: 'fa-chart-line',   id: 'finances'   },
-  { href: '/static/suppliers.html',  label: 'Proveedores',    icon: 'fa-truck',        id: 'suppliers'  },
-  { href: '/static/agenda.html',     label: 'Agenda',         icon: 'fa-calendar-alt', id: 'agenda'     },
-  { href: '/static/reports.html',    label: 'Reportes',       icon: 'fa-chart-bar',    id: 'reports'    },
-  { href: '/static/imports.html',    label: 'Importar/Exp.',  icon: 'fa-file-import',  id: 'imports'    },
-  { href: '/static/historial.html',  label: 'Historial',      icon: 'fa-history',      id: 'historial'  },
-  { href: '/static/admin.html',      label: 'Administración', icon: 'fa-shield-alt',   id: 'admin', adminOnly: true },
-  { href: '/static/garita.html',     label: 'Garita',         icon: 'fa-shield-alt',   id: 'garita', garitaVisible: true },
+  { href: '/static/index.html',      label: 'Inicio',         icon: 'fa-home',         id: 'index',      roles: ['ADMIN', 'USER'] },
+  { href: '/static/properties.html', label: 'Propiedades',    icon: 'fa-building',     id: 'properties', roles: ['ADMIN', 'USER'] },
+  { href: '/static/units.html',      label: 'Unidades',       icon: 'fa-door-open',    id: 'units',      roles: ['ADMIN', 'USER'] },
+  { href: '/static/owners.html',     label: 'Propietarios',   icon: 'fa-users',        id: 'owners',     roles: ['ADMIN', 'USER'] },
+  { href: '/static/finances.html',   label: 'Finanzas',       icon: 'fa-chart-line',   id: 'finances',   roles: ['ADMIN', 'USER'] },
+  { href: '/static/suppliers.html',  label: 'Proveedores',    icon: 'fa-truck',        id: 'suppliers',  roles: ['ADMIN', 'USER'] },
+  // Agenda: visible para ADMIN, USER y GARITA
+  { href: '/static/agenda.html',     label: 'Agenda',         icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER', 'GARITA'] },
+  { href: '/static/reports.html',    label: 'Reportes',       icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
+  { href: '/static/imports.html',    label: 'Importar/Exp.',  icon: 'fa-file-import',  id: 'imports',    roles: ['ADMIN', 'USER'] },
+  { href: '/static/historial.html',  label: 'Historial',      icon: 'fa-history',      id: 'historial',  roles: ['ADMIN', 'USER'] },
+  // Administración: solo ADMIN
+  { href: '/static/admin.html',      label: 'Administración', icon: 'fa-shield-alt',   id: 'admin',      roles: ['ADMIN'] },
+  // Garita: visible para ADMIN, USER y GARITA
+  { href: '/static/garita.html',     label: 'Garita',         icon: 'fa-car',          id: 'garita',     roles: ['ADMIN', 'USER', 'GARITA'] },
 ];
+
+// Etiquetas de rol para mostrar al usuario
+const ROLE_LABELS = {
+  'ADMIN':  'Administrador',
+  'USER':   'Usuario',
+  'GARITA': 'Seguridad Garita',
+};
 
 function renderSidebar(activePage) {
   if (!Auth.require()) return;
 
+  const role    = Auth.role();
   const isAdmin = Auth.isAdmin();
 
+  // Si la página actual no está permitida para este rol → redirigir
+  const currentPage = NAV_PAGES.find(p => p.id === activePage);
+  if (currentPage && !currentPage.roles.includes(role)) {
+    // GARITA: redirigir a garita
+    if (Auth.isGarita()) {
+      window.location.href = '/static/garita.html';
+      return;
+    }
+    // USER intentando llegar a página de admin
+    window.location.href = '/static/index.html';
+    return;
+  }
+
   if (!document.getElementById('_sidebar')) {
-    // ── Obtener solo el contenido relevante ──────────────────────────
-    // Algunas páginas tienen <header class="main-header" id="main-header">
-    // que ya no se usa con el sidebar. Lo eliminamos antes de capturar.
     const oldHeader = document.querySelector('header.main-header');
     if (oldHeader) oldHeader.remove();
 
-    // Capturar el contenido del body (sin el header viejo)
     const existingContent = document.body.innerHTML;
 
     document.body.innerHTML = `
@@ -151,23 +220,19 @@ function renderSidebar(activePage) {
       <div id="notification"></div>`;
   }
 
-  // Llenar nav — filtrar páginas adminOnly si no es admin
+  // Llenar nav — filtrar según el rol del usuario
   const nav = document.getElementById('_sidebar_nav');
   nav.innerHTML = NAV_PAGES
-    .filter(p => {
-      if (p.adminOnly && !isAdmin) return false;
-      // Garita: visible para ADMIN, USER y GARITA — no para otros roles que no existen aún
-      return true;
-    })
+    .filter(p => p.roles.includes(role))
     .map(p => `
       <a href="${p.href}" class="${activePage === p.id ? 'active' : ''}">
         <i class="fas ${p.icon}"></i>
         <span>${p.label}</span>
       </a>`).join('');
 
-  // Usuario y rol
+  // Usuario, rol y avatar
   const u        = Auth.user();
-  const rolLabel = isAdmin ? 'Administrador' : 'Usuario';
+  const rolLabel = ROLE_LABELS[role] || role;
   const elU = document.getElementById('_sb_username');
   const elR = document.getElementById('_sb_role_label');
   const av  = document.getElementById('_sb_avatar');
@@ -175,7 +240,13 @@ function renderSidebar(activePage) {
   if (elR) elR.textContent = rolLabel;
   if (av)  av.textContent  = u.charAt(0).toUpperCase();
 
-  // Título y fecha
+  // Color del avatar según rol
+  if (av) {
+    if (role === 'ADMIN')  av.style.background = '#fbbf24'; // amarillo admin
+    if (role === 'GARITA') av.style.background = '#34d399'; // verde garita
+  }
+
+  // Título y fecha en topbar
   const page = NAV_PAGES.find(p => p.id === activePage);
   const tt   = document.getElementById('_topbar_title');
   const td   = document.getElementById('_topbar_date');
@@ -221,7 +292,7 @@ function _applySidebarCollapse(collapse, save) {
 
 function logout() { Auth.clear(); window.location.href = '/login'; }
 
-/* ─── Loaders de selects ─────────────────────── */
+/* ─── Loaders de selects ─────────────────────────────────── */
 async function loadSelectOptions(selectId, endpoint, valFn, labelFn, ph = 'Seleccione...') {
   const sel = document.getElementById(selectId);
   if (!sel) return [];
