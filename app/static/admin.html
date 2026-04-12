@@ -30,8 +30,11 @@
 
     /* ── Badge rol ── */
     .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
-    .role-ADMIN { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
-    .role-USER  { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .role-ADMIN  { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .role-USER   { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+    /* NUEVO: badge para rol GARITA */
+    .role-GARITA { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+
     .active-dot   { display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:4px; }
     .inactive-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#dc2626; margin-right:4px; }
 
@@ -110,14 +113,15 @@
             <input type="password" id="new-password" placeholder="Mínimo 6 caracteres">
 
             <label class="field-label">Rol *</label>
-            <select id="new-role">
-              <option value="USER">Usuario (sin eliminar/editar pagos o cargos)</option>
-              <option value="ADMIN">Administrador (acceso total)</option>
+            <select id="new-role" onchange="updateRoleDescription()">
+              <option value="USER">Usuario — acceso estándar</option>
+              <option value="ADMIN">Administrador — acceso total</option>
+              <option value="GARITA">Seguridad Garita — solo módulo de garita</option>
             </select>
 
-            <div style="background:var(--accent-soft);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.8rem;color:var(--text-secondary);">
-              <strong>Rol Usuario:</strong> puede registrar pagos, crear cargos, propietarios y propiedades, pero <strong>no puede eliminar ni editar</strong> pagos o cargos existentes.<br><br>
-              <strong>Rol Administrador:</strong> acceso total, incluyendo eliminar y editar pagos y cargos.
+            <!-- Descripción dinámica del rol seleccionado -->
+            <div id="role-desc" style="background:var(--accent-soft);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.8rem;color:var(--text-secondary);">
+              <strong>Rol Usuario:</strong> puede registrar pagos, crear cargos, propietarios y propiedades, pero <strong>no puede eliminar ni editar</strong> pagos o cargos existentes.
             </div>
 
             <button onclick="createUser()">
@@ -307,6 +311,8 @@
       <input type="number" id="edit-pay-amount" step="0.01" min="0.01">
       <label class="field-label">N° Factura física</label>
       <input type="text" id="edit-pay-invoice" placeholder="Opcional">
+      <label class="field-label">N° Recibo físico</label>
+      <input type="text" id="edit-pay-receipt" placeholder="Opcional">
       <label class="field-label">Referencia</label>
       <input type="text" id="edit-pay-ref" placeholder="Opcional">
       <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px;margin-bottom:12px;font-size:.8rem;color:#856404;">
@@ -336,9 +342,9 @@
       <input type="text" id="edit-chg-desc">
       <label class="field-label">Monto *</label>
       <input type="number" id="edit-chg-amount" step="0.01" min="0.01">
-      <label class="field-label">Fecha creación *</label>
+      <label class="field-label">Fecha de creación *</label>
       <input type="date" id="edit-chg-date-created">
-      <label class="field-label">Fecha vencimiento *</label>
+      <label class="field-label">Fecha de vencimiento *</label>
       <input type="date" id="edit-chg-due-date">
       <div style="display:flex;gap:10px;margin-top:4px;">
         <button onclick="confirmEditCharge()" style="flex:1;margin-top:0;"><i class="fas fa-save"></i> Guardar</button>
@@ -351,50 +357,88 @@
 <div id="notification"></div>
 <script src="js/main.js"></script>
 <script>
-renderSidebar('admin');
-
-// Verificar que sea admin
-if (!Auth.isAdmin()) {
+// ── Verificar acceso admin ───────────────────────────────
+const _role = Auth.role();
+if (_role !== 'ADMIN') {
   document.getElementById('access-denied').style.display = 'block';
 } else {
   document.getElementById('admin-content').style.display = 'block';
-  init();
+  initAdmin();
 }
 
-let allUsers    = [];
+renderSidebar('admin');
+
+// ── Descripción dinámica del rol ─────────────────────────
+function updateRoleDescription() {
+  const role = document.getElementById('new-role').value;
+  const desc = document.getElementById('role-desc');
+  const texts = {
+    'USER':   '<strong>Rol Usuario:</strong> puede registrar pagos, crear cargos, propietarios y propiedades, pero <strong>no puede eliminar ni editar</strong> pagos o cargos existentes.',
+    'ADMIN':  '<strong>Rol Administrador:</strong> acceso total, incluyendo eliminar y editar pagos, cargos y usuarios.',
+    'GARITA': '<strong>Rol Garita:</strong> acceso <strong>exclusivo al módulo de Control de Garita</strong>. Solo puede registrar visitas, ver historial y gestionar pre-registros. No tiene acceso a finanzas, propietarios ni administración.',
+  };
+  desc.innerHTML = texts[role] || '';
+}
+
+// ── Estado global ────────────────────────────────────────
 let allPayments = [];
 let allCharges  = [];
-let pwdTargetId = null;
+let allOwners   = [];
+let allUnits    = [];
+let editingPwdUserId = null;
 
-// ── Init ──────────────────────────────────────────────────
-async function init() {
-  await Promise.all([loadUsers(), loadPayments(), loadCharges()]);
-}
-
-// ── Tabs ──────────────────────────────────────────────────
+// ── Tabs ─────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.adm-tab').forEach((b, i) => {
-    b.classList.toggle('active', ['usuarios','pagos','cargos'][i] === tab);
+    const ids = ['usuarios','pagos','cargos'];
+    b.classList.toggle('active', ids[i] === tab);
   });
   document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+
+  if (tab === 'pagos')  loadPayments();
+  if (tab === 'cargos') loadCharges();
 }
 
-// ════════════ USUARIOS ════════════════════════════════════
+// ── Init ─────────────────────────────────────────────────
+async function initAdmin() {
+  const [owners, units] = await Promise.all([
+    apiRequest('/owners'),
+    apiRequest('/units'),
+  ]);
+  allOwners = owners || [];
+  allUnits  = units  || [];
+
+  // Llenar filtros de pagos
+  const pfOwner = document.getElementById('pf-owner');
+  const cfOwner = document.getElementById('cf-owner');
+  allOwners.forEach(o => {
+    pfOwner.innerHTML += `<option value="${o.id}">${o.full_name}</option>`;
+    cfOwner.innerHTML += `<option value="${o.id}">${o.full_name}</option>`;
+  });
+
+  // Llenar filtros de unidad
+  const pfUnit = document.getElementById('pf-unit');
+  const cfUnit = document.getElementById('cf-unit');
+  allUnits.forEach(u => {
+    pfUnit.innerHTML += `<option value="${u.unit_number}">Apt. ${u.unit_number}</option>`;
+    cfUnit.innerHTML += `<option value="${u.unit_number}">Apt. ${u.unit_number}</option>`;
+  });
+
+  loadUsers();
+}
+
+// ══ USUARIOS ════════════════════════════════════════════
 
 async function loadUsers() {
-  allUsers = await apiRequest('/auth/users') || [];
-  renderUsers();
-}
-
-function renderUsers() {
-  document.getElementById('users-count').textContent = allUsers.length;
+  const users = await apiRequest('/auth/users') || [];
+  document.getElementById('users-count').textContent = users.length;
   const tbody = document.getElementById('users-tbody');
-  if (!allUsers.length) {
+  if (!users.length) {
     tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin usuarios</td></tr>`;
     return;
   }
-  tbody.innerHTML = allUsers.map(u => `
+  tbody.innerHTML = users.map(u => `
     <tr>
       <td><strong>${u.username}</strong></td>
       <td><span class="role-badge role-${u.role}">${u.role}</span></td>
@@ -405,12 +449,10 @@ function renderUsers() {
       <td>
         <div class="action-btns">
           <button class="btn-edit" onclick="openPwdModal(${u.id}, '${u.username}')">
-            <i class="fas fa-key"></i> Contraseña
+            <i class="fas fa-key"></i> Clave
           </button>
-          <button class="btn-edit" onclick="toggleUser(${u.id})"
-            style="${u.is_active ? 'background:#fef3c7;color:#92400e;' : 'background:#d1fae5;color:#065f46;'}">
+          <button class="btn-edit" onclick="toggleUser(${u.id})" title="${u.is_active ? 'Desactivar' : 'Activar'}">
             <i class="fas fa-${u.is_active ? 'ban' : 'check'}"></i>
-            ${u.is_active ? 'Desactivar' : 'Activar'}
           </button>
           <button class="btn-del" onclick="deleteUser(${u.id}, '${u.username}')">
             <i class="fas fa-trash"></i>
@@ -424,11 +466,11 @@ async function createUser() {
   const username = document.getElementById('new-username').value.trim();
   const password = document.getElementById('new-password').value;
   const role     = document.getElementById('new-role').value;
-  if (!username || !password) { showToast('Completa usuario y contraseña', 'error'); return; }
-  if (password.length < 6)    { showToast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
+  if (!username || !password) { showToast('Completa todos los campos', 'error'); return; }
+  if (password.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
   const r = await apiRequest('/auth/users', 'POST', { username, password, role });
   if (r) {
-    showToast(`Usuario ${username} creado`, 'success');
+    showToast(`Usuario "${username}" creado con rol ${role}`, 'success');
     document.getElementById('new-username').value = '';
     document.getElementById('new-password').value = '';
     loadUsers();
@@ -436,18 +478,18 @@ async function createUser() {
 }
 
 async function toggleUser(id) {
-  const r = await apiRequest(`/auth/users/${id}/toggle`, 'PATCH', {});
-  if (r) { showToast(r.message); loadUsers(); }
+  const r = await apiRequest(`/auth/users/${id}/toggle`, 'PATCH');
+  if (r) { showToast('Estado actualizado'); loadUsers(); }
 }
 
 async function deleteUser(id, username) {
   if (!confirm(`¿Eliminar el usuario "${username}"? Esta acción no se puede deshacer.`)) return;
   const r = await apiRequest(`/auth/users/${id}`, 'DELETE');
-  if (r) { showToast('Usuario eliminado'); loadUsers(); }
+  if (r) { showToast(`Usuario "${username}" eliminado`); loadUsers(); }
 }
 
 function openPwdModal(id, username) {
-  pwdTargetId = id;
+  editingPwdUserId = id;
   document.getElementById('pwd-modal-user').textContent = username;
   document.getElementById('modal-new-pwd').value = '';
   document.getElementById('pwd-modal').classList.add('open');
@@ -457,66 +499,61 @@ function closePwdModal() { document.getElementById('pwd-modal').classList.remove
 async function confirmPwdChange() {
   const pwd = document.getElementById('modal-new-pwd').value;
   if (!pwd || pwd.length < 6) { showToast('Mínimo 6 caracteres', 'error'); return; }
-  const r = await apiRequest(`/auth/users/${pwdTargetId}/password`, 'PATCH', { new_password: pwd });
-  if (r) { showToast('Contraseña actualizada'); closePwdModal(); }
+  const r = await apiRequest(`/auth/users/${editingPwdUserId}/password`, 'PATCH', { new_password: pwd });
+  if (r) { showToast('Contraseña actualizada', 'success'); closePwdModal(); }
 }
 
-// ════════════ PAGOS ═══════════════════════════════════════
+// ══ PAGOS ════════════════════════════════════════════════
 
 async function loadPayments() {
-  allPayments = await apiRequest('/finance/all-payments') || [];
-
-  // Llenar selects de filtro
-  const owners = [...new Set(allPayments.map(p => p.owner_name).filter(Boolean))].sort();
-  const units  = [...new Set(allPayments.map(p => p.unit_number).filter(Boolean))].sort();
-  const pfOwner = document.getElementById('pf-owner');
-  const pfUnit  = document.getElementById('pf-unit');
-  pfOwner.innerHTML = '<option value="">Todos</option>';
-  pfUnit.innerHTML  = '<option value="">Todos</option>';
-  owners.forEach(o => pfOwner.innerHTML += `<option>${o}</option>`);
-  units.forEach(u  => pfUnit.innerHTML  += `<option value="${u}">Apt. ${u}</option>`);
-
+  const data = await apiRequest('/finance/all-payments') || [];
+  allPayments = data;
+  document.getElementById('payments-count').textContent = data.length;
   filterPayments();
 }
 
 function filterPayments() {
-  const owner  = document.getElementById('pf-owner').value;
-  const unit   = document.getElementById('pf-unit').value;
-  const search = document.getElementById('pf-search').value.toLowerCase().trim();
+  const ownerId = document.getElementById('pf-owner').value;
+  const unitNum = document.getElementById('pf-unit').value;
+  const search  = document.getElementById('pf-search').value.toLowerCase();
 
-  const list = allPayments.filter(p => {
-    if (owner  && p.owner_name  !== owner) return false;
-    if (unit   && p.unit_number !== unit)  return false;
+  const filtered = allPayments.filter(p => {
+    if (ownerId && String(p.owner_id || '') !== ownerId) return false;
+    if (unitNum && p.unit_number !== unitNum) return false;
     if (search) {
-      const txt = [p.invoice_number, p.reference, p.owner_name, String(p.amount)].join(' ').toLowerCase();
-      if (!txt.includes(search)) return false;
+      const hay = `${p.invoice_number || ''} ${p.reference || ''} ${p.owner_name || ''} ${p.receipt_number || ''}`.toLowerCase();
+      if (!hay.includes(search)) return false;
     }
     return true;
   });
 
-  document.getElementById('payments-count').textContent = list.length;
-  const tbody = document.getElementById('payments-tbody');
+  renderPayments(filtered);
+}
 
+function renderPayments(list) {
+  const tbody = document.getElementById('payments-tbody');
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
     return;
   }
-
   tbody.innerHTML = list.map(p => `
     <tr>
-      <td class="td-mono" style="font-size:.78rem;color:var(--text-muted);">#${p.payment_id}</td>
+      <td class="td-mono">${p.payment_id}</td>
       <td>${formatDate(p.fecha)}</td>
-      <td style="font-size:.83rem;">${p.owner_name}</td>
-      <td>Apt. ${p.unit_number}</td>
-      <td style="font-size:.78rem;color:var(--text-muted);">
-        ${p.cargos.map(c => `<div>${c.description} <strong>$${formatMoney(c.applied)}</strong></div>`).join('') || '—'}
+      <td>${p.owner_name}</td>
+      <td>${p.unit_number}</td>
+      <td style="max-width:180px;font-size:.8rem;color:var(--text-secondary);">
+        ${(p.cargos || []).map(c => c.description).join(', ') || '—'}
       </td>
       <td class="td-right"><strong>$${formatMoney(p.amount)}</strong></td>
-      <td style="font-size:.78rem;color:var(--text-muted);">${p.invoice_number || '—'}</td>
+      <td style="font-size:.8rem;">
+        ${p.invoice_number ? `<span class="badge badge-primary">${p.invoice_number}</span>` : '<span style="color:var(--text-muted);">—</span>'}
+        ${p.tiene_factura ? `<br><a href="/static/factura.html?payment_id=${p.payment_id}" target="_blank" style="font-size:.72rem;color:var(--accent);">ver factura</a>` : ''}
+      </td>
       <td>
         <div class="action-btns">
-          <button class="btn-edit" onclick="openEditPayment(${p.payment_id}, '${p.fecha}', ${p.amount}, '${p.invoice_number||''}', '${p.reference||''}')">
-            <i class="fas fa-edit"></i> Editar
+          <button class="btn-edit" onclick="openEditPayment(${p.payment_id}, '${p.fecha}', ${p.amount}, '${p.invoice_number||''}', '${p.reference||''}', '${p.receipt_number||''}')">
+            <i class="fas fa-edit"></i>
           </button>
           <button class="btn-del" onclick="deletePayment(${p.payment_id})">
             <i class="fas fa-trash"></i>
@@ -531,87 +568,84 @@ function clearPaymentFilters() {
   filterPayments();
 }
 
-function openEditPayment(id, fecha, amount, invoice, ref) {
+function openEditPayment(id, fecha, amount, invoice, ref, receipt) {
   document.getElementById('edit-pay-id').value      = id;
   document.getElementById('edit-pay-date').value    = fecha;
   document.getElementById('edit-pay-amount').value  = amount;
   document.getElementById('edit-pay-invoice').value = invoice;
   document.getElementById('edit-pay-ref').value     = ref;
+  document.getElementById('edit-pay-receipt').value = receipt;
   document.getElementById('edit-payment-modal').classList.add('open');
 }
 function closeEditPayment() { document.getElementById('edit-payment-modal').classList.remove('open'); }
 
 async function confirmEditPayment() {
   const id      = document.getElementById('edit-pay-id').value;
-  const date    = document.getElementById('edit-pay-date').value;
+  const fecha   = document.getElementById('edit-pay-date').value;
   const amount  = parseFloat(document.getElementById('edit-pay-amount').value);
   const invoice = document.getElementById('edit-pay-invoice').value.trim() || null;
-  const ref     = document.getElementById('edit-pay-ref').value.trim()     || null;
-  if (!date || !amount || amount <= 0) { showToast('Fecha y monto son obligatorios', 'error'); return; }
-  const r = await apiRequest(`/finance/payment/${id}`, 'PUT', { payment_date: date, amount, invoice_number: invoice, reference: ref });
-  if (r) { showToast('Pago actualizado'); closeEditPayment(); loadPayments(); }
+  const ref     = document.getElementById('edit-pay-ref').value.trim() || null;
+  const receipt = document.getElementById('edit-pay-receipt').value.trim() || null;
+  if (!fecha || !amount) { showToast('Fecha y monto son obligatorios', 'error'); return; }
+  const r = await apiRequest(`/finance/payment/${id}`, 'PUT', {
+    payment_date: fecha, amount, invoice_number: invoice, reference: ref, receipt_number: receipt
+  });
+  if (r) { showToast('Pago actualizado', 'success'); closeEditPayment(); loadPayments(); }
 }
 
 async function deletePayment(id) {
-  if (!confirm(`¿Eliminar el pago #${id}?\n\nEsto revertirá los saldos de los cargos vinculados.`)) return;
+  if (!confirm(`¿Eliminar el pago #${id}?\n\nEsto revertirá los saldos de los cargos vinculados y eliminará la factura asociada si existe.`)) return;
   const r = await apiRequest(`/finance/payment/${id}`, 'DELETE');
-  if (r) { showToast('Pago eliminado y saldos revertidos', 'success'); loadPayments(); loadCharges(); }
+  if (r) { showToast('Pago eliminado y saldos revertidos', 'success'); loadPayments(); }
 }
 
-// ════════════ CARGOS ══════════════════════════════════════
+// ══ CARGOS ═══════════════════════════════════════════════
 
 async function loadCharges() {
-  allCharges = await apiRequest('/finance/charges') || [];
-
-  const owners = [...new Set(allCharges.map(c => c.owner_name).filter(Boolean))].sort();
-  const units  = [...new Set(allCharges.map(c => c.unit_number).filter(Boolean))].sort();
-  const cfOwner = document.getElementById('cf-owner');
-  const cfUnit  = document.getElementById('cf-unit');
-  cfOwner.innerHTML = '<option value="">Todos</option>';
-  cfUnit.innerHTML  = '<option value="">Todos</option>';
-  owners.forEach(o => cfOwner.innerHTML += `<option>${o}</option>`);
-  units.forEach(u  => cfUnit.innerHTML  += `<option value="${u}">Apt. ${u}</option>`);
-
+  const data = await apiRequest('/finance/charges') || [];
+  allCharges = data;
+  document.getElementById('charges-count').textContent = data.length;
   filterCharges();
 }
 
 function filterCharges() {
-  const status = document.getElementById('cf-status').value;
-  const owner  = document.getElementById('cf-owner').value;
-  const unit   = document.getElementById('cf-unit').value;
-  const desc   = document.getElementById('cf-desc').value.toLowerCase().trim();
+  const status  = document.getElementById('cf-status').value;
+  const ownerId = document.getElementById('cf-owner').value;
+  const unitNum = document.getElementById('cf-unit').value;
+  const desc    = document.getElementById('cf-desc').value.toLowerCase();
 
-  const list = allCharges.filter(c => {
-    if (status && c.status      !== status) return false;
-    if (owner  && c.owner_name  !== owner)  return false;
-    if (unit   && c.unit_number !== unit)   return false;
-    if (desc   && !c.description?.toLowerCase().includes(desc)) return false;
+  const filtered = allCharges.filter(c => {
+    if (status  && c.status !== status) return false;
+    if (ownerId && String(c.owner_id || '') !== ownerId) return false;
+    if (unitNum && c.unit_number !== unitNum) return false;
+    if (desc    && !c.description.toLowerCase().includes(desc)) return false;
     return true;
   });
 
-  document.getElementById('charges-count').textContent = list.length;
-  const tbody = document.getElementById('charges-tbody');
+  renderCharges(filtered);
+}
 
+function renderCharges(list) {
+  const tbody = document.getElementById('charges-tbody');
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
     return;
   }
-
   tbody.innerHTML = list.map(c => `
     <tr>
-      <td style="font-size:.83rem;">${c.owner_name || '<em style="color:var(--text-muted)">Sin asignar</em>'}</td>
-      <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
-      <td><strong>${c.description}</strong></td>
-      <td style="font-size:.82rem;color:var(--text-secondary);">${formatDate(c.due_date)}</td>
+      <td>${c.owner_name || '—'}</td>
+      <td>${c.unit_number || '—'}</td>
+      <td>${c.description}</td>
+      <td>${formatDate(c.due_date)}</td>
       <td class="td-right">$${formatMoney(c.amount)}</td>
-      <td class="td-right td-bold">$${formatMoney(c.balance)}</td>
+      <td class="td-right">$${formatMoney(c.balance)}</td>
       <td><span class="badge badge-${c.status}">${c.status}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn-edit" onclick="openEditCharge(${c.charge_id}, ${c.unit_id}, '${c.description}', ${c.amount}, '${c.date_created}', '${c.due_date}')">
-            <i class="fas fa-edit"></i> Editar
+          <button class="btn-edit" onclick="openEditCharge(${c.id}, ${c.unit_id}, \`${c.description.replace(/`/g,"'")}\`, ${c.amount}, '${c.date_created}', '${c.due_date}')">
+            <i class="fas fa-edit"></i>
           </button>
-          <button class="btn-del" onclick="deleteCharge(${c.charge_id}, '${c.description}')">
+          <button class="btn-del" onclick="deleteCharge(${c.id}, \`${c.description.replace(/`/g,"'")}\`)">
             <i class="fas fa-trash"></i>
           </button>
         </div>
