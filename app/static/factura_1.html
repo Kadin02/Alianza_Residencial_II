@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo de Pago | Alianza Residencial</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Lato', sans-serif;
+      background: #f4f4f4;
+      color: #222;
+      font-size: 12.5px;
+    }
+
+    .print-bar {
+      background: #1a1a2e;
+      padding: 10px 24px;
+      display: flex; align-items: center; gap: 10px; justify-content: center;
+    }
+    .print-bar button {
+      padding: 7px 20px; border: none; border-radius: 5px;
+      font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-print { background: #fff; color: #1a1a2e; }
+    .btn-back  { background: transparent; color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.3) !important; }
+    .btn-print:hover, .btn-back:hover { opacity:.85; }
+
+    .page {
+      width: 210mm;
+      min-height: 180mm;
+      margin: 20px auto;
+      background: #fff;
+      padding: 12mm 14mm;
+      box-shadow: 0 2px 20px rgba(0,0,0,.1);
+    }
+
+    /* ── Header ── */
+    .doc-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 44px; height: 44px; background: #1a1a2e;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 900; font-size: .95rem; overflow: hidden;
+    }
+    .brand-logo img { width:100%; height:100%; object-fit:contain; }
+    .brand-name h1  { font-size: .95rem; font-weight: 900; color: #1a1a2e; letter-spacing: .03em; }
+    .brand-name p   { font-size: .7rem; color: #888; margin-top: 1px; }
+
+    .doc-ref { text-align: right; }
+    .doc-ref h2 {
+      font-size: 1.05rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: .08em; color: #1a1a2e;
+    }
+    .doc-ref .ref-num {
+      font-size: .72rem; color: #888; margin-top: 3px; line-height: 1.7;
+    }
+    .doc-ref .paid-stamp {
+      display: inline-block; margin-top: 6px;
+      background: #eafaf1; color: #1e8449;
+      border: 1px solid #a9dfbf;
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 3px 10px; border-radius: 3px;
+    }
+
+    /* ── Info grid ── */
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .info-cell .lbl {
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: #999; margin-bottom: 4px;
+    }
+    .info-cell .val { font-size: .88rem; font-weight: 700; color: #1a1a2e; line-height: 1.6; }
+    .info-cell .val small { display:block; font-weight: 400; color: #666; font-size: .82em; }
+
+    /* ── Tabla ── */
+    .section-title {
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: #999; margin-bottom: 8px;
+    }
+
+    table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+
+    thead tr { border-bottom: 2px solid #1a1a2e; }
+    thead th {
+      padding: 6px 10px; text-align: left;
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em; color: #1a1a2e;
+    }
+    thead th.r { text-align: right; }
+
+    tbody tr { border-bottom: 1px solid #f0f0f0; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 7px 10px; color: #333; font-size: .84rem; }
+    tbody td.r { text-align: right; font-weight: 700; }
+    tbody td.muted { color: #999; }
+
+    /* ── Total ── */
+    .total-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+    .total-block {
+      min-width: 200px;
+      border-top: 2px solid #1a1a2e;
+      padding-top: 8px;
+    }
+    .total-row-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 0;
+    }
+    .total-row-line .tl { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #999; }
+    .total-row-line .tv { font-size: 1.05rem; font-weight: 900; color: #1a1a2e; }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 16px; padding-top: 12px;
+      border-top: 1px solid #e8e8e8;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .doc-footer-left { font-size: .68rem; color: #aaa; line-height: 1.7; }
+    .firma-line {
+      border-top: 1px solid #bbb; margin-top: 36px; padding-top: 5px;
+      font-size: .68rem; color: #aaa; text-align: center; min-width: 140px;
+    }
+
+    #loading { text-align:center; padding:60px; color:#999; font-size:.9rem; }
+
+    @media print {
+      body { background:#fff; }
+      .print-bar { display:none; }
+      .page { margin:0; box-shadow:none; padding:8mm 12mm; width:100%; min-height:auto; }
+      @page { size:A4; margin:0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="print-bar">
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+  <button class="btn-back"  onclick="window.close()">← Cerrar</button>
+</div>
+
+<div id="loading">Cargando recibo...</div>
+
+<div class="page" id="inv-page" style="display:none;">
+
+  <div class="doc-head">
+    <div class="brand">
+      <div class="brand-logo" id="inv-logo">AR</div>
+      <div class="brand-name">
+        <h1>ALIANZA RESIDENCIAL</h1>
+        <p>Administración de Propiedades</p>
+      </div>
+    </div>
+    <div class="doc-ref">
+      <h2>Recibo de Pago</h2>
+      <div class="ref-num" id="inv-ref-num">—</div>
+      <div class="paid-stamp">✓ Pago registrado</div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-cell">
+      <div class="lbl">Propietario</div>
+      <div class="val" id="inv-owner">—</div>
+    </div>
+    <div class="info-cell">
+      <div class="lbl">Detalle del pago</div>
+      <div class="val" id="inv-pay-info">—</div>
+    </div>
+  </div>
+
+  <div class="section-title">Cargos pagados</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Descripción</th>
+        <th class="r">Monto aplicado</th>
+      </tr>
+    </thead>
+    <tbody id="inv-tbody"></tbody>
+  </table>
+
+  <div class="total-section">
+    <div class="total-block">
+      <div class="total-row-line">
+        <span class="tl">Total pagado</span>
+        <span class="tv" id="inv-total">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <div class="doc-footer-left">
+      Alianza Residencial &bull; Administración de Propiedades<br>
+      Emitido el <span id="inv-date"></span>
+    </div>
+    <div class="firma-line">Firma Administración</div>
+  </div>
+
+</div>
+
+<script>
+const fmoney = v => parseFloat(v||0).toLocaleString('es-PA', {
+  minimumFractionDigits:2, maximumFractionDigits:2
+});
+const fdate = s => {
+  if (!s) return '—';
+  try {
+    const [y,m,d] = String(s).split('T')[0].split('-');
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+  } catch { return s; }
+};
+
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const pid    = params.get('payment_id');
+  if (!pid) { document.getElementById('loading').textContent = 'No se especificó un pago.'; return; }
+
+  try {
+    const token   = localStorage.getItem('access_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const [pay, detail] = await Promise.all([
+      fetch(`/api/finance/payment/${pid}`,             { headers }).then(r => r.json()),
+      fetch(`/api/finance/payment-detail-full/${pid}`, { headers }).then(r => r.ok ? r.json() : null),
+    ]);
+
+    // Logo
+    const logoEl = document.getElementById('inv-logo');
+    const img    = new Image();
+    img.onload   = () => { logoEl.innerHTML = `<img src="/static/logo.png" alt="Logo">`; };
+    img.src      = '/static/logo.png';
+
+    const today = new Date().toLocaleDateString('es-PA', {
+      year:'numeric', month:'long', day:'numeric'
+    });
+
+    // Referencia
+    let refHtml = '';
+    if (detail?.invoice_number)       refHtml += `N° Sistema: ${detail.invoice_number}<br>`;
+    if (detail?.fiscal_invoice_number) refHtml += `N° Fiscal: ${detail.fiscal_invoice_number}`;
+    document.getElementById('inv-ref-num').innerHTML = refHtml || `Pago #${pid}`;
+
+    // Propietario
+    document.getElementById('inv-owner').innerHTML =
+      `${detail?.owner_name || '—'}
+       <small>Unidad: ${detail?.unit_number || '—'}</small>
+       <small>Propiedad: ${detail?.property_name || '—'}</small>`;
+
+    // Datos del pago
+    document.getElementById('inv-pay-info').innerHTML =
+      `Fecha: ${fdate(detail?.payment_date || pay?.payment_date)}
+       ${detail?.reference ? `<small>Referencia: ${detail.reference}</small>` : ''}`;
+
+    // Tabla de cargos
+    const tbody = document.getElementById('inv-tbody');
+    const apps  = pay?.applications || [];
+
+    if (!apps.length) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:16px;color:#bbb;">Sin detalle disponible</td></tr>`;
+    } else {
+      apps.forEach((a, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="muted">${i+1}</td>
+            <td>${a.description || `Cargo #${a.charge_id}`}</td>
+            <td class="r">$${fmoney(a.applied_amount)}</td>
+          </tr>`;
+      });
+    }
+
+    document.getElementById('inv-total').textContent = `$${fmoney(pay?.amount || 0)}`;
+    document.getElementById('inv-date').textContent  = today;
+
+    document.getElementById('loading').style.display  = 'none';
+    document.getElementById('inv-page').style.display = 'block';
+
+  } catch(e) {
+    document.getElementById('loading').textContent = `Error: ${e.message}`;
+  }
+})();
+</script>
+</body>
+</html>
