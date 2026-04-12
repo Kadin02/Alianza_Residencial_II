@@ -135,8 +135,12 @@ const NAV_PAGES = [
   { href: '/static/owners.html',     label: 'Propietarios',   icon: 'fa-users',        id: 'owners',     roles: ['ADMIN', 'USER'] },
   { href: '/static/finances.html',   label: 'Finanzas',       icon: 'fa-chart-line',   id: 'finances',   roles: ['ADMIN', 'USER'] },
   { href: '/static/suppliers.html',  label: 'Proveedores',    icon: 'fa-truck',        id: 'suppliers',  roles: ['ADMIN', 'USER'] },
+<<<<<<< HEAD
   // Agenda: visible para ADMIN, USER y GARITA
   { href: '/static/agenda.html',     label: 'Agenda',         icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER', 'GARITA'] },
+=======
+  { href: '/static/agenda.html',     label: 'Agenda',         icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER'] },
+>>>>>>> 2769f259ac501eb7dddf6cf6c637dffc94d00971
   { href: '/static/reports.html',    label: 'Reportes',       icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
   { href: '/static/imports.html',    label: 'Importar/Exp.',  icon: 'fa-file-import',  id: 'imports',    roles: ['ADMIN', 'USER'] },
   { href: '/static/historial.html',  label: 'Historial',      icon: 'fa-history',      id: 'historial',  roles: ['ADMIN', 'USER'] },
