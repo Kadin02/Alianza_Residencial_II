@@ -10,6 +10,8 @@
    · Protección de páginas: si el rol no tiene acceso, redirige a garita.html
    · rolLabel muestra "Seguridad Garita" para el rol GARITA
    · Protección de rutas en cada página sensible
+   · FIX: conflicto de git resuelto en NAV_PAGES (Agenda)
+   · FIX: GARITA ahora solo ve el ítem "Garita / Visitas" en el sidebar
 ════════════════════════════════════════════════════════════════ */
 
 /* ─── Auth ────────────────────────────────────────────────── */
@@ -128,22 +130,25 @@ function todayLong() {
 //   ['ADMIN', 'USER', 'GARITA'] = todos
 //   ['ADMIN', 'USER']           = no garita
 //   ['ADMIN']                   = solo admin
+//
+// GARITA solo aparece en el ítem 'garita' — no puede ver ningún otro módulo.
 const NAV_PAGES = [
-  { href: '/static/index.html',      label: 'Inicio',         icon: 'fa-home',         id: 'index',      roles: ['ADMIN', 'USER'] },
-  { href: '/static/properties.html', label: 'Propiedades',    icon: 'fa-building',     id: 'properties', roles: ['ADMIN', 'USER'] },
-  { href: '/static/units.html',      label: 'Unidades',       icon: 'fa-door-open',    id: 'units',      roles: ['ADMIN', 'USER'] },
-  { href: '/static/owners.html',     label: 'Propietarios',   icon: 'fa-users',        id: 'owners',     roles: ['ADMIN', 'USER'] },
-  { href: '/static/finances.html',   label: 'Finanzas',       icon: 'fa-chart-line',   id: 'finances',   roles: ['ADMIN', 'USER'] },
-  { href: '/static/suppliers.html',  label: 'Proveedores',    icon: 'fa-truck',        id: 'suppliers',  roles: ['ADMIN', 'USER'] },
-  // Agenda: visible para ADMIN, USER y GARITA
-  { href: '/static/agenda.html',     label: 'Agenda',         icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER', 'GARITA'] },
-  { href: '/static/reports.html',    label: 'Reportes',       icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
-  { href: '/static/imports.html',    label: 'Importar/Exp.',  icon: 'fa-file-import',  id: 'imports',    roles: ['ADMIN', 'USER'] },
-  { href: '/static/historial.html',  label: 'Historial',      icon: 'fa-history',      id: 'historial',  roles: ['ADMIN', 'USER'] },
+  { href: '/static/index.html',      label: 'Inicio',           icon: 'fa-home',         id: 'index',      roles: ['ADMIN', 'USER'] },
+  { href: '/static/properties.html', label: 'Propiedades',      icon: 'fa-building',     id: 'properties', roles: ['ADMIN', 'USER'] },
+  { href: '/static/units.html',      label: 'Unidades',         icon: 'fa-door-open',    id: 'units',      roles: ['ADMIN', 'USER'] },
+  { href: '/static/owners.html',     label: 'Propietarios',     icon: 'fa-users',        id: 'owners',     roles: ['ADMIN', 'USER'] },
+  { href: '/static/finances.html',   label: 'Finanzas',         icon: 'fa-chart-line',   id: 'finances',   roles: ['ADMIN', 'USER'] },
+  { href: '/static/suppliers.html',  label: 'Proveedores',      icon: 'fa-truck',        id: 'suppliers',  roles: ['ADMIN', 'USER'] },
+  // FIX: conflicto git resuelto — Agenda solo para ADMIN y USER (no GARITA)
+  { href: '/static/agenda.html',     label: 'Agenda',           icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER'] },
+  { href: '/static/reports.html',    label: 'Reportes',         icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
+  { href: '/static/imports.html',    label: 'Importar/Exp.',    icon: 'fa-file-import',  id: 'imports',    roles: ['ADMIN', 'USER'] },
+  { href: '/static/historial.html',  label: 'Historial',        icon: 'fa-history',      id: 'historial',  roles: ['ADMIN', 'USER'] },
   // Administración: solo ADMIN
-  { href: '/static/admin.html',      label: 'Administración', icon: 'fa-shield-alt',   id: 'admin',      roles: ['ADMIN'] },
+  { href: '/static/admin.html',      label: 'Administración',   icon: 'fa-shield-alt',   id: 'admin',      roles: ['ADMIN'] },
   // Garita: visible para ADMIN, USER y GARITA
-  { href: '/static/garita.html',     label: 'Garita',         icon: 'fa-car',          id: 'garita',     roles: ['ADMIN', 'USER', 'GARITA'] },
+  // GARITA solo verá este ítem en su menú
+  { href: '/static/garita.html',     label: 'Garita / Visitas', icon: 'fa-car',          id: 'garita',     roles: ['ADMIN', 'USER', 'GARITA'] },
 ];
 
 // Etiquetas de rol para mostrar al usuario
@@ -159,16 +164,24 @@ function renderSidebar(activePage) {
   const role    = Auth.role();
   const isAdmin = Auth.isAdmin();
 
+  // ── Protección de ruta ────────────────────────────────────────
   // Si la página actual no está permitida para este rol → redirigir
   const currentPage = NAV_PAGES.find(p => p.id === activePage);
   if (currentPage && !currentPage.roles.includes(role)) {
-    // GARITA: redirigir a garita
+    // GARITA intentando acceder a cualquier página que no sea garita → redirigir
     if (Auth.isGarita()) {
       window.location.href = '/static/garita.html';
       return;
     }
-    // USER intentando llegar a página de admin
+    // USER intentando llegar a página de admin → redirigir a inicio
     window.location.href = '/static/index.html';
+    return;
+  }
+
+  // Si no hay página definida en NAV_PAGES y es GARITA → redirigir
+  // (protege rutas no listadas, ej: index.html no está en roles de GARITA)
+  if (!currentPage && Auth.isGarita()) {
+    window.location.href = '/static/garita.html';
     return;
   }
 
@@ -221,6 +234,7 @@ function renderSidebar(activePage) {
   }
 
   // Llenar nav — filtrar según el rol del usuario
+  // GARITA solo verá los ítems donde su rol está incluido → únicamente "Garita / Visitas"
   const nav = document.getElementById('_sidebar_nav');
   nav.innerHTML = NAV_PAGES
     .filter(p => p.roles.includes(role))
