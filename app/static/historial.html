@@ -504,7 +504,8 @@ function fdate(s) {
   } catch { return s; }
 }
 
-function generarReporte() {
+function generarReporte() 
+{
   const content = document.getElementById('reporte-content');
   const res = getPagosFiltradosReporte();
 
@@ -529,58 +530,67 @@ function generarReporte() {
                : desde ? `Desde ${fdate(desde)}`
                : hasta ? `Hasta ${fdate(hasta)}` : 'Histórico completo';
 
-  // Resumen por concepto
+  // Resumen por concepto para chips
   const porC = {};
   pagos.forEach(p => { porC[p.concepto] = (porC[p.concepto] || 0) + p.monto; });
 
-  // Intentar logo
-  const logoHtml = `<div class="brand-logo" id="pdf-logo-box">AR</div>`;
+  // Generar filas de la tabla
+  let tableRows = '';
+  pagos.forEach(p => {
+    tableRows += `
+      <tr>
+        <td class="td-mono" style="font-size:.78rem;">${p.factura}</td>
+        <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
+        <td>${razonTag(p.concepto)}</td>
+        <td class="r"><strong>$${formatMoney(p.monto)}</strong></td>
+      </tr>
+    `;
+  });
+
+  // Generar chips de resumen por concepto
+  let conceptChips = '';
+  Object.entries(porC).forEach(([k, v]) => {
+    conceptChips += `<div class="sum-chip"><strong>$${formatMoney(v)}</strong><span>${k}</span></div>`;
+  });
 
   content.innerHTML = `
     <div id="pdf-doc" class="pdf-doc">
-
-      <!-- Cabecera igual al estado de cuenta -->
       <div class="doc-head">
         <div class="brand">
-          ${logoHtml}
+          <div class="brand-logo" id="pdf-logo-box">AR</div>
           <div class="brand-name">
             <h1>ALIANZA RESIDENCIAL</h1>
-            <p>Administración de Propiedades</p>
+            <p>Centro de Cobros · Panamá</p>
           </div>
         </div>
         <div class="doc-title">
-          <h2>Reporte de Pagos</h2>
-          <p>Generado el ${hoy}</p>
+          <h2>REPORTE DE PAGOS</h2>
+          <p>${hoy}</p>
         </div>
       </div>
 
-      <!-- Info del apartamento -->
       <div class="info-grid">
         <div class="info-cell">
-          <div class="ic-lbl">Apartamento</div>
-          <div class="ic-val">Apt. ${apto}</div>
+          <div class="ic-lbl">APARTAMENTO</div>
+          <div class="ic-val">${apto}</div>
         </div>
         <div class="info-cell">
-          <div class="ic-lbl">Propietario</div>
+          <div class="ic-lbl">PROPIETARIO</div>
           <div class="ic-val">${owner}</div>
         </div>
         <div class="info-cell">
-          <div class="ic-lbl">Período</div>
-          <div class="ic-val" style="font-size:.82rem;">${periodo}</div>
+          <div class="ic-lbl">PERÍODO</div>
+          <div class="ic-val">${periodo}</div>
         </div>
       </div>
 
-      <!-- Resumen por concepto -->
       <div class="section-title">Resumen por concepto</div>
       <div class="sum-row">
-        ${Object.entries(porC).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
-          <div class="sum-chip">
-            <strong>$${formatMoney(v)}</strong>
-            <span>${k}</span>
-          </div>`).join('')}
+        <div class="sum-chip"><strong>${pagos.length}</strong><span>Registros</span></div>
+        <div class="sum-chip"><strong>$${formatMoney(total)}</strong><span>Total</span></div>
+        ${conceptChips}
       </div>
 
-      <!-- Tabla de pagos -->
       <div class="section-title">Detalle de pagos</div>
       <table>
         <thead>
@@ -592,58 +602,30 @@ function generarReporte() {
           </tr>
         </thead>
         <tbody>
-          ${pagos.map(p => `
-            <tr>
-              <td class="muted">${p.factura}</td>
-              <td>${fdate(p.fecha)}</td>
-              <td>${p.concepto}</td>
-              <td class="r">$${formatMoney(p.monto)}</td>
-            </tr>`).join('')}
+          ${tableRows}
         </tbody>
       </table>
 
-      <!-- Totales -->
       <div class="total-line">
-        <div>
-          <div class="tl">Registros</div>
-          <div class="tv">${pagos.length}</div>
-        </div>
-        <div>
-          <div class="tl">Total pagado</div>
-          <div class="tv">$${formatMoney(total)}</div>
-        </div>
+        <div><span class="tl">TOTAL PAGADO</span></div>
+        <div><span class="tv">$${formatMoney(total)}</span></div>
       </div>
 
-      <!-- Aviso legal -->
       <div class="legal-notice">
-        <p>
-          <strong>DOCUMENTO NO FISCAL —</strong>
-          Este reporte es un documento informativo generado por el sistema de administración
-          de Alianza Residencial y <strong>no constituye una factura fiscal ni comprobante de
-          pago con validez tributaria</strong> ante la Dirección General de Ingresos (DGI) u
-          otra autoridad competente. Para efectos fiscales y legales, solicite el recibo o
-          factura oficial emitido al momento del pago.
-        </p>
+        <p><strong>Nota informativa</strong><br>Este documento refleja los pagos registrados en el sistema. Para aclaraciones, contactar administración.</p>
       </div>
 
-      <!-- Footer -->
       <div class="doc-footer">
         <div class="doc-footer-left">
-          Alianza Residencial &bull; Sistema de Administración de Propiedades<br>
-          Generado el ${hoy}
+          Alianza Residencial · ${new Date().getFullYear()}<br>
+          Documento generado electrónicamente
         </div>
-        <div class="firma-line">Firma Administración</div>
+        <div class="firma-line">
+          Administración
+        </div>
       </div>
-
-    </div>`;
-
-  // Cargar logo si existe
-  const logoImg = new Image();
-  logoImg.onload = () => {
-    const box = document.getElementById('pdf-logo-box');
-    if (box) box.innerHTML = `<img src="/static/logo.png" alt="Logo">`;
-  };
-  logoImg.src = '/static/logo.png';
+    </div>
+  `;
 }
 
 /* ── Imprimir / Exportar PDF ─────────────────────────── */
@@ -679,6 +661,3 @@ init();
 </script>
 </body>
 </html>
-
-
-

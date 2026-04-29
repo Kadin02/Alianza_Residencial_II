@@ -230,25 +230,13 @@ async function init() {
   if (!paymentId) { showError('No se especificó pago.'); return; }
 
   try {
-    // Cargar datos del pago
-    const allPayments = await apiGet('/finance/all-payments');
-    const payment = (allPayments || []).find(p => p.payment_id == paymentId);
+    // Cargar datos del pago usando el endpoint de detalle completo
+    const payment = await apiGet(`/finance/payment-detail-full/${paymentId}`);
     if (!payment) throw new Error('Pago no encontrado');
 
-    // Cargar propietario y propiedad
-    const [owner, unitOwners, units, properties] = await Promise.all([
-      apiGet(`/owners/${payment.owner_id}`).catch(() => ({ full_name: payment.owner_name })),
-      apiGet('/unit-owners/all').catch(() => []),
-      apiGet('/units').catch(() => []),
-      apiGet('/properties').catch(() => []),
-    ]);
-
-    const uo   = (unitOwners||[]).find(x => x.owner_id == payment.owner_id && x.is_active);
-    const unit = uo ? (units||[]).find(u => u.id === uo.unit_id) : null;
-    const prop = unit ? (properties||[]).find(p => p.id === unit.property_id) : null;
-
-    const unitNum  = payment.unit_number || (unit ? unit.unit_number : '—');
-    const propName = prop ? prop.name : 'Alianza Residencial';
+    const unitNum  = payment.unit_number || '—';
+    const propName = payment.property_name || 'Alianza Residencial';
+    const owner    = { full_name: payment.owner_name || '—' };
 
     renderDoc(payment, owner, unitNum, propName);
   } catch(e) {
@@ -266,12 +254,12 @@ function renderDoc(payment, owner, unitNum, propName) {
   const estado = 'PAGADO'; // la factura representa un pago registrado
 
   // Filas de cargos aplicados
-  const cargosRows = (payment.cargos || []).map(c => `
+  const cargosRows = (payment.cargos || payment.applications || []).map(c => `
     <tr>
       <td>
         <div class="desc-main">${c.description || c.razon || '—'}</div>
       </td>
-      <td class="right">$${fmt(c.applied || c.monto || total)}</td>
+      <td class="right">$${fmt(c.applied || c.applied_amount || c.monto || total)}</td>
     </tr>
   `).join('');
 
