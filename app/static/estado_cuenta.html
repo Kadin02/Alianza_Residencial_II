@@ -59,20 +59,26 @@ const fdateshort = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA'
         const isPending = item.balance > 0;
         
         // Construir los números de factura desde los pagos vinculados
+       // Construir los números de factura desde los pagos vinculados
         let facturasHTML = '—';
         if (item.payments && item.payments.length > 0) {
           facturasHTML = item.payments.map(p => {
-            // Primero intentar con fiscal_invoice_number, luego invoice_number del pago
-            const num = p.fiscal_invoice_number || p.reference || '';
+            // Intentar todas las posibles fuentes del número de factura
+            const num = p.fiscal_invoice_number || p.invoice_number || p.reference || '';
             if (num) {
               return `<span style="font-family:monospace;font-weight:600;">${num}</span>`;
             }
             return '';
           }).filter(f => f !== '').join(', ') || '—';
         }
-        // Si no hay facturas en payments, intentar obtener el último payment_id
-        if (facturasHTML === '—' && item.payment_id) {
-          facturasHTML = `<span style="font-family:monospace;font-weight:600;">Pago #${item.payment_id}</span>`;
+        // Si aún no hay factura, mostrar referencia o ID del pago
+        if (facturasHTML === '—') {
+          const primerPago = item.payments?.[0];
+          if (primerPago?.reference) {
+            facturasHTML = `<span style="font-family:monospace;font-weight:600;">${primerPago.reference}</span>`;
+          } else if (primerPago?.payment_id) {
+            facturasHTML = `<span style="font-family:monospace;font-weight:600;">Pago #${primerPago.payment_id}</span>`;
+          }
         }
         
         tbody += `

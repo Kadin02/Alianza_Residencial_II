@@ -620,44 +620,98 @@ function imprimirPDF() {
   const doc = document.getElementById('pdf-doc');
   if (!doc)  { showToast('Genera el reporte primero','warning'); return; }
   
-  // Crear ventana temporal solo con el contenido del reporte
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  // Clonar el contenido para no afectar la vista actual
+  const contenido = doc.cloneNode(true);
+  
+  // Crear ventana temporal con estilos embebidos
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="UTF-8">
       <title>Reporte Apt. ${apto}</title>
-      <link rel="stylesheet" href="/static/css/doc_style.css">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-          font-family: 'Inter', system-ui, sans-serif;
+          font-family: 'Segoe UI', system-ui, sans-serif;
           background: white; 
-          padding: 36px 40px;
+          padding: 30px 35px;
           color: #1a2639;
+          font-size: 13px;
+          line-height: 1.5;
         }
+        .doc-header {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          border-bottom: 2px solid #0a2c5e; padding-bottom: 18px; margin-bottom: 20px;
+        }
+        .doc-header h1 { font-size: 1.3rem; font-weight: 800; color: #0a2c5e; text-transform: uppercase; }
+        .doc-header .sub-info { font-size: .78rem; color: #5a6a7e; }
+        .doc-header .doc-title { text-align: right; }
+        .doc-header .doc-title h2 { font-size: 1rem; font-weight: 700; color: #0a2c5e; }
+        .doc-header .date { font-size: .78rem; color: #5a6a7e; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid #e6e9f0; 
+                     border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
+        .info-cell { padding: 10px 14px; border-right: 1px solid #e6e9f0; }
+        .info-cell:last-child { border-right: none; }
+        .ic-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; 
+                  letter-spacing: .06em; color: #94a3b8; margin-bottom: 3px; }
+        .ic-val { font-size: .88rem; font-weight: 700; color: #1a2639; }
+        
+        .summary-cards { display: flex; gap: 10px; margin-bottom: 18px; }
+        .sum-card { text-align: center; padding: 14px 16px; border-radius: 6px; 
+                    border: 1px solid #e6e9f0; }
+        .sum-card .sv { font-size: 1.2rem; font-weight: 800; color: #0a2c5e; }
+        .sum-card .sl { font-size: .68rem; font-weight: 600; text-transform: uppercase; 
+                         letter-spacing: .04em; color: #5a6a7e; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        thead tr { background: #f8fafc; }
+        th { padding: 9px 10px; text-align: left; font-size: .68rem; font-weight: 700; 
+             text-transform: uppercase; letter-spacing: .05em; color: #5a6a7e; 
+             border-bottom: 2px solid #e6e9f0; }
+        td { padding: 8px 10px; font-size: .83rem; border-bottom: 1px solid #e6e9f0; }
+        td.right, th.right { text-align: right; }
+        
+        .total-line { border-top: 2px solid #0a2c5e; padding-top: 10px; 
+                      display: flex; justify-content: flex-end; gap: 20px; margin-top: 16px; }
+        .total-line span:first-child { font-size: .72rem; font-weight: 700; text-transform: uppercase; 
+                                        letter-spacing: .05em; color: #5a6a7e; }
+        .total-line span:last-child { font-size: 1.05rem; font-weight: 900; color: #0a2c5e; }
+        
+        .signature-section { display: flex; justify-content: flex-end; margin-top: 30px; }
+        .signature-block { text-align: center; min-width: 180px; }
+        .signature-line { border-top: 1.5px solid #1a2639; margin-bottom: 5px; }
+        .sig-name { font-size: .82rem; font-weight: 700; }
+        .sig-title { font-size: .7rem; color: #5a6a7e; }
+        
+        .doc-footer-note { margin-top: 20px; padding: 14px 16px; background: #fdf4e7; 
+                          border: 1px solid #fce4c8; border-left: 4px solid #f59e0b; 
+                          border-radius: 0 6px 6px 0; font-size: .75rem; color: #5a6a7e; }
+        .doc-footer-note strong { color: #1a2639; display: block; margin-bottom: 3px; }
+        
         @media print {
-          body { padding: 36px 40px; }
+          body { padding: 25px 30px; }
           @page { size: A4; margin: 0; }
         }
       </style>
     </head>
     <body>
-      ${doc.innerHTML}
+      ${contenido.innerHTML}
     </body>
     </html>
   `);
   printWindow.document.close();
   
-  // Esperar a que se carguen los estilos y luego imprimir
+  // Esperar a que carguen estilos y luego imprimir
   setTimeout(() => {
     printWindow.focus();
     printWindow.print();
-    // Cerrar después de imprimir (o cancelar)
     printWindow.onafterprint = function() {
       printWindow.close();
     };
-  }, 500);
+  }, 600);
 }
 
 /* ── Excel del reporte ───────────────────────────────── */
