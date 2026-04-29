@@ -1,0 +1,200 @@
+/* ═══════════════════════════════════════════════════════════
+   ALIANZA RESIDENCIAL — Estilos Unificados de Documentos
+   Facturas, Estados de Cuenta y Reportes
+   ═══════════════════════════════════════════════════════════ */
+   @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
+
+   :root {
+     --doc-accent:   #0a2c5e;
+     --doc-text:     #1a2639;
+     --doc-muted:    #5a6a7e;
+     --doc-light:    #94a3b8;
+     --doc-border:   #e6e9f0;
+     --doc-bg:       #f8fafc;
+     --doc-white:    #ffffff;
+     --doc-danger:   #ef4444;
+     --doc-danger-bg: #fee2e2;
+     --doc-success:  #10b981;
+     --doc-warning:  #f59e0b;
+   }
+
+   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+   body {
+     font-family: 'Inter', system-ui, sans-serif;
+     background: #f0f2f5;
+     color: var(--doc-text);
+     font-size: 13px;
+     line-height: 1.5;
+     display: flex;
+     justify-content: center;
+     padding: 24px;
+   }
+
+   .document-wrapper {
+     max-width: 800px;
+     width: 100%;
+     background: var(--doc-white);
+     border-radius: 12px;
+     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+     overflow: hidden;
+   }
+
+   .action-bar {
+     background: var(--doc-accent);
+     padding: 12px 24px;
+     display: flex;
+     align-items: center;
+     gap: 12px;
+     flex-wrap: wrap;
+   }
+   .action-bar span { color: rgba(255,255,255,0.7); font-size: .82rem; }
+   .btn-action {
+     padding: 7px 16px; border: none; border-radius: 6px;
+     font-family: inherit; font-size: .8rem; font-weight: 600;
+     cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+     transition: opacity .15s; background: rgba(255,255,255,0.15); color: #fff;
+   }
+   .btn-action:hover { opacity: .85; }
+   .btn-download { background: var(--doc-success); color: #fff; }
+   .btn-print    { background: rgba(255,255,255,0.15); color: #fff; }
+   .btn-close    { background: transparent; color: rgba(255,255,255,0.7); font-size: .8rem; margin-left: auto; }
+   
+   .document {
+     padding: 36px 40px;
+   }
+
+   .doc-header {
+     display: flex;
+     justify-content: space-between;
+     align-items: flex-start;
+     border-bottom: 2px solid var(--doc-accent);
+     padding-bottom: 20px;
+     margin-bottom: 24px;
+     flex-wrap: wrap;
+     gap: 16px;
+   }
+   .doc-header h1 {
+     font-size: 1.4rem; font-weight: 800; color: var(--doc-accent);
+     text-transform: uppercase; letter-spacing: .05em;
+   }
+   .doc-header .sub-info {
+     font-size: .8rem; color: var(--doc-muted);
+   }
+   .doc-header .doc-title {
+     text-align: right;
+   }
+   .doc-header .doc-title h2 {
+     font-size: 1.1rem; font-weight: 700; color: var(--doc-accent);
+   }
+   .doc-header .doc-title .date {
+     font-size: .8rem; color: var(--doc-muted);
+   }
+
+   .info-grid {
+     display: grid;
+     grid-template-columns: 1fr 1fr 1fr;
+     gap: 0;
+     border: 1px solid var(--doc-border);
+     border-radius: 8px;
+     overflow: hidden;
+     margin-bottom: 24px;
+   }
+   .info-cell {
+     padding: 12px 16px;
+     border-right: 1px solid var(--doc-border);
+   }
+   .info-cell:last-child { border-right: none; }
+   .info-cell .ic-lbl {
+     font-size: .65rem; font-weight: 700; text-transform: uppercase;
+     letter-spacing: .08em; color: var(--doc-light); margin-bottom: 4px;
+   }
+   .info-cell .ic-val {
+     font-size: .9rem; font-weight: 700; color: var(--doc-text);
+   }
+
+   .summary-cards {
+     display: grid;
+     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+     gap: 10px;
+     margin-bottom: 24px;
+   }
+   .sum-card {
+     text-align: center;
+     padding: 16px 12px;
+     border-radius: 8px;
+     border: 1px solid var(--doc-border);
+   }
+   .sum-card .sv { font-size: 1.3rem; font-weight: 800; color: var(--doc-accent); }
+   .sum-card .sl { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--doc-muted); margin-top: 4px; }
+   .sum-card.danger .sv { color: var(--doc-danger); }
+   .sum-card.success .sv { color: var(--doc-success); }
+
+   table.doc-table {
+     width: 100%;
+     border-collapse: collapse;
+     margin: 16px 0;
+   }
+   thead tr { background: var(--doc-bg); }
+   th {
+    padding: 10px 12px; text-align: left;
+    font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--doc-muted); border-bottom: 2px solid var(--doc-border);
+  }
+  td {
+    padding: 9px 12px; font-size: .85rem;
+    border-bottom: 1px solid var(--doc-border); vertical-align: middle;
+  }
+  td.right, th.right { text-align: right; }
+  .text-danger { color: var(--doc-danger); font-weight: 600; }
+  .bg-danger-light { background-color: var(--doc-danger-bg); }
+  .badge-pendiente { 
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: .7rem; font-weight: 700;
+    background: var(--doc-danger-bg); color: var(--doc-danger);
+  }
+  .badge-pagado { 
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: .7rem; font-weight: 700;
+    background: #d1fae5; color: #065f46;
+  }
+
+   .doc-footer-note {
+     margin-top: 28px;
+     padding: 16px 20px;
+     background: #fdf4e7;
+     border: 1px solid #fce4c8;
+     border-left: 4px solid var(--doc-warning);
+     border-radius: 0 8px 8px 0;
+     font-size: .78rem;
+     color: var(--doc-muted);
+     line-height: 1.6;
+   }
+   .doc-footer-note strong { color: var(--doc-text); display: block; margin-bottom: 4px; }
+
+   .signature-section {
+     display: flex;
+     justify-content: flex-end;
+     margin-top: 32px;
+     padding-top: 20px;
+   }
+   .signature-block {
+     text-align: center;
+     min-width: 200px;
+   }
+   .signature-line {
+     border-top: 1.5px solid var(--doc-text);
+     margin-bottom: 6px;
+   }
+   .signature-block .sig-name {
+     font-size: .85rem; font-weight: 700; color: var(--doc-text);
+   }
+   .signature-block .sig-title {
+     font-size: .72rem; color: var(--doc-muted);
+   }
+
+   @media print {
+     body { background: white; padding: 0; }
+     .action-bar { display: none !important; }
+     .document-wrapper { box-shadow: none; border-radius: 0; }
+   }

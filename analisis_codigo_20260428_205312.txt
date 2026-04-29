@@ -1,6 +1,6 @@
 ================================================================================
 ANALISIS DE CODIGO - PROYECTO ALIANZA BACKEND
-Fecha de generacion: 2026-04-28 17:22:51
+Fecha de generacion: 2026-04-28 20:53:12
 Ruta principal: C:\alianza_backend
 ================================================================================
 
@@ -3857,351 +3857,407 @@ RUTA COMPLETA: C:\alianza_backend\app\static\Factura.html
    2 | <html lang="es">
    3 | <head>
    4 |   <meta charset="UTF-8">
-   5 |   <title>Recibo de Pago | Alianza Residencial</title>
-   6 |   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-   7 |   <style>
-   8 |     * { margin:0; padding:0; box-sizing:border-box; }
-   9 | 
+   5 |   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   6 |   <title>Factura | Alianza Residencial</title>
+   7 |   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   8 |   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+   9 |   <style>
   10 |     :root {
-  11 |       --primary-navy: #1a2a44; /* Azul Marino Elegante */
-  12 |       --accent-gray: #f8f9fa;
-  13 |       --border-gray: #dee2e6;
-  14 |       --text-main: #333;
-  15 |       --text-muted: #6c757d;
-  16 |     }
-  17 | 
-  18 |     body {
-  19 |       font-family: 'Lato', sans-serif;
-  20 |       background: #e9ecef;
-  21 |       color: var(--text-main);
-  22 |       font-size: 13px;
-  23 |     }
-  24 | 
-  25 |     /* Barra de herramientas */
-  26 |     .print-bar {
-  27 |       background: var(--primary-navy);
-  28 |       padding: 12px;
-  29 |       display: flex; align-items: center; gap: 15px; justify-content: center;
-  30 |       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  11 |       --brand-dark:   #0a2c5e;
+  12 |       --brand-mid:    #1e4a8c;
+  13 |       --brand-light:  #e8f0fb;
+  14 |       --accent:       #1e4a8c;
+  15 |       --success:      #10b981;
+  16 |       --danger:       #ef4444;
+  17 |       --warning:      #f59e0b;
+  18 |       --text:         #1a2639;
+  19 |       --text-muted:   #6b7280;
+  20 |       --border:       #e5e7eb;
+  21 |       --white:        #ffffff;
+  22 |     }
+  23 | 
+  24 |     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  25 |     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: var(--text); font-size: 14px; }
+  26 | 
+  27 |     .action-bar {
+  28 |       background: var(--brand-dark);
+  29 |       padding: 10px 24px;
+  30 |       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   31 |     }
-  32 |     .print-bar button {
-  33 |       padding: 8px 24px; border: none; border-radius: 4px;
-  34 |       font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-  35 |       transition: all 0.2s;
-  36 |     }
-  37 |     .btn-print { background: #fff; color: var(--primary-navy); }
-  38 |     .btn-back  { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.4) !important; }
-  39 |     .btn-print:hover { background: #f0f0f0; transform: translateY(-1px); }
-  40 | 
-  41 |     .page {
-  42 |       width: 210mm;
-  43 |       min-height: 297mm;
-  44 |       margin: 30px auto;
-  45 |       background: #fff;
-  46 |       padding: 15mm 18mm;
-  47 |       box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-  48 |       position: relative;
-  49 |     }
-  50 | 
-  51 |     /* ── ENCABEZADO: NOMBRE DE PROPIEDAD EN GRANDE ── */
-  52 |     .property-header {
-  53 |       text-align: center;
-  54 |       border-bottom: 3px solid var(--primary-navy);
-  55 |       padding-bottom: 15px;
-  56 |       margin-bottom: 25px;
-  57 |     }
-  58 |     .property-name {
-  59 |       font-size: 2.2rem;
-  60 |       font-weight: 900;
-  61 |       color: var(--primary-navy);
-  62 |       text-transform: uppercase;
-  63 |       letter-spacing: 2px;
-  64 |       margin-bottom: 5px;
-  65 |     }
-  66 |     .property-address {
-  67 |       font-size: 0.85rem;
-  68 |       color: var(--text-muted);
-  69 |       font-style: italic;
-  70 |     }
-  71 | 
-  72 |     .doc-main-info {
-  73 |       display: flex;
-  74 |       justify-content: space-between;
-  75 |       align-items: center;
-  76 |       margin-bottom: 30px;
-  77 |     }
-  78 | 
-  79 |     .brand-side { display: flex; align-items: center; gap: 12px; }
-  80 |     .brand-logo {
-  81 |       width: 50px; height: 50px; background: var(--primary-navy);
-  82 |       border-radius: 4px; display: flex; align-items: center; justify-content: center;
-  83 |       color: #fff; font-weight: 900; font-size: 1.1rem;
-  84 |     }
-  85 |     .brand-text h1 { font-size: 1rem; color: var(--primary-navy); font-weight: 900; }
-  86 |     .brand-text p { font-size: 0.75rem; color: var(--text-muted); }
-  87 | 
-  88 |     .receipt-title-box { text-align: right; }
-  89 |     .receipt-title-box h2 {
-  90 |       font-size: 1.4rem; font-weight: 900; color: var(--primary-navy);
-  91 |       text-transform: uppercase; margin-bottom: 5px;
-  92 |     }
-  93 |     .ref-num { font-size: 0.85rem; color: var(--text-muted); font-family: monospace; }
-  94 | 
-  95 |     /* ── Grilla de Información ── */
-  96 |     .data-grid {
-  97 |       display: grid;
-  98 |       grid-template-columns: 1fr 1fr;
-  99 |       gap: 20px;
- 100 |       margin-bottom: 30px;
- 101 |       background: var(--accent-gray);
- 102 |       padding: 20px;
- 103 |       border-radius: 8px;
- 104 |       border-left: 5px solid var(--primary-navy);
- 105 |     }
- 106 |     .data-cell .label {
- 107 |       font-size: 0.7rem; font-weight: 900; color: var(--text-muted);
- 108 |       text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;
- 109 |     }
- 110 |     .data-cell .value { font-size: 1rem; font-weight: 700; color: var(--primary-navy); }
- 111 |     .data-cell .sub-value { display: block; font-size: 0.8rem; font-weight: 400; color: #555; margin-top: 2px; }
- 112 | 
- 113 |     /* ── Tabla de Cargos ── */
- 114 |     table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
- 115 |     thead th {
- 116 |       background: var(--primary-navy);
- 117 |       color: #fff;
- 118 |       padding: 12px 15px;
- 119 |       text-align: left;
- 120 |       font-size: 0.75rem;
- 121 |       text-transform: uppercase;
- 122 |       letter-spacing: 1px;
- 123 |     }
- 124 |     thead th.r { text-align: right; }
- 125 |     tbody td {
- 126 |       padding: 12px 15px;
- 127 |       border-bottom: 1px solid var(--border-gray);
- 128 |       font-size: 0.95rem;
- 129 |     }
- 130 |     tbody tr:nth-child(even) { background: #fafafa; }
- 131 |     .td-num { color: var(--text-muted); font-weight: 300; width: 40px; }
- 132 |     .td-price { font-weight: 700; color: var(--primary-navy); text-align: right; }
+  32 |     .action-bar span { color: #7aa8d4; font-size: .82rem; }
+  33 |     .btn-action {
+  34 |       padding: 7px 18px; border: none; border-radius: 6px;
+  35 |       font-family: inherit; font-size: .82rem; font-weight: 700;
+  36 |       cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  37 |       transition: opacity .15s;
+  38 |     }
+  39 |     .btn-action:hover { opacity: .85; }
+  40 |     .btn-download { background: var(--success);  color: #fff; }
+  41 |     .btn-print    { background: var(--brand-mid); color: #fff; }
+  42 |     .btn-close    { background: transparent; color: #7aa8d4; font-size: .8rem; margin-left: auto; }
+  43 | 
+  44 |     .doc-wrapper { max-width: 820px; margin: 24px auto; padding: 0 16px 40px; }
+  45 | 
+  46 |     #doc {
+  47 |       background: var(--white);
+  48 |       border-radius: 10px;
+  49 |       box-shadow: 0 2px 16px rgba(0,0,0,.1);
+  50 |       overflow: hidden;
+  51 |     }
+  52 | 
+  53 |     /* Cabecera */
+  54 |     .doc-header {
+  55 |       background: var(--brand-dark);
+  56 |       padding: 28px 36px 22px;
+  57 |       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  58 |     }
+  59 |     .doc-header-left { display: flex; align-items: center; gap: 16px; }
+  60 | 
+  61 |     /*
+  62 |      * ╔══════════════════════════════════════════╗
+  63 |      * ║  LOGO — reemplaza el bloque .doc-logo    ║
+  64 |      * ║  con <img src="/static/img/logo.png">    ║
+  65 |      * ╚══════════════════════════════════════════╝
+  66 |      */
+  67 |     .doc-logo {
+  68 |       width: 54px; height: 54px;
+  69 |       background: var(--brand-mid); border-radius: 10px;
+  70 |       display: flex; align-items: center; justify-content: center;
+  71 |       font-size: 1.3rem; font-weight: 900; color: var(--white); flex-shrink: 0;
+  72 |     }
+  73 |     .doc-brand h1 {
+  74 |       font-size: 1.15rem; font-weight: 800; color: var(--white);
+  75 |       text-transform: uppercase; letter-spacing: .05em;
+  76 |     }
+  77 |     .doc-brand p { font-size: .75rem; color: #7aa8d4; margin-top: 2px; }
+  78 |     .doc-title-block { text-align: right; }
+  79 |     .doc-title-block h2 {
+  80 |       font-size: 1rem; font-weight: 700; color: var(--white);
+  81 |       text-transform: uppercase; letter-spacing: .1em;
+  82 |     }
+  83 |     .doc-title-block p { font-size: .75rem; color: #7aa8d4; margin-top: 3px; }
+  84 | 
+  85 |     /* Número de factura destacado */
+  86 |     .invoice-num-bar {
+  87 |       background: var(--brand-light);
+  88 |       padding: 10px 36px;
+  89 |       display: flex; align-items: center; gap: 12px;
+  90 |       border-bottom: 1px solid var(--border);
+  91 |     }
+  92 |     .invoice-num-bar .inv-label {
+  93 |       font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  94 |       letter-spacing: .08em; color: var(--brand-dark);
+  95 |     }
+  96 |     .invoice-num-bar .inv-value {
+  97 |       font-size: .95rem; font-weight: 800; color: var(--brand-dark);
+  98 |       letter-spacing: .05em; font-family: 'Courier New', monospace;
+  99 |     }
+ 100 | 
+ 101 |     /* Totales */
+ 102 |     .doc-totals { display: flex; border-bottom: 1px solid var(--border); }
+ 103 |     .total-cell { flex: 1; padding: 20px 28px; border-right: 1px solid var(--border); }
+ 104 |     .total-cell:last-child { border-right: none; }
+ 105 |     .total-cell .lbl {
+ 106 |       font-size: .68rem; font-weight: 700; text-transform: uppercase;
+ 107 |       letter-spacing: .07em; color: var(--text-muted); margin-bottom: 6px;
+ 108 |     }
+ 109 |     .total-cell .val { font-size: 1.6rem; font-weight: 900; }
+ 110 |     .val-billed  { color: var(--text); }
+ 111 |     .val-paid    { color: var(--success); }
+ 112 |     .val-pending { color: var(--danger); }
+ 113 |     .val-zero    { color: var(--text-muted); }
+ 114 | 
+ 115 |     .status-badge {
+ 116 |       display: inline-block; padding: 4px 14px; border-radius: 20px;
+ 117 |       font-size: .72rem; font-weight: 800;
+ 118 |       text-transform: uppercase; letter-spacing: .07em; margin-top: 6px;
+ 119 |     }
+ 120 |     .status-PAGADO    { background: #d1fae5; color: #065f46; }
+ 121 |     .status-PENDIENTE { background: #fee2e2; color: #991b1b; }
+ 122 |     .status-PARCIAL   { background: #fef3c7; color: #92400e; }
+ 123 | 
+ 124 |     /* Info */
+ 125 |     .doc-info { display: flex; gap: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+ 126 |     .info-cell { flex: 1; padding: 14px 28px; border-right: 1px solid var(--border); min-width: 140px; }
+ 127 |     .info-cell:last-child { border-right: none; }
+ 128 |     .info-cell .lbl {
+ 129 |       font-size: .65rem; font-weight: 700; text-transform: uppercase;
+ 130 |       letter-spacing: .07em; color: var(--text-muted); margin-bottom: 4px;
+ 131 |     }
+ 132 |     .info-cell .val { font-size: .9rem; font-weight: 700; color: var(--text); }
  133 | 
- 134 |     /* ── Totales ── */
- 135 |     .summary-wrapper {
- 136 |       display: flex;
- 137 |       justify-content: flex-end;
- 138 |     }
- 139 |     .total-card {
- 140 |       width: 280px;
- 141 |       background: var(--primary-navy);
- 142 |       color: #fff;
- 143 |       padding: 20px;
- 144 |       border-radius: 4px;
- 145 |       display: flex;
- 146 |       justify-content: space-between;
- 147 |       align-items: center;
+ 134 |     /* Tabla */
+ 135 |     .doc-table-wrap { padding: 0 28px 20px; }
+ 136 |     table.doc-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+ 137 |     .doc-table thead tr { background: var(--brand-light); }
+ 138 |     .doc-table th {
+ 139 |       padding: 9px 12px; text-align: left;
+ 140 |       font-size: .7rem; font-weight: 700; text-transform: uppercase;
+ 141 |       letter-spacing: .06em; color: var(--brand-dark);
+ 142 |       border-bottom: 2px solid var(--brand-mid);
+ 143 |     }
+ 144 |     .doc-table th.right, .doc-table td.right { text-align: right; }
+ 145 |     .doc-table td {
+ 146 |       padding: 9px 12px; font-size: .85rem;
+ 147 |       border-bottom: 1px solid var(--border); vertical-align: middle;
  148 |     }
- 149 |     .total-card .label { font-size: 0.8rem; font-weight: 400; text-transform: uppercase; }
- 150 |     .total-card .amount { font-size: 1.6rem; font-weight: 900; }
- 151 | 
- 152 |     /* ── Contacto y Footer ── */
- 153 |     .contact-info {
- 154 |       margin-top: 50px;
- 155 |       background: #f1f3f5;
- 156 |       padding: 15px;
- 157 |       border-radius: 6px;
- 158 |       font-size: 0.85rem;
- 159 |       color: #444;
- 160 |       line-height: 1.6;
- 161 |       border: 1px dashed var(--border-gray);
- 162 |     }
- 163 |     .contact-info strong { color: var(--primary-navy); }
- 164 | 
- 165 |     .doc-footer {
- 166 |       margin-top: 40px;
- 167 |       display: flex;
- 168 |       justify-content: space-between;
- 169 |       align-items: flex-end;
- 170 |     }
- 171 |     .footer-stamp { font-size: 0.75rem; color: var(--text-muted); }
- 172 |     .signature-box {
- 173 |       border-top: 1px solid var(--primary-navy);
- 174 |       padding-top: 10px;
- 175 |       width: 200px;
- 176 |       text-align: center;
- 177 |       font-weight: 700;
- 178 |       font-size: 0.8rem;
- 179 |       color: var(--primary-navy);
+ 149 |     .doc-table tbody tr:hover { background: #fafbff; }
+ 150 |     .desc-main { font-weight: 600; color: var(--text); }
+ 151 |     .desc-sub  { font-size: .75rem; color: var(--text-muted); margin-top: 1px; }
+ 152 | 
+ 153 |     /* Nota */
+ 154 |     .doc-footer {
+ 155 |       margin: 0 28px 24px;
+ 156 |       padding: 12px 16px;
+ 157 |       background: #fffbeb; border: 1px solid #fde68a;
+ 158 |       border-radius: 7px; font-size: .78rem; color: #78350f;
+ 159 |     }
+ 160 |     .doc-footer strong { display: block; margin-bottom: 3px; }
+ 161 | 
+ 162 |     /* Firma */
+ 163 |     .doc-sign { display: flex; justify-content: flex-end; padding: 0 28px 28px; }
+ 164 |     .doc-sign-block { text-align: center; }
+ 165 |     .doc-sign-block .line { width: 180px; border-top: 1px solid var(--text); margin: 0 auto 6px; }
+ 166 |     .doc-sign-block p { font-size: .75rem; color: var(--text-muted); }
+ 167 | 
+ 168 |     .loading-box { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+ 169 |     .loading-box i { font-size: 2rem; margin-bottom: 12px; display: block; opacity: .4; }
+ 170 | 
+ 171 |     @media print {
+ 172 |       body { background: white !important; }
+ 173 |       .action-bar { display: none !important; }
+ 174 |       .doc-wrapper { margin: 0; padding: 0; }
+ 175 |       #doc { box-shadow: none; border-radius: 0; }
+ 176 |       .doc-header, .doc-totals, .doc-info, .invoice-num-bar,
+ 177 |       .doc-table thead tr, .doc-footer, .status-badge {
+ 178 |         -webkit-print-color-adjust: exact; print-color-adjust: exact;
+ 179 |       }
  180 |     }
- 181 | 
- 182 |     #loading { text-align:center; padding:100px; color: var(--primary-navy); font-weight: 700; }
- 183 | 
- 184 |     @media print {
- 185 |       body { background: #fff; }
- 186 |       .print-bar { display: none; }
- 187 |       .page { margin: 0; box-shadow: none; width: 100%; padding: 10mm; }
- 188 |       @page { size: A4; margin: 0; }
- 189 |     }
- 190 |   </style>
- 191 | </head>
- 192 | <body>
- 193 | 
- 194 | <div class="print-bar">
- 195 |   <button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
- 196 |   <button class="btn-back"  onclick="window.close()">← Cerrar</button>
- 197 | </div>
- 198 | 
- 199 | <div id="loading">Generando documento...</div>
- 200 | 
- 201 | <div class="page" id="inv-page" style="display:none;">
- 202 | 
- 203 |   <header class="property-header">
- 204 |     <div class="property-name" id="display-property-name">P.H. PARK VIEW I</div>
- 205 |     <div class="property-address">Park View, Av. 17B Nte., Panamá, Provincia de Panamá</div>
- 206 |   </header>
- 207 | 
- 208 |   <div class="doc-main-info">
- 209 |     <div class="brand-side">
- 210 |       <div class="brand-logo" id="inv-logo">MB</div>
- 211 |       <div class="brand-text">
- 212 |         <h1>MERCEDES BIENES RAÍCES</h1>
- 213 |         <p>Alianza Residencial | Gestión Administrativa Inmobiliaria</p>
- 214 |       </div>
- 215 |     </div>
- 216 |     <div class="receipt-title-box">
- 217 |       <h2>Recibo de Pago</h2>
- 218 |       <div class="ref-num" id="inv-ref-num">—</div>
- 219 |     </div>
- 220 |   </div>
- 221 | 
- 222 |   <div class="data-grid">
- 223 |     <div class="data-cell">
- 224 |       <div class="label">Propietario / Cliente</div>
- 225 |       <div class="value" id="inv-owner">—</div>
- 226 |     </div>
- 227 |     <div class="data-cell">
- 228 |       <div class="label">Información de Pago</div>
- 229 |       <div class="value" id="inv-pay-info">—</div>
- 230 |     </div>
- 231 |   </div>
- 232 | 
- 233 |   <table>
- 234 |     <thead>
- 235 |       <tr>
- 236 |         <th class="td-num">#</th>
- 237 |         <th>Descripción del Cargo</th>
- 238 |         <th class="r">Monto Aplicado</th>
- 239 |       </tr>
- 240 |     </thead>
- 241 |     <tbody id="inv-tbody"></tbody>
- 242 |   </table>
- 243 | 
- 244 |   <div class="summary-wrapper">
- 245 |     <div class="total-card">
- 246 |       <span class="label">Total Pagado</span>
- 247 |       <span class="amount" id="inv-total">$0.00</span>
- 248 |     </div>
- 249 |   </div>
- 250 | 
- 251 |   <div class="contact-info">
- 252 |     Puede enviar sus comprobantes de pago por <strong>WhatsApp al 6971-4177</strong> o al correo: <strong>admparkview1@gmail.com</strong>.
- 253 |   </div>
- 254 | 
- 255 |   <div class="doc-footer">
- 256 |     <div class="footer-stamp">
- 257 |       Documento generado automáticamente por Alianza Residencial<br>
- 258 |       Fecha de emisión: <span id="inv-date"></span>
- 259 |     </div>
- 260 |     <div class="signature-box">
- 261 |       Firma Autorizada
- 262 |     </div>
- 263 |   </div>
- 264 | 
- 265 | </div>
- 266 | 
- 267 | <script>
- 268 | // Manteniendo la lógica funcional original intacta
- 269 | const fmoney = v => parseFloat(v||0).toLocaleString('es-PA', {
- 270 |   minimumFractionDigits:2, maximumFractionDigits:2
- 271 | });
- 272 | const fdate = s => {
- 273 |   if (!s) return '—';
- 274 |   try {
- 275 |     const [y,m,d] = String(s).split('T')[0].split('-');
- 276 |     const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
- 277 |     return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
- 278 |   } catch { return s; }
- 279 | };
- 280 | 
- 281 | (async () => {
- 282 |   const params = new URLSearchParams(location.search);
- 283 |   const pid    = params.get('payment_id');
- 284 |   if (!pid) { document.getElementById('loading').textContent = 'Error: No se encontró el ID de pago.'; return; }
- 285 | 
- 286 |   try {
- 287 |     const token   = localStorage.getItem('access_token');
- 288 |     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
- 289 | 
- 290 |     const [pay, detail] = await Promise.all([
- 291 |       fetch(`/api/finance/payment/${pid}`,             { headers }).then(r => r.json()),
- 292 |       fetch(`/api/finance/payment-detail-full/${pid}`, { headers }).then(r => r.ok ? r.json() : null),
- 293 |     ]);
+ 181 |   </style>
+ 182 | </head>
+ 183 | <body>
+ 184 | 
+ 185 | <div class="action-bar" id="actionBar">
+ 186 |   <span><i class="fas fa-receipt"></i> Factura de Pago</span>
+ 187 |   <button class="btn-action btn-download" onclick="descargarPDF()">
+ 188 |     <i class="fas fa-download"></i> Descargar PDF
+ 189 |   </button>
+ 190 |   <button class="btn-action btn-print" onclick="window.print()">
+ 191 |     <i class="fas fa-print"></i> Imprimir
+ 192 |   </button>
+ 193 |   <button class="btn-action btn-close" onclick="window.close()">
+ 194 |     <i class="fas fa-times"></i> Cerrar
+ 195 |   </button>
+ 196 | </div>
+ 197 | 
+ 198 | <div class="doc-wrapper">
+ 199 |   <div id="doc">
+ 200 |     <div class="loading-box" id="loadingBox">
+ 201 |       <i class="fas fa-spinner fa-spin"></i>
+ 202 |       Cargando factura…
+ 203 |     </div>
+ 204 |   </div>
+ 205 | </div>
+ 206 | 
+ 207 | <script>
+ 208 | const TOKEN_KEY = 'alianza_token';
+ 209 | function token() { return localStorage.getItem(TOKEN_KEY); }
+ 210 | 
+ 211 | async function apiGet(endpoint) {
+ 212 |   const res = await fetch(`/api${endpoint}`, {
+ 213 |     headers: { 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' }
+ 214 |   });
+ 215 |   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+ 216 |   return res.json();
+ 217 | }
+ 218 | 
+ 219 | function fmt(v) {
+ 220 |   return parseFloat(v || 0).toLocaleString('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+ 221 | }
+ 222 | function fmtDate(str) {
+ 223 |   if (!str) return '—';
+ 224 |   try { const [y,m,d] = str.split('T')[0].split('-'); return `${d}/${m}/${y}`; } catch(_){ return str; }
+ 225 | }
+ 226 | 
+ 227 | async function init() {
+ 228 |   const params    = new URLSearchParams(window.location.search);
+ 229 |   const paymentId = params.get('payment_id');
+ 230 |   if (!paymentId) { showError('No se especificó pago.'); return; }
+ 231 | 
+ 232 |   try {
+ 233 |     // Cargar datos del pago usando el endpoint de detalle completo
+ 234 |     const payment = await apiGet(`/finance/payment-detail-full/${paymentId}`);
+ 235 |     if (!payment) throw new Error('Pago no encontrado');
+ 236 | 
+ 237 |     const unitNum  = payment.unit_number || '—';
+ 238 |     const propName = payment.property_name || 'Alianza Residencial';
+ 239 |     const owner    = { full_name: payment.owner_name || '—' };
+ 240 | 
+ 241 |     renderDoc(payment, owner, unitNum, propName);
+ 242 |   } catch(e) {
+ 243 |     showError('Error al cargar los datos: ' + e.message);
+ 244 |   }
+ 245 | }
+ 246 | 
+ 247 | function renderDoc(payment, owner, unitNum, propName) {
+ 248 |   const now      = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
+ 249 |   const total    = parseFloat(payment.monto || payment.amount || 0);
+ 250 |   const invNum   = payment.factura || payment.invoice_number || '—';
+ 251 |   const concepto = payment.concepto || payment.reference || '—';
+ 252 | 
+ 253 |   // Determinar estado según si hay cargos pendientes vinculados
+ 254 |   const estado = 'PAGADO'; // la factura representa un pago registrado
+ 255 | 
+ 256 |   // Filas de cargos aplicados
+ 257 |   const cargosRows = (payment.cargos || payment.applications || []).map(c => `
+ 258 |     <tr>
+ 259 |       <td>
+ 260 |         <div class="desc-main">${c.description || c.razon || '—'}</div>
+ 261 |       </td>
+ 262 |       <td class="right">$${fmt(c.applied || c.applied_amount || c.monto || total)}</td>
+ 263 |     </tr>
+ 264 |   `).join('');
+ 265 | 
+ 266 |   // Si no hay cargos detallados, mostrar la referencia
+ 267 |   const bodyRows = cargosRows || `<tr>
+ 268 |     <td><div class="desc-main">${concepto}</div></td>
+ 269 |     <td class="right">$${fmt(total)}</td>
+ 270 |   </tr>`;
+ 271 | 
+ 272 |   document.getElementById('doc').innerHTML = `
+ 273 |     <!-- Cabecera -->
+ 274 |     <div class="doc-header">
+ 275 |       <div class="doc-header-left">
+ 276 |         <!--
+ 277 |           ╔════════════════════════════════════════════╗
+ 278 |           ║  LOGO — cambia el div.doc-logo por:        ║
+ 279 |           ║  <img src="/static/img/logo.png"           ║
+ 280 |           ║       style="width:54px;border-radius:10px"> ║
+ 281 |           ╚════════════════════════════════════════════╝
+ 282 |         -->
+ 283 |         <div class="doc-logo">AR</div>
+ 284 |         <div class="doc-brand">
+ 285 |           <h1>${propName}</h1>
+ 286 |           <p>Sistema de Administración de Propiedades</p>
+ 287 |         </div>
+ 288 |       </div>
+ 289 |       <div class="doc-title-block">
+ 290 |         <h2>Factura de Pago</h2>
+ 291 |         <p>${now}</p>
+ 292 |       </div>
+ 293 |     </div>
  294 | 
- 295 |     const today = new Date().toLocaleDateString('es-PA', {
- 296 |       year:'numeric', month:'long', day:'numeric'
- 297 |     });
- 298 | 
- 299 |     // Actualizar nombre del PH si viene del API
- 300 |     if(detail?.property_name) {
- 301 |         document.getElementById('display-property-name').textContent = detail.property_name.toUpperCase();
- 302 |     }
- 303 | 
- 304 |     // Referencias
- 305 |     let refHtml = '';
- 306 |     if (detail?.invoice_number)       refHtml += `N° Sistema: ${detail.invoice_number} | `;
- 307 |     if (detail?.fiscal_invoice_number) refHtml += `N° Fiscal: ${detail.fiscal_invoice_number}`;
- 308 |     document.getElementById('inv-ref-num').innerHTML = refHtml || `ID Pago: #${pid}`;
- 309 | 
- 310 |     // Propietario
- 311 |     document.getElementById('inv-owner').innerHTML =
- 312 |       `${detail?.owner_name || '—'}
- 313 |        <span class="sub-value">Unidad: ${detail?.unit_number || '—'}</span>`;
- 314 | 
- 315 |     // Datos del pago
- 316 |     document.getElementById('inv-pay-info').innerHTML =
- 317 |       `Fecha: ${fdate(detail?.payment_date || pay?.payment_date)}
- 318 |        ${detail?.reference ? `<span class="sub-value">Ref: ${detail.reference}</span>` : ''}`;
+ 295 |     <!-- Número de factura destacado -->
+ 296 |     <div class="invoice-num-bar">
+ 297 |       <span class="inv-label">N° Factura</span>
+ 298 |       <span class="inv-value">${invNum !== '—' ? invNum : 'Sin número físico'}</span>
+ 299 |       ${payment.receipt_number ? `<span class="inv-label" style="margin-left:16px;">Recibo</span>
+ 300 |         <span class="inv-value">${payment.receipt_number}</span>` : ''}
+ 301 |     </div>
+ 302 | 
+ 303 |     <!-- Totales -->
+ 304 |     <div class="doc-totals">
+ 305 |       <div class="total-cell">
+ 306 |         <div class="lbl">Monto Pagado</div>
+ 307 |         <div class="val val-paid">$${fmt(total)}</div>
+ 308 |         <span class="status-badge status-${estado}">${estado}</span>
+ 309 |       </div>
+ 310 |       <div class="total-cell">
+ 311 |         <div class="lbl">Fecha de Pago</div>
+ 312 |         <div class="val" style="font-size:1.2rem;">${fmtDate(payment.fecha || payment.payment_date)}</div>
+ 313 |       </div>
+ 314 |       <div class="total-cell">
+ 315 |         <div class="lbl">Concepto</div>
+ 316 |         <div class="val" style="font-size:.95rem;line-height:1.4;">${concepto}</div>
+ 317 |       </div>
+ 318 |     </div>
  319 | 
- 320 |     // Tabla de cargos
- 321 |     const tbody = document.getElementById('inv-tbody');
- 322 |     const apps  = pay?.applications || [];
- 323 | 
- 324 |     if (!apps.length) {
- 325 |       tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:30px;color:#999;">Sin detalles de aplicación disponibles.</td></tr>`;
- 326 |     } else {
- 327 |       apps.forEach((a, i) => {
- 328 |         tbody.innerHTML += `
- 329 |           <tr>
- 330 |             <td class="td-num">${i+1}</td>
- 331 |             <td>${a.description || `Aplicación de cargo #${a.charge_id}`}</td>
- 332 |             <td class="td-price">$${fmoney(a.applied_amount)}</td>
- 333 |           </tr>`;
- 334 |       });
- 335 |     }
- 336 | 
- 337 |     document.getElementById('inv-total').textContent = `$${fmoney(pay?.amount || 0)}`;
- 338 |     document.getElementById('inv-date').textContent  = today;
+ 320 |     <!-- Info propietario -->
+ 321 |     <div class="doc-info">
+ 322 |       <div class="info-cell">
+ 323 |         <div class="lbl">Propietario</div>
+ 324 |         <div class="val">${owner.full_name || owner.name || payment.owner_name || '—'}</div>
+ 325 |       </div>
+ 326 |       <div class="info-cell">
+ 327 |         <div class="lbl">Unidad</div>
+ 328 |         <div class="val">${unitNum}</div>
+ 329 |       </div>
+ 330 |       <div class="info-cell">
+ 331 |         <div class="lbl">Propiedad</div>
+ 332 |         <div class="val">${propName}</div>
+ 333 |       </div>
+ 334 |       <div class="info-cell">
+ 335 |         <div class="lbl">Referencia</div>
+ 336 |         <div class="val" style="font-size:.8rem;font-weight:500;">${payment.referencia || payment.reference || '—'}</div>
+ 337 |       </div>
+ 338 |     </div>
  339 | 
- 340 |     document.getElementById('loading').style.display  = 'none';
- 341 |     document.getElementById('inv-page').style.display = 'block';
- 342 | 
- 343 |   } catch(e) {
- 344 |     document.getElementById('loading').textContent = `Error crítico: ${e.message}`;
- 345 |   }
- 346 | })();
- 347 | </script>
- 348 | </body>
- 349 | </html>
+ 340 |     <!-- Tabla de cargos aplicados -->
+ 341 |     <div class="doc-table-wrap">
+ 342 |       <table class="doc-table">
+ 343 |         <thead>
+ 344 |           <tr>
+ 345 |             <th>Concepto / Cargo Aplicado</th>
+ 346 |             <th class="right">Monto</th>
+ 347 |           </tr>
+ 348 |         </thead>
+ 349 |         <tbody>
+ 350 |           ${bodyRows}
+ 351 |           <tr style="background:var(--brand-light);">
+ 352 |             <td style="font-weight:800;text-align:right;padding-right:16px;">TOTAL PAGADO</td>
+ 353 |             <td class="right" style="font-weight:900;font-size:1rem;color:var(--success);">$${fmt(total)}</td>
+ 354 |           </tr>
+ 355 |         </tbody>
+ 356 |       </table>
+ 357 |     </div>
+ 358 | 
+ 359 |     <!-- Nota -->
+ 360 |     <div class="doc-footer">
+ 361 |       <strong><i class="fas fa-info-circle"></i> Nota</strong>
+ 362 |       Este documento es un comprobante de pago generado automáticamente por el Sistema de Administración de Propiedades.
+ 363 |       Consérvelo como respaldo de su transacción.
+ 364 |     </div>
+ 365 | 
+ 366 |     <!-- Firma -->
+ 367 |     <div class="doc-sign">
+ 368 |       <div class="doc-sign-block">
+ 369 |         <div class="line"></div>
+ 370 |         <p>Firma Administración</p>
+ 371 |       </div>
+ 372 |     </div>
+ 373 |   `;
+ 374 | }
+ 375 | 
+ 376 | function showError(msg) {
+ 377 |   document.getElementById('doc').innerHTML = `
+ 378 |     <div class="loading-box">
+ 379 |       <i class="fas fa-exclamation-triangle"></i>
+ 380 |       <p>${msg}</p>
+ 381 |     </div>`;
+ 382 | }
+ 383 | 
+ 384 | function descargarPDF() {
+ 385 |   const bar = document.getElementById('actionBar');
+ 386 |   bar.style.display = 'none';
+ 387 |   const invNum = document.querySelector('.inv-value')?.textContent?.replace(/\s+/g,'_') || 'factura';
+ 388 |   const opt = {
+ 389 |     margin:       [8, 8, 8, 8],
+ 390 |     filename:     `factura_${invNum}.pdf`,
+ 391 |     image:        { type: 'jpeg', quality: 0.98 },
+ 392 |     html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+ 393 |     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+ 394 |     pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+ 395 |   };
+ 396 |   html2pdf().set(opt).from(document.getElementById('doc')).save().then(() => {
+ 397 |     bar.style.display = '';
+ 398 |   });
+ 399 | }
+ 400 | 
+ 401 | init();
+ 402 | </script>
+ 403 | </body>
+ 404 | </html>
+ 405 | 
 
 --------------------------------------------------------------------------------
 
@@ -5434,309 +5490,622 @@ RUTA COMPLETA: C:\alianza_backend\app\static\estado_cuenta.html
    1 | <!DOCTYPE html>
    2 | <html lang="es">
    3 | <head>
-   4 |   <meta charset="UTF-8">
-   5 |   <title>Estado de Cuenta | Alianza Residencial</title>
-   6 |   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-   7 |   <style>
-   8 |     * { margin:0; padding:0; box-sizing:border-box; }
-   9 |     body { font-family:'Lato',sans-serif; background:#f4f4f4; color:#222; font-size:12.5px; }
+   4 | <meta charset="UTF-8">
+   5 | <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   6 | <title>Estado de Cuenta | Alianza Residencial</title>
+   7 | 
+   8 | <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+   9 | <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   10 | 
-  11 |     .print-bar {
-  12 |       background:#1a1a2e; padding:10px 24px;
-  13 |       display:flex; align-items:center; gap:10px; justify-content:center;
-  14 |     }
-  15 |     .print-bar button {
-  16 |       padding:7px 20px; border:none; border-radius:5px;
-  17 |       font-family:inherit; font-size:.82rem; font-weight:700; cursor:pointer;
-  18 |     }
-  19 |     .btn-print { background:#fff; color:#1a1a2e; }
-  20 |     .btn-back  { background:transparent; color:rgba(255,255,255,.8); border:1px solid rgba(255,255,255,.3)!important; }
-  21 |     .btn-print:hover,.btn-back:hover { opacity:.85; }
-  22 | 
-  23 |     .page {
-  24 |       width:210mm; min-height:277mm; margin:20px auto;
-  25 |       background:#fff; padding:12mm 14mm 14mm;
-  26 |       box-shadow:0 2px 20px rgba(0,0,0,.1);
-  27 |     }
-  28 | 
-  29 |     .doc-head {
-  30 |       display:flex; justify-content:space-between; align-items:flex-start;
-  31 |       margin-bottom:18px; padding-bottom:14px; border-bottom:2px solid #1a1a2e;
-  32 |     }
-  33 |     .brand { display:flex; align-items:center; gap:10px; }
-  34 |     .brand-logo {
-  35 |       width:48px; height:48px; background:#1a1a2e; border-radius:8px;
-  36 |       display:flex; align-items:center; justify-content:center;
-  37 |       color:#fff; font-weight:900; font-size:.95rem; overflow:hidden;
-  38 |     }
-  39 |     .brand-logo img { width:100%; height:100%; object-fit:contain; }
-  40 |     .brand-name h1 { font-size:1rem; font-weight:900; color:#1a1a2e; }
-  41 |     .brand-name p  { font-size:.7rem; color:#888; margin-top:2px; line-height:1.5; }
-  42 |     .doc-title { text-align:right; }
-  43 |     .doc-title h2 { font-size:1.1rem; font-weight:900; color:#1a1a2e; text-transform:uppercase; letter-spacing:.08em; }
-  44 |     .doc-title .doc-date { font-size:.72rem; color:#888; margin-top:3px; }
-  45 | 
-  46 |     .owner-section { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
-  47 |     .owner-cell .lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#999; margin-bottom:3px; }
-  48 |     .owner-cell .val { font-size:.88rem; font-weight:700; color:#1a1a2e; }
-  49 | 
-  50 |     .fin-summary {
-  51 |       display:grid; grid-template-columns:1fr 1fr 1fr;
-  52 |       gap:0; margin-bottom:18px;
-  53 |       border:1px solid #e0e0e0; border-radius:6px; overflow:hidden;
-  54 |     }
-  55 |     .fin-cell { padding:10px 14px; border-right:1px solid #e0e0e0; }
-  56 |     .fin-cell:last-child { border-right:none; }
-  57 |     .fin-cell .fc-lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#999; margin-bottom:4px; }
-  58 |     .fin-cell .fc-val { font-size:1.05rem; font-weight:900; color:#1a1a2e; }
-  59 |     .fin-cell.is-pending .fc-val { color:#c0392b; }
-  60 |     .fin-cell.is-paid    .fc-val { color:#27ae60; }
-  61 | 
-  62 |     .section-title { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#999; margin-bottom:8px; }
-  63 | 
-  64 |     table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:.82rem; }
-  65 |     thead tr { border-bottom:2px solid #1a1a2e; }
-  66 |     thead th { padding:6px 10px; text-align:left; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#1a1a2e; }
-  67 |     thead th.r { text-align:right; }
-  68 |     tbody tr { border-bottom:1px solid #f0f0f0; }
-  69 |     tbody tr:last-child { border-bottom:none; }
-  70 |     tbody td { padding:7px 10px; color:#333; vertical-align:middle; }
-  71 |     tbody td.r { text-align:right; }
-  72 |     tbody td.b { font-weight:700; }
-  73 |     tbody td.muted { color:#999; }
-  74 | 
-  75 |     .st { display:inline-block; padding:2px 8px; border-radius:3px; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
-  76 |     .st-PAGADO    { background:#eafaf1; color:#1e8449; border:1px solid #a9dfbf; }
-  77 |     .st-PARCIAL   { background:#fef9e7; color:#b7950b; border:1px solid #f9e79f; }
-  78 |     .st-PENDIENTE { background:#fdedec; color:#c0392b; border:1px solid #f1948a; }
-  79 | 
-  80 |     /* Sub-filas de pagos */
-  81 |     .pay-detail-row td { padding:0 10px 5px 30px; border-bottom:none; }
-  82 |     .pay-detail-inner {
-  83 |       background:#f9f9f9; border-left:2px solid #ddd;
-  84 |       border-radius:0 4px 4px 0; padding:5px 10px;
-  85 |       font-size:.75rem; color:#666;
-  86 |       display:flex; align-items:center; flex-wrap:wrap; gap:10px;
-  87 |     }
-  88 |     .pay-detail-inner span { white-space:nowrap; }
-  89 |     .pay-detail-inner strong { color:#333; }
-  90 |     .btn-factura-mini {
-  91 |       display:inline-flex; align-items:center; gap:4px;
-  92 |       padding:2px 10px; border-radius:4px; font-size:.68rem; font-weight:700;
-  93 |       background:#e8f0fe; color:#1a73e8; border:1px solid #c5d8fc;
-  94 |       cursor:pointer; text-decoration:none; white-space:nowrap;
-  95 |     }
-  96 |     .btn-factura-mini:hover { background:#d2e3fc; }
-  97 | 
-  98 |     .legal-notice {
-  99 |       margin-top:16px; padding:10px 14px;
- 100 |       background:#f8f8f8; border:1px solid #e8e8e8;
- 101 |       border-left:3px solid #1a1a2e; border-radius:0 4px 4px 0;
- 102 |     }
- 103 |     .legal-notice p { font-size:.64rem; color:#777; line-height:1.7; margin:0; }
- 104 |     .legal-notice strong { color:#555; }
- 105 | 
- 106 |     .doc-footer {
- 107 |       margin-top:20px; padding-top:12px; border-top:1px solid #e0e0e0;
- 108 |       display:flex; justify-content:space-between; align-items:flex-end;
- 109 |     }
- 110 |     .doc-footer-left { font-size:.67rem; color:#aaa; line-height:1.8; }
- 111 |     .firma-line { border-top:1px solid #bbb; margin-top:36px; padding-top:5px; font-size:.67rem; color:#aaa; text-align:center; min-width:140px; }
- 112 | 
- 113 |     #loading { text-align:center; padding:60px; color:#999; font-size:.9rem; }
- 114 | 
- 115 |     @media print {
- 116 |       body { background:#fff; }
- 117 |       .print-bar { display:none; }
- 118 |       .btn-factura-mini { display:none; }  /* ocultar botones en impresión */
- 119 |       .page { margin:0; box-shadow:none; padding:8mm 12mm; width:100%; min-height:auto; }
- 120 |       @page { size:A4; margin:0; }
- 121 |     }
- 122 |   </style>
- 123 | </head>
- 124 | <body>
- 125 | 
- 126 | <div class="print-bar">
- 127 |   <button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
- 128 |   <button class="btn-back"  onclick="window.close()">← Cerrar</button>
- 129 | </div>
- 130 | 
- 131 | <div id="loading">Cargando estado de cuenta...</div>
- 132 | 
- 133 | <div class="page" id="stmt-page" style="display:none;">
- 134 | 
- 135 |   <div class="doc-head">
- 136 |     <div class="brand">
- 137 |       <div class="brand-logo" id="stmt-logo">AR</div>
- 138 |       <div class="brand-name">
- 139 |         <h1>ALIANZA RESIDENCIAL</h1>
- 140 |         <p id="stmt-prop-addr">Administración de Propiedades</p>
- 141 |       </div>
- 142 |     </div>
- 143 |     <div class="doc-title">
- 144 |       <h2>Estado de Cuenta</h2>
- 145 |       <div class="doc-date" id="stmt-date"></div>
- 146 |     </div>
- 147 |   </div>
- 148 | 
- 149 |   <div class="owner-section">
- 150 |     <div class="owner-cell">
- 151 |       <div class="lbl">Propietario</div>
- 152 |       <div class="val" id="s-owner">—</div>
- 153 |     </div>
- 154 |     <div class="owner-cell">
- 155 |       <div class="lbl">Unidad</div>
- 156 |       <div class="val" id="s-unit">—</div>
- 157 |     </div>
- 158 |     <div class="owner-cell">
- 159 |       <div class="lbl">Propiedad</div>
- 160 |       <div class="val" id="s-prop">—</div>
- 161 |     </div>
- 162 |   </div>
- 163 | 
- 164 |   <div class="fin-summary">
- 165 |     <div class="fin-cell">
- 166 |       <div class="fc-lbl">Total facturado</div>
- 167 |       <div class="fc-val" id="sum-total">—</div>
- 168 |     </div>
- 169 |     <div class="fin-cell is-paid">
- 170 |       <div class="fc-lbl">Total pagado</div>
- 171 |       <div class="fc-val" id="sum-paid">—</div>
- 172 |     </div>
- 173 |     <div class="fin-cell is-pending">
- 174 |       <div class="fc-lbl">Saldo pendiente</div>
- 175 |       <div class="fc-val" id="sum-pend">—</div>
- 176 |     </div>
- 177 |   </div>
- 178 | 
- 179 |   <div class="section-title">Historial de cargos</div>
- 180 |   <table>
- 181 |     <thead>
- 182 |       <tr>
- 183 |         <th>Descripción</th>
- 184 |         <th>Vencimiento</th>
- 185 |         <th class="r">Cargo</th>
- 186 |         <th class="r">Pagado</th>
- 187 |         <th class="r">Saldo</th>
- 188 |         <th>Estado</th>
- 189 |       </tr>
- 190 |     </thead>
- 191 |     <tbody id="stmt-tbody"></tbody>
- 192 |   </table>
- 193 | 
- 194 |   <div class="legal-notice">
- 195 |     <p>
- 196 |       <strong>DOCUMENTO NO FISCAL —</strong>
- 197 |       Este estado de cuenta es un documento informativo generado por el sistema de administración
- 198 |       de Alianza Residencial y <strong>no constituye una factura fiscal ni comprobante de pago
- 199 |       con validez tributaria</strong> ante la Dirección General de Ingresos (DGI) u otra autoridad
- 200 |       competente. No tiene valor legal como documento de cobro judicial. Para efectos fiscales y
- 201 |       legales, solicite el recibo o factura oficial emitido al momento del pago.
- 202 |     </p>
- 203 |   </div>
- 204 | 
- 205 |   <div class="doc-footer">
- 206 |     <div class="doc-footer-left">
- 207 |       Alianza Residencial &bull; Sistema de Administración de Propiedades<br>
- 208 |       Generado el <span id="gen-date"></span>
- 209 |     </div>
- 210 |     <div class="firma-line">Firma Administración</div>
- 211 |   </div>
- 212 | 
- 213 | </div>
- 214 | 
- 215 | <script>
- 216 | const fmoney = v => parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2,maximumFractionDigits:2});
- 217 | const fdate  = s => {
- 218 |   if (!s) return '—';
- 219 |   try {
- 220 |     const [y,m,d] = s.split('T')[0].split('-');
- 221 |     const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
- 222 |     return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
- 223 |   } catch { return s; }
- 224 | };
+  11 | <style>
+  12 | * {
+  13 |   margin: 0;
+  14 |   padding: 0;
+  15 |   box-sizing: border-box;
+  16 | }
+  17 | 
+  18 | body {
+  19 |   font-family: 'Inter', sans-serif;
+  20 |   background: linear-gradient(135deg, #e8eef4 0%, #dce3ec 100%);
+  21 |   padding: 40px 20px;
+  22 |   color: #1a2c3e;
+  23 | }
+  24 | 
+  25 | /* CONTENEDOR PRINCIPAL */
+  26 | .page {
+  27 |   max-width: 1100px;
+  28 |   margin: 0 auto;
+  29 |   background: #ffffff;
+  30 |   border-radius: 24px;
+  31 |   overflow: hidden;
+  32 |   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  33 |   transition: all 0.3s ease;
+  34 | }
+  35 | 
+  36 | /* HEADER MEJORADO */
+  37 | .doc-header {
+  38 |   background: linear-gradient(135deg, #0a2c5e 0%, #0f3b6e 100%);
+  39 |   padding: 32px 36px;
+  40 |   display: flex;
+  41 |   justify-content: space-between;
+  42 |   align-items: center;
+  43 |   border-bottom: 4px solid #f59e0b;
+  44 |   position: relative;
+  45 |   overflow: hidden;
+  46 | }
+  47 | 
+  48 | .doc-header::before {
+  49 |   content: '';
+  50 |   position: absolute;
+  51 |   top: -50%;
+  52 |   right: -20%;
+  53 |   width: 300px;
+  54 |   height: 300px;
+  55 |   background: radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%);
+  56 |   border-radius: 50%;
+  57 | }
+  58 | 
+  59 | .brand {
+  60 |   display: flex;
+  61 |   align-items: center;
+  62 |   gap: 16px;
+  63 |   position: relative;
+  64 |   z-index: 1;
+  65 | }
+  66 | 
+  67 | .brand img {
+  68 |   width: 65px;
+  69 |   height: 65px;
+  70 |   object-fit: contain;
+  71 |   background: white;
+  72 |   border-radius: 12px;
+  73 |   padding: 8px;
+  74 | }
+  75 | 
+  76 | .brand-info h1 {
+  77 |   font-size: 1.4rem;
+  78 |   font-weight: 800;
+  79 |   letter-spacing: -0.3px;
+  80 |   color: #ffffff;
+  81 |   margin-bottom: 4px;
+  82 | }
+  83 | 
+  84 | .brand-info p {
+  85 |   font-size: 0.75rem;
+  86 |   color: #cbd5e1;
+  87 |   font-weight: 400;
+  88 | }
+  89 | 
+  90 | .header-right {
+  91 |   text-align: right;
+  92 |   position: relative;
+  93 |   z-index: 1;
+  94 | }
+  95 | 
+  96 | .header-right .badge {
+  97 |   background: rgba(255,255,255,0.15);
+  98 |   padding: 8px 16px;
+  99 |   border-radius: 40px;
+ 100 |   display: inline-block;
+ 101 | }
+ 102 | 
+ 103 | .header-right .factura {
+ 104 |   font-weight: 700;
+ 105 |   font-size: 0.85rem;
+ 106 |   color: #fcd34d;
+ 107 |   letter-spacing: 0.5px;
+ 108 |   margin-bottom: 6px;
+ 109 | }
+ 110 | 
+ 111 | .header-right .fecha {
+ 112 |   font-size: 0.75rem;
+ 113 |   color: #cbd5e1;
+ 114 | }
+ 115 | 
+ 116 | /* SECCIONES DE INFORMACIÓN */
+ 117 | .section {
+ 118 |   display: grid;
+ 119 |   grid-template-columns: repeat(3, 1fr);
+ 120 |   border-bottom: 1px solid #e9eef3;
+ 121 |   background: #fafcff;
+ 122 | }
+ 123 | 
+ 124 | .cell {
+ 125 |   padding: 20px 24px;
+ 126 |   border-right: 1px solid #e9eef3;
+ 127 |   transition: background 0.2s;
+ 128 | }
+ 129 | 
+ 130 | .cell:last-child {
+ 131 |   border-right: none;
+ 132 | }
+ 133 | 
+ 134 | .cell:hover {
+ 135 |   background: #f8fafd;
+ 136 | }
+ 137 | 
+ 138 | .lbl {
+ 139 |   font-size: 0.7rem;
+ 140 |   text-transform: uppercase;
+ 141 |   letter-spacing: 0.8px;
+ 142 |   font-weight: 700;
+ 143 |   color: #6c86a3;
+ 144 |   margin-bottom: 6px;
+ 145 |   display: flex;
+ 146 |   align-items: center;
+ 147 |   gap: 6px;
+ 148 | }
+ 149 | 
+ 150 | .lbl i {
+ 151 |   font-size: 0.7rem;
+ 152 | }
+ 153 | 
+ 154 | .val {
+ 155 |   font-weight: 700;
+ 156 |   font-size: 1rem;
+ 157 |   color: #1a2c3e;
+ 158 | }
+ 159 | 
+ 160 | /* RESUMEN FINANCIERO - TARJETAS */
+ 161 | .summary {
+ 162 |   display: grid;
+ 163 |   grid-template-columns: repeat(3, 1fr);
+ 164 |   gap: 1px;
+ 165 |   background: #e9eef3;
+ 166 |   padding: 0;
+ 167 | }
+ 168 | 
+ 169 | .sum {
+ 170 |   background: #ffffff;
+ 171 |   padding: 24px 20px;
+ 172 |   text-align: center;
+ 173 |   transition: all 0.2s;
+ 174 | }
+ 175 | 
+ 176 | .sum:hover {
+ 177 |   transform: translateY(-2px);
+ 178 | }
+ 179 | 
+ 180 | .sum .title {
+ 181 |   font-size: 0.7rem;
+ 182 |   text-transform: uppercase;
+ 183 |   letter-spacing: 1px;
+ 184 |   font-weight: 700;
+ 185 |   color: #6c86a3;
+ 186 |   margin-bottom: 10px;
+ 187 |   display: flex;
+ 188 |   align-items: center;
+ 189 |   justify-content: center;
+ 190 |   gap: 6px;
+ 191 | }
+ 192 | 
+ 193 | .sum .value {
+ 194 |   font-size: 2rem;
+ 195 |   font-weight: 800;
+ 196 |   letter-spacing: -1px;
+ 197 | }
+ 198 | 
+ 199 | .sum .value.green {
+ 200 |   color: #10b981;
+ 201 | }
+ 202 | 
+ 203 | .sum .value.red {
+ 204 |   color: #ef4444;
+ 205 | }
+ 206 | 
+ 207 | .sum .value.blue {
+ 208 |   color: #0a2c5e;
+ 209 | }
+ 210 | 
+ 211 | /* TABLA MEJORADA */
+ 212 | .table-wrap {
+ 213 |   padding: 28px 24px 20px 24px;
+ 214 |   background: #ffffff;
+ 215 | }
+ 216 | 
+ 217 | .table-header-tools {
+ 218 |   display: flex;
+ 219 |   justify-content: space-between;
+ 220 |   align-items: center;
+ 221 |   margin-bottom: 20px;
+ 222 |   padding-bottom: 12px;
+ 223 |   border-bottom: 2px solid #e9eef3;
+ 224 | }
  225 | 
- 226 | (async () => {
- 227 |   const params  = new URLSearchParams(location.search);
- 228 |   const ownerId = params.get('owner_id');
- 229 |   if (!ownerId) { document.getElementById('loading').textContent='No se especificó un propietario.'; return; }
- 230 | 
- 231 |   try {
- 232 |     const token   = localStorage.getItem('access_token');
- 233 |     const headers = token ? {'Authorization':`Bearer ${token}`} : {};
+ 226 | .table-header-tools h3 {
+ 227 |   font-size: 0.9rem;
+ 228 |   font-weight: 700;
+ 229 |   color: #1a2c3e;
+ 230 |   display: flex;
+ 231 |   align-items: center;
+ 232 |   gap: 8px;
+ 233 | }
  234 | 
- 235 |     const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`,{headers})
- 236 |       .then(r => { if (!r.ok) throw new Error('No encontrado'); return r.json(); });
- 237 | 
- 238 |     const logoEl = document.getElementById('stmt-logo');
- 239 |     const img    = new Image();
- 240 |     img.onload   = () => { logoEl.innerHTML=`<img src="/static/logo.png" alt="Logo">`; };
- 241 |     img.src      = '/static/logo.png';
- 242 | 
- 243 |     const today = new Date().toLocaleDateString('es-PA',{year:'numeric',month:'long',day:'numeric'});
- 244 |     document.getElementById('stmt-date').textContent      = today;
- 245 |     document.getElementById('gen-date').textContent       = today;
- 246 |     document.getElementById('s-owner').textContent        = data.owner_name    || '—';
- 247 |     document.getElementById('s-unit').textContent         = data.unit_number   ? `Apt. ${data.unit_number}` : '—';
- 248 |     document.getElementById('s-prop').textContent         = data.property_name || '—';
- 249 |     document.getElementById('stmt-prop-addr').textContent = data.property_address || 'Administración de Propiedades';
- 250 | 
- 251 |     const stmt = data.statement || [];
- 252 |     let tFact=0, tPaid=0, tPend=0;
- 253 |     stmt.forEach(c => { tFact+=c.amount||0; tPaid+=c.paid||0; tPend+=c.balance||0; });
- 254 |     document.getElementById('sum-total').textContent = `$${fmoney(tFact)}`;
- 255 |     document.getElementById('sum-paid').textContent  = `$${fmoney(tPaid)}`;
- 256 |     document.getElementById('sum-pend').textContent  = `$${fmoney(tPend)}`;
- 257 | 
- 258 |     const tbody = document.getElementById('stmt-tbody');
+ 235 | .table-header-tools h3 i {
+ 236 |   color: #f59e0b;
+ 237 | }
+ 238 | 
+ 239 | .btn-print {
+ 240 |   background: #f8fafc;
+ 241 |   border: 1px solid #e2e8f0;
+ 242 |   padding: 8px 16px;
+ 243 |   border-radius: 10px;
+ 244 |   font-size: 0.75rem;
+ 245 |   font-weight: 600;
+ 246 |   color: #1a2c3e;
+ 247 |   cursor: pointer;
+ 248 |   transition: all 0.2s;
+ 249 |   display: flex;
+ 250 |   align-items: center;
+ 251 |   gap: 8px;
+ 252 | }
+ 253 | 
+ 254 | .btn-print:hover {
+ 255 |   background: #0a2c5e;
+ 256 |   color: white;
+ 257 |   border-color: #0a2c5e;
+ 258 | }
  259 | 
- 260 |     if (!stmt.length) {
- 261 |       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#bbb;">Sin cargos registrados</td></tr>`;
- 262 |     } else {
- 263 |       stmt.forEach(c => {
- 264 |         tbody.innerHTML += `
- 265 |           <tr>
- 266 |             <td class="b">${c.description}</td>
- 267 |             <td class="muted">${fdate(c.due_date)}</td>
- 268 |             <td class="r">$${fmoney(c.amount)}</td>
- 269 |             <td class="r">$${fmoney(c.paid)}</td>
- 270 |             <td class="r b" style="color:${c.balance>0?'#c0392b':'#27ae60'}">$${fmoney(c.balance)}</td>
- 271 |             <td><span class="st st-${c.status}">${c.status}</span></td>
- 272 |           </tr>`;
- 273 | 
- 274 |         if (c.payments?.length) {
- 275 |           // Mostrar cada pago con su # referencia/factura y botón Ver Factura
- 276 |           const pagosHtml = c.payments.map(p => {
- 277 |             const ref = p.fiscal_invoice_number
- 278 |               ? `<span>Factura: <strong>${p.fiscal_invoice_number}</strong></span>`
- 279 |               : (p.reference ? `<span>Ref: <strong>${p.reference}</strong></span>` : '');
- 280 |             
- 281 |             return `
- 282 |               <span>✓ <strong>$${fmoney(p.applied_amount)}</strong></span>
- 283 |               <span>${fdate(p.payment_date)}</span>
- 284 |               ${ref}
- 285 |               ${btnFactura}`;
- 286 |           }).join('<span style="color:#ccc;margin:0 4px;">|</span>');
- 287 | 
- 288 |           tbody.innerHTML += `<tr class="pay-detail-row">
- 289 |             <td colspan="6">
- 290 |               <div class="pay-detail-inner">${pagosHtml}</div>
- 291 |             </td>
- 292 |           </tr>`;
- 293 |         }
- 294 |       });
- 295 |     }
- 296 | 
- 297 |     document.getElementById('loading').style.display   = 'none';
- 298 |     document.getElementById('stmt-page').style.display = 'block';
- 299 | 
- 300 |   } catch(e) {
- 301 |     document.getElementById('loading').textContent = `Error: ${e.message}`;
- 302 |   }
- 303 | })();
- 304 | </script>
- 305 | </body>
- 306 | </html>
+ 260 | table {
+ 261 |   width: 100%;
+ 262 |   border-collapse: collapse;
+ 263 | }
+ 264 | 
+ 265 | thead {
+ 266 |   background: #f8fafc;
+ 267 |   border-bottom: 2px solid #e2e8f0;
+ 268 | }
+ 269 | 
+ 270 | th {
+ 271 |   text-align: left;
+ 272 |   font-size: 0.7rem;
+ 273 |   font-weight: 700;
+ 274 |   text-transform: uppercase;
+ 275 |   letter-spacing: 0.8px;
+ 276 |   padding: 14px 12px;
+ 277 |   color: #475569;
+ 278 | }
+ 279 | 
+ 280 | th.right {
+ 281 |   text-align: right;
+ 282 | }
+ 283 | 
+ 284 | td {
+ 285 |   padding: 14px 12px;
+ 286 |   border-bottom: 1px solid #f0f2f5;
+ 287 |   font-size: 0.85rem;
+ 288 |   color: #334155;
+ 289 | }
+ 290 | 
+ 291 | td.right {
+ 292 |   text-align: right;
+ 293 | }
+ 294 | 
+ 295 | tbody tr {
+ 296 |   transition: background 0.2s;
+ 297 | }
+ 298 | 
+ 299 | tbody tr:hover {
+ 300 |   background: #fafcff;
+ 301 | }
+ 302 | 
+ 303 | /* Badges de estado */
+ 304 | .status-badge {
+ 305 |   display: inline-block;
+ 306 |   padding: 4px 10px;
+ 307 |   border-radius: 20px;
+ 308 |   font-size: 0.7rem;
+ 309 |   font-weight: 600;
+ 310 | }
+ 311 | 
+ 312 | .status-paid {
+ 313 |   background: #d1fae5;
+ 314 |   color: #065f46;
+ 315 | }
+ 316 | 
+ 317 | .status-pending {
+ 318 |   background: #fed7aa;
+ 319 |   color: #9a3412;
+ 320 | }
+ 321 | 
+ 322 | .status-partial {
+ 323 |   background: #fef3c7;
+ 324 |   color: #92400e;
+ 325 | }
+ 326 | 
+ 327 | /* FOOTER MEJORADO */
+ 328 | .footer {
+ 329 |   margin: 0 24px 24px 24px;
+ 330 |   padding: 20px 24px;
+ 331 |   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+ 332 |   border-radius: 16px;
+ 333 |   border-left: 4px solid #f59e0b;
+ 334 |   font-family: 'Playfair Display', serif;
+ 335 |   font-size: 0.8rem;
+ 336 |   color: #475569;
+ 337 |   line-height: 1.7;
+ 338 | }
+ 339 | 
+ 340 | .footer strong {
+ 341 |   color: #0a2c5e;
+ 342 |   display: block;
+ 343 |   margin-bottom: 8px;
+ 344 | }
+ 345 | 
+ 346 | .footer i {
+ 347 |   color: #f59e0b;
+ 348 |   margin-right: 6px;
+ 349 | }
+ 350 | 
+ 351 | /* FIRMA */
+ 352 | .signature {
+ 353 |   padding: 20px 36px 36px 36px;
+ 354 |   text-align: right;
+ 355 | }
+ 356 | 
+ 357 | .signature div {
+ 358 |   border-top: 2px solid #cbd5e1;
+ 359 |   width: 220px;
+ 360 |   margin-left: auto;
+ 361 |   padding-top: 12px;
+ 362 |   font-size: 0.7rem;
+ 363 |   color: #94a3b8;
+ 364 |   font-weight: 500;
+ 365 | }
+ 366 | 
+ 367 | /* MEDIA PRINT */
+ 368 | @media print {
+ 369 |   body {
+ 370 |     background: white;
+ 371 |     padding: 0;
+ 372 |     margin: 0;
+ 373 |   }
+ 374 |   
+ 375 |   .page {
+ 376 |     box-shadow: none;
+ 377 |     border-radius: 0;
+ 378 |   }
+ 379 |   
+ 380 |   .btn-print {
+ 381 |     display: none;
+ 382 |   }
+ 383 |   
+ 384 |   .doc-header {
+ 385 |     background: #0a2c5e;
+ 386 |     -webkit-print-color-adjust: exact;
+ 387 |     print-color-adjust: exact;
+ 388 |   }
+ 389 |   
+ 390 |   .summary {
+ 391 |     -webkit-print-color-adjust: exact;
+ 392 |     print-color-adjust: exact;
+ 393 |   }
+ 394 |   
+ 395 |   .footer {
+ 396 |     -webkit-print-color-adjust: exact;
+ 397 |     print-color-adjust: exact;
+ 398 |   }
+ 399 | }
+ 400 | 
+ 401 | /* ANIMACIONES */
+ 402 | @keyframes fadeInUp {
+ 403 |   from {
+ 404 |     opacity: 0;
+ 405 |     transform: translateY(20px);
+ 406 |   }
+ 407 |   to {
+ 408 |     opacity: 1;
+ 409 |     transform: translateY(0);
+ 410 |   }
+ 411 | }
+ 412 | 
+ 413 | .page {
+ 414 |   animation: fadeInUp 0.5s ease;
+ 415 | }
+ 416 | </style>
+ 417 | </head>
+ 418 | 
+ 419 | <body>
+ 420 | 
+ 421 | <div class="page">
+ 422 | 
+ 423 | <!-- HEADER MEJORADO -->
+ 424 | <div class="doc-header">
+ 425 |   <div class="brand">
+ 426 |     <img src="/static/Logo_2.png" alt="Logo" onerror="this.style.display='none'">
+ 427 |     <div class="brand-info">
+ 428 |       <h1>MERCEDES BIENES RAÍCES</h1>
+ 429 |       <p>Administración Profesional | Alianza Residencial</p>
+ 430 |     </div>
+ 431 |   </div>
+ 432 |   <div class="header-right">
+ 433 |     <div class="badge">
+ 434 |       <div class="factura" id="factura">—</div>
+ 435 |       <div class="fecha" id="fecha">—</div>
+ 436 |     </div>
+ 437 |   </div>
+ 438 | </div>
+ 439 | 
+ 440 | <!-- INFORMACIÓN PROPIEDAD -->
+ 441 | <div class="section">
+ 442 |   <div class="cell">
+ 443 |     <div class="lbl"><i class="fas fa-building"></i> EDIFICIO</div>
+ 444 |     <div class="val" id="prop">—</div>
+ 445 |   </div>
+ 446 |   <div class="cell">
+ 447 |     <div class="lbl"><i class="fas fa-location-dot"></i> DIRECCIÓN</div>
+ 448 |     <div class="val" id="direccion">Av. 17B Nte, Panamá, Panamá</div>
+ 449 |   </div>
+ 450 |   <div class="cell">
+ 451 |     <div class="lbl"><i class="fas fa-phone-alt"></i> CONTACTO</div>
+ 452 |     <div class="val">+507 6971-4177</div>
+ 453 |   </div>
+ 454 | </div>
+ 455 | 
+ 456 | <!-- INFORMACIÓN CLIENTE -->
+ 457 | <div class="section">
+ 458 |   <div class="cell">
+ 459 |     <div class="lbl"><i class="fas fa-user"></i> PROPIETARIO</div>
+ 460 |     <div class="val" id="owner">—</div>
+ 461 |   </div>
+ 462 |   <div class="cell">
+ 463 |     <div class="lbl"><i class="fas fa-door-open"></i> UNIDAD</div>
+ 464 |     <div class="val" id="unit">—</div>
+ 465 |   </div>
+ 466 |   <div class="cell">
+ 467 |     <div class="lbl"><i class="fas fa-envelope"></i> CORREO ELECTRÓNICO</div>
+ 468 |     <div class="val" id="email">—</div>
+ 469 |   </div>
+ 470 | </div>
+ 471 | 
+ 472 | <!-- RESUMEN FINANCIERO -->
+ 473 | <div class="summary">
+ 474 |   <div class="sum">
+ 475 |     <div class="title"><i class="fas fa-receipt"></i> FACTURADO</div>
+ 476 |     <div class="value blue" id="total">$0.00</div>
+ 477 |   </div>
+ 478 |   <div class="sum">
+ 479 |     <div class="title"><i class="fas fa-check-circle"></i> PAGADO</div>
+ 480 |     <div class="value green" id="paid">$0.00</div>
+ 481 |   </div>
+ 482 |   <div class="sum">
+ 483 |     <div class="title"><i class="fas fa-clock"></i> PENDIENTE</div>
+ 484 |     <div class="value red" id="pending">$0.00</div>
+ 485 |   </div>
+ 486 | </div>
+ 487 | 
+ 488 | <!-- TABLA DE MOVIMIENTOS -->
+ 489 | <div class="table-wrap">
+ 490 |   <div class="table-header-tools">
+ 491 |     <h3><i class="fas fa-list-ul"></i> Detalle de Movimientos</h3>
+ 492 |     <button class="btn-print" onclick="window.print()">
+ 493 |       <i class="fas fa-print"></i> Imprimir / Guardar PDF
+ 494 |     </button>
+ 495 |   </div>
+ 496 |   
+ 497 |   <div style="overflow-x: auto;">
+ 498 |     <table>
+ 499 |       <thead>
+ 500 |         <tr>
+ 501 |           <th>Concepto</th>
+ 502 |           <th>Fecha de Pago</th>
+ 503 |           <th class="right">Cargo</th>
+ 504 |           <th class="right">Abono</th>
+ 505 |           <th class="right">Saldo</th>
+ 506 |         </tr>
+ 507 |       </thead>
+ 508 |       <tbody id="tbody">
+ 509 |         <tr><td colspan="5" style="text-align:center;padding:40px;">
+ 510 |           <i class="fas fa-spinner fa-spin"></i> Cargando estado de cuenta...
+ 511 |         </td></tr>
+ 512 |       </tbody>
+ 513 |     </table>
+ 514 |   </div>
+ 515 | </div>
+ 516 | 
+ 517 | <!-- NOTA INFORMATIVA -->
+ 518 | <div class="footer">
+ 519 |   <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+ 520 |   Este estado de cuenta refleja los movimientos registrados en el sistema de administración. 
+ 521 |   Los saldos mostrados corresponden al histórico de transacciones hasta la fecha de emisión. 
+ 522 |   Para cualquier aclaración o detalle adicional, favor contactar a la administración.
+ 523 | </div>
+ 524 | 
+ 525 | <div class="signature">
+ 526 |   <div>Firma Autorizada<br>Administración Alianza Residencial</div>
+ 527 | </div>
+ 528 | 
+ 529 | </div>
+ 530 | 
+ 531 | <script>
+ 532 | const fmoney = v => parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2});
+ 533 | const fdate = s => s ? new Date(s).toLocaleDateString('es-PA') : '—';
+ 534 | 
+ 535 | (async()=>{
+ 536 |   const params = new URLSearchParams(location.search);
+ 537 |   const ownerId = params.get('owner_id');
+ 538 | 
+ 539 |   if (!ownerId) {
+ 540 |     document.getElementById('tbody').innerHTML = `
+ 541 |       <tr><td colspan="5" style="text-align:center;padding:40px;color:#ef4444;">
+ 542 |         <i class="fas fa-exclamation-triangle"></i> No se especificó un propietario válido
+ 543 |       </td></tr>
+ 544 |     `;
+ 545 |     return;
+ 546 |   }
+ 547 | 
+ 548 |   try {
+ 549 |     const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`).then(r=>r.json());
+ 550 | 
+ 551 |     document.getElementById('fecha').textContent = new Date().toLocaleDateString('es-PA', {
+ 552 |       year: 'numeric',
+ 553 |       month: 'long',
+ 554 |       day: 'numeric'
+ 555 |     });
+ 556 | 
+ 557 |     const facturaNum = `${ownerId}-${Date.now().toString().slice(-6)}`;
+ 558 |     document.getElementById('factura').textContent = `N° Documento: ${facturaNum}`;
+ 559 | 
+ 560 |     document.getElementById('owner').textContent = data.owner_name || '—';
+ 561 |     document.getElementById('unit').textContent = data.unit_number || '—';
+ 562 |     document.getElementById('prop').textContent = data.property_name || 'Alianza Residencial';
+ 563 |     document.getElementById('email').textContent = data.email || 'No registrado';
+ 564 | 
+ 565 |     let totalFacturado = 0;
+ 566 |     let totalPagado = 0;
+ 567 |     let saldoActual = 0;
+ 568 | 
+ 569 |     const tbody = document.getElementById('tbody');
+ 570 |     tbody.innerHTML = '';
+ 571 | 
+ 572 |     if (data.statement && data.statement.length > 0) {
+ 573 |       data.statement.forEach(item => {
+ 574 |         totalFacturado += item.amount || 0;
+ 575 |         totalPagado += item.paid || 0;
+ 576 |         saldoActual += item.balance || 0;
+ 577 | 
+ 578 |         const fechaPago = item.payments?.length > 0 
+ 579 |           ? fdate(item.payments[0].payment_date) 
+ 580 |           : '—';
+ 581 | 
+ 582 |         const row = `
+ 583 |           <tr>
+ 584 |             <td style="font-weight:500;">${item.description || '—'}</td>
+ 585 |             <td>${fechaPago}</td>
+ 586 |             <td class="right">$${fmoney(item.amount)}</td>
+ 587 |             <td class="right" style="color:#10b981;">$${fmoney(item.paid)}</td>
+ 588 |             <td class="right" style="font-weight:600;">$${fmoney(item.balance)}</td>
+ 589 |           </tr>
+ 590 |         `;
+ 591 |         tbody.innerHTML += row;
+ 592 |       });
+ 593 |     } else {
+ 594 |       tbody.innerHTML = `
+ 595 |         <tr>
+ 596 |           <td colspan="5" style="text-align:center;padding:40px;color:#6c86a3;">
+ 597 |             <i class="fas fa-folder-open"></i> No hay movimientos registrados
+ 598 |           </td>
+ 599 |         </tr>
+ 600 |       `;
+ 601 |     }
+ 602 | 
+ 603 |     document.getElementById('total').textContent = `$${fmoney(totalFacturado)}`;
+ 604 |     document.getElementById('paid').textContent = `$${fmoney(totalPagado)}`;
+ 605 |     document.getElementById('pending').textContent = `$${fmoney(saldoActual)}`;
+ 606 | 
+ 607 |   } catch (error) {
+ 608 |     console.error('Error al cargar estado de cuenta:', error);
+ 609 |     document.getElementById('tbody').innerHTML = `
+ 610 |       <tr><td colspan="5" style="text-align:center;padding:40px;color:#ef4444;">
+ 611 |         <i class="fas fa-exclamation-circle"></i> Error al cargar los datos. Verifique su conexión.
+ 612 |       </td></tr>
+ 613 |     `;
+ 614 |   }
+ 615 | })();
+ 616 | </script>
+ 617 | 
+ 618 | </body>
+ 619 | </html>
 
 --------------------------------------------------------------------------------
 
@@ -8159,185 +8528,163 @@ RUTA COMPLETA: C:\alianza_backend\app\static\historial.html
  504 |   } catch { return s; }
  505 | }
  506 | 
- 507 | function generarReporte() {
- 508 |   const content = document.getElementById('reporte-content');
- 509 |   const res = getPagosFiltradosReporte();
- 510 | 
- 511 |   if (!res) {
- 512 |     content.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">
- 513 |       <i class="fas fa-home" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
- 514 |       Selecciona un apartamento para generar el reporte</div>`;
- 515 |     return;
- 516 |   }
- 517 | 
- 518 |   const { apto, desde, hasta, concepto, pagos } = res;
- 519 | 
- 520 |   if (!pagos.length) {
- 521 |     content.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros seleccionados</div>`;
- 522 |     return;
- 523 |   }
- 524 | 
- 525 |   const owner  = pagos[0]?.owner_name || '—';
- 526 |   const total  = pagos.reduce((s, p) => s + p.monto, 0);
- 527 |   const hoy    = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
- 528 |   const periodo= desde && hasta ? `${fdate(desde)} al ${fdate(hasta)}`
- 529 |                : desde ? `Desde ${fdate(desde)}`
- 530 |                : hasta ? `Hasta ${fdate(hasta)}` : 'Histórico completo';
- 531 | 
- 532 |   // Resumen por concepto
- 533 |   const porC = {};
- 534 |   pagos.forEach(p => { porC[p.concepto] = (porC[p.concepto] || 0) + p.monto; });
- 535 | 
- 536 |   // Intentar logo
- 537 |   const logoHtml = `<div class="brand-logo" id="pdf-logo-box">AR</div>`;
- 538 | 
- 539 |   content.innerHTML = `
- 540 |     <div id="pdf-doc" class="pdf-doc">
- 541 | 
- 542 |       <!-- Cabecera igual al estado de cuenta -->
- 543 |       <div class="doc-head">
- 544 |         <div class="brand">
- 545 |           ${logoHtml}
- 546 |           <div class="brand-name">
- 547 |             <h1>ALIANZA RESIDENCIAL</h1>
- 548 |             <p>Administración de Propiedades</p>
- 549 |           </div>
- 550 |         </div>
- 551 |         <div class="doc-title">
- 552 |           <h2>Reporte de Pagos</h2>
- 553 |           <p>Generado el ${hoy}</p>
- 554 |         </div>
- 555 |       </div>
- 556 | 
- 557 |       <!-- Info del apartamento -->
- 558 |       <div class="info-grid">
- 559 |         <div class="info-cell">
- 560 |           <div class="ic-lbl">Apartamento</div>
- 561 |           <div class="ic-val">Apt. ${apto}</div>
- 562 |         </div>
- 563 |         <div class="info-cell">
- 564 |           <div class="ic-lbl">Propietario</div>
- 565 |           <div class="ic-val">${owner}</div>
- 566 |         </div>
- 567 |         <div class="info-cell">
- 568 |           <div class="ic-lbl">Período</div>
- 569 |           <div class="ic-val" style="font-size:.82rem;">${periodo}</div>
- 570 |         </div>
- 571 |       </div>
- 572 | 
- 573 |       <!-- Resumen por concepto -->
- 574 |       <div class="section-title">Resumen por concepto</div>
- 575 |       <div class="sum-row">
- 576 |         ${Object.entries(porC).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
- 577 |           <div class="sum-chip">
- 578 |             <strong>$${formatMoney(v)}</strong>
- 579 |             <span>${k}</span>
- 580 |           </div>`).join('')}
- 581 |       </div>
- 582 | 
- 583 |       <!-- Tabla de pagos -->
- 584 |       <div class="section-title">Detalle de pagos</div>
- 585 |       <table>
- 586 |         <thead>
- 587 |           <tr>
- 588 |             <th># Factura</th>
- 589 |             <th>Fecha</th>
- 590 |             <th>Concepto</th>
- 591 |             <th class="r">Monto</th>
- 592 |           </tr>
- 593 |         </thead>
- 594 |         <tbody>
- 595 |           ${pagos.map(p => `
- 596 |             <tr>
- 597 |               <td class="muted">${p.factura}</td>
- 598 |               <td>${fdate(p.fecha)}</td>
- 599 |               <td>${p.concepto}</td>
- 600 |               <td class="r">$${formatMoney(p.monto)}</td>
- 601 |             </tr>`).join('')}
- 602 |         </tbody>
- 603 |       </table>
- 604 | 
- 605 |       <!-- Totales -->
- 606 |       <div class="total-line">
- 607 |         <div>
- 608 |           <div class="tl">Registros</div>
- 609 |           <div class="tv">${pagos.length}</div>
- 610 |         </div>
- 611 |         <div>
- 612 |           <div class="tl">Total pagado</div>
- 613 |           <div class="tv">$${formatMoney(total)}</div>
- 614 |         </div>
- 615 |       </div>
- 616 | 
- 617 |       <!-- Aviso legal -->
- 618 |       <div class="legal-notice">
- 619 |         <p>
- 620 |           <strong>DOCUMENTO NO FISCAL —</strong>
- 621 |           Este reporte es un documento informativo generado por el sistema de administración
- 622 |           de Alianza Residencial y <strong>no constituye una factura fiscal ni comprobante de
- 623 |           pago con validez tributaria</strong> ante la Dirección General de Ingresos (DGI) u
- 624 |           otra autoridad competente. Para efectos fiscales y legales, solicite el recibo o
- 625 |           factura oficial emitido al momento del pago.
- 626 |         </p>
- 627 |       </div>
- 628 | 
- 629 |       <!-- Footer -->
- 630 |       <div class="doc-footer">
- 631 |         <div class="doc-footer-left">
- 632 |           Alianza Residencial &bull; Sistema de Administración de Propiedades<br>
- 633 |           Generado el ${hoy}
- 634 |         </div>
- 635 |         <div class="firma-line">Firma Administración</div>
- 636 |       </div>
- 637 | 
- 638 |     </div>`;
+ 507 | function generarReporte() 
+ 508 | {
+ 509 |   const content = document.getElementById('reporte-content');
+ 510 |   const res = getPagosFiltradosReporte();
+ 511 | 
+ 512 |   if (!res) {
+ 513 |     content.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">
+ 514 |       <i class="fas fa-home" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+ 515 |       Selecciona un apartamento para generar el reporte</div>`;
+ 516 |     return;
+ 517 |   }
+ 518 | 
+ 519 |   const { apto, desde, hasta, concepto, pagos } = res;
+ 520 | 
+ 521 |   if (!pagos.length) {
+ 522 |     content.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros seleccionados</div>`;
+ 523 |     return;
+ 524 |   }
+ 525 | 
+ 526 |   const owner  = pagos[0]?.owner_name || '—';
+ 527 |   const total  = pagos.reduce((s, p) => s + p.monto, 0);
+ 528 |   const hoy    = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
+ 529 |   const periodo= desde && hasta ? `${fdate(desde)} al ${fdate(hasta)}`
+ 530 |                : desde ? `Desde ${fdate(desde)}`
+ 531 |                : hasta ? `Hasta ${fdate(hasta)}` : 'Histórico completo';
+ 532 | 
+ 533 |   // Resumen por concepto para chips
+ 534 |   const porC = {};
+ 535 |   pagos.forEach(p => { porC[p.concepto] = (porC[p.concepto] || 0) + p.monto; });
+ 536 | 
+ 537 |   // Generar filas de la tabla
+ 538 |   let tableRows = '';
+ 539 |   pagos.forEach(p => {
+ 540 |     tableRows += `
+ 541 |       <tr>
+ 542 |         <td class="td-mono" style="font-size:.78rem;">${p.factura}</td>
+ 543 |         <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
+ 544 |         <td>${razonTag(p.concepto)}</td>
+ 545 |         <td class="r"><strong>$${formatMoney(p.monto)}</strong></td>
+ 546 |       </tr>
+ 547 |     `;
+ 548 |   });
+ 549 | 
+ 550 |   // Generar chips de resumen por concepto
+ 551 |   let conceptChips = '';
+ 552 |   Object.entries(porC).forEach(([k, v]) => {
+ 553 |     conceptChips += `<div class="sum-chip"><strong>$${formatMoney(v)}</strong><span>${k}</span></div>`;
+ 554 |   });
+ 555 | 
+ 556 |   content.innerHTML = `
+ 557 |     <div id="pdf-doc" class="pdf-doc">
+ 558 |       <div class="doc-head">
+ 559 |         <div class="brand">
+ 560 |           <div class="brand-logo" id="pdf-logo-box">AR</div>
+ 561 |           <div class="brand-name">
+ 562 |             <h1>ALIANZA RESIDENCIAL</h1>
+ 563 |             <p>Centro de Cobros · Panamá</p>
+ 564 |           </div>
+ 565 |         </div>
+ 566 |         <div class="doc-title">
+ 567 |           <h2>REPORTE DE PAGOS</h2>
+ 568 |           <p>${hoy}</p>
+ 569 |         </div>
+ 570 |       </div>
+ 571 | 
+ 572 |       <div class="info-grid">
+ 573 |         <div class="info-cell">
+ 574 |           <div class="ic-lbl">APARTAMENTO</div>
+ 575 |           <div class="ic-val">${apto}</div>
+ 576 |         </div>
+ 577 |         <div class="info-cell">
+ 578 |           <div class="ic-lbl">PROPIETARIO</div>
+ 579 |           <div class="ic-val">${owner}</div>
+ 580 |         </div>
+ 581 |         <div class="info-cell">
+ 582 |           <div class="ic-lbl">PERÍODO</div>
+ 583 |           <div class="ic-val">${periodo}</div>
+ 584 |         </div>
+ 585 |       </div>
+ 586 | 
+ 587 |       <div class="section-title">Resumen por concepto</div>
+ 588 |       <div class="sum-row">
+ 589 |         <div class="sum-chip"><strong>${pagos.length}</strong><span>Registros</span></div>
+ 590 |         <div class="sum-chip"><strong>$${formatMoney(total)}</strong><span>Total</span></div>
+ 591 |         ${conceptChips}
+ 592 |       </div>
+ 593 | 
+ 594 |       <div class="section-title">Detalle de pagos</div>
+ 595 |       <table>
+ 596 |         <thead>
+ 597 |           <tr>
+ 598 |             <th># Factura</th>
+ 599 |             <th>Fecha</th>
+ 600 |             <th>Concepto</th>
+ 601 |             <th class="r">Monto</th>
+ 602 |           </tr>
+ 603 |         </thead>
+ 604 |         <tbody>
+ 605 |           ${tableRows}
+ 606 |         </tbody>
+ 607 |       </table>
+ 608 | 
+ 609 |       <div class="total-line">
+ 610 |         <div><span class="tl">TOTAL PAGADO</span></div>
+ 611 |         <div><span class="tv">$${formatMoney(total)}</span></div>
+ 612 |       </div>
+ 613 | 
+ 614 |       <div class="legal-notice">
+ 615 |         <p><strong>Nota informativa</strong><br>Este documento refleja los pagos registrados en el sistema. Para aclaraciones, contactar administración.</p>
+ 616 |       </div>
+ 617 | 
+ 618 |       <div class="doc-footer">
+ 619 |         <div class="doc-footer-left">
+ 620 |           Alianza Residencial · ${new Date().getFullYear()}<br>
+ 621 |           Documento generado electrónicamente
+ 622 |         </div>
+ 623 |         <div class="firma-line">
+ 624 |           Administración
+ 625 |         </div>
+ 626 |       </div>
+ 627 |     </div>
+ 628 |   `;
+ 629 | }
+ 630 | 
+ 631 | /* ── Imprimir / Exportar PDF ─────────────────────────── */
+ 632 | function imprimirPDF() {
+ 633 |   const apto = document.getElementById('rep-apto').value;
+ 634 |   if (!apto) { showToast('Selecciona un apartamento primero','warning'); return; }
+ 635 |   const doc = document.getElementById('pdf-doc');
+ 636 |   if (!doc)  { showToast('Genera el reporte primero','warning'); return; }
+ 637 |   window.print();
+ 638 | }
  639 | 
- 640 |   // Cargar logo si existe
- 641 |   const logoImg = new Image();
- 642 |   logoImg.onload = () => {
- 643 |     const box = document.getElementById('pdf-logo-box');
- 644 |     if (box) box.innerHTML = `<img src="/static/logo.png" alt="Logo">`;
- 645 |   };
- 646 |   logoImg.src = '/static/logo.png';
- 647 | }
- 648 | 
- 649 | /* ── Imprimir / Exportar PDF ─────────────────────────── */
- 650 | function imprimirPDF() {
- 651 |   const apto = document.getElementById('rep-apto').value;
- 652 |   if (!apto) { showToast('Selecciona un apartamento primero','warning'); return; }
- 653 |   const doc = document.getElementById('pdf-doc');
- 654 |   if (!doc)  { showToast('Genera el reporte primero','warning'); return; }
- 655 |   window.print();
- 656 | }
- 657 | 
- 658 | /* ── Excel del reporte ───────────────────────────────── */
- 659 | function exportarReporteExcel() {
- 660 |   const res = getPagosFiltradosReporte();
- 661 |   if (!res) { showToast('Selecciona un apartamento primero','warning'); return; }
- 662 |   const { apto, pagos } = res;
- 663 |   if (!pagos.length) { showToast('Sin datos para exportar','warning'); return; }
- 664 | 
- 665 |   const total   = pagos.reduce((s,p) => s+p.monto, 0);
- 666 |   const headers = ['# Factura','Fecha','Apartamento','Propietario','Concepto','Monto'];
- 667 |   const rows    = pagos.map(p => [p.factura, p.fecha, p.apto, p.owner_name, p.concepto, p.monto]);
- 668 |   rows.push([], ['','','','','TOTAL', total]);
- 669 | 
- 670 |   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
- 671 |   ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:28},{wch:22},{wch:12}];
- 672 |   const wb = XLSX.utils.book_new();
- 673 |   XLSX.utils.book_append_sheet(wb, ws, `Apt ${apto}`);
- 674 |   XLSX.writeFile(wb, `reporte_apt${apto}_${new Date().toISOString().split('T')[0]}.xlsx`);
- 675 |   showToast('Reporte descargado','success');
- 676 | }
- 677 | 
- 678 | init();
- 679 | </script>
- 680 | </body>
- 681 | </html>
- 682 | 
- 683 | 
- 684 | 
- 685 | 
+ 640 | /* ── Excel del reporte ───────────────────────────────── */
+ 641 | function exportarReporteExcel() {
+ 642 |   const res = getPagosFiltradosReporte();
+ 643 |   if (!res) { showToast('Selecciona un apartamento primero','warning'); return; }
+ 644 |   const { apto, pagos } = res;
+ 645 |   if (!pagos.length) { showToast('Sin datos para exportar','warning'); return; }
+ 646 | 
+ 647 |   const total   = pagos.reduce((s,p) => s+p.monto, 0);
+ 648 |   const headers = ['# Factura','Fecha','Apartamento','Propietario','Concepto','Monto'];
+ 649 |   const rows    = pagos.map(p => [p.factura, p.fecha, p.apto, p.owner_name, p.concepto, p.monto]);
+ 650 |   rows.push([], ['','','','','TOTAL', total]);
+ 651 | 
+ 652 |   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+ 653 |   ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:28},{wch:22},{wch:12}];
+ 654 |   const wb = XLSX.utils.book_new();
+ 655 |   XLSX.utils.book_append_sheet(wb, ws, `Apt ${apto}`);
+ 656 |   XLSX.writeFile(wb, `reporte_apt${apto}_${new Date().toISOString().split('T')[0]}.xlsx`);
+ 657 |   showToast('Reporte descargado','success');
+ 658 | }
+ 659 | 
+ 660 | init();
+ 661 | </script>
+ 662 | </body>
+ 663 | </html>
 
 --------------------------------------------------------------------------------
 
@@ -9811,428 +10158,902 @@ RUTA COMPLETA: C:\alianza_backend\app\static\reports.html
    7 |   <link rel="stylesheet" href="css/main.css">
    8 |   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
    9 |   <style>
-  10 |     .rep-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
-  11 |     .rep-tab {
-  12 |       padding:7px 16px; border-radius:8px; border:1px solid var(--border);
-  13 |       background:var(--card-bg); color:var(--text-secondary); font-size:.82rem;
-  14 |       font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit;
+  10 |     /* ── Tabs ── */
+  11 |     .rep-tabs {
+  12 |       display: flex; gap: 4px; flex-wrap: wrap;
+  13 |       background: var(--card-bg); border: 1px solid var(--border);
+  14 |       border-radius: var(--radius-lg); padding: 6px; margin-bottom: 20px;
   15 |     }
-  16 |     .rep-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-  17 |     .rep-panel { display:none; }
-  18 |     .rep-panel.active { display:block; }
-  19 | 
-  20 |     .summary-row {
-  21 |       display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-  22 |       gap:12px; margin-bottom:20px;
-  23 |     }
-  24 |     .sum-card {
-  25 |       background:var(--card-bg); border:1px solid var(--border);
-  26 |       border-radius:var(--radius-md); padding:14px 16px; text-align:center;
-  27 |     }
-  28 |     .sum-card .sum-val { font-size:1.4rem; font-weight:800; color:var(--accent); }
-  29 |     .sum-card .sum-lbl { font-size:.72rem; color:var(--text-muted); margin-top:2px; text-transform:uppercase; letter-spacing:.04em; }
-  30 | 
-  31 |     .print-btn {
-  32 |       background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-soft);
-  33 |       width:auto; margin-top:0; padding:7px 16px; font-size:.82rem;
-  34 |     }
-  35 |     @media print {
-  36 |       .rep-tabs, .rep-panel:not(.active), .topbar, .sidebar,
-  37 |       .sidebar-toggle, .print-btn, #notification { display:none !important; }
-  38 |       .main-wrapper { margin-left:0 !important; }
-  39 |       .app { padding:0 !important; }
-  40 |       table { font-size:11px; }
-  41 |     }
-  42 |   </style>
-  43 | </head>
-  44 | <body>
-  45 | <div class="app">
-  46 |   <div class="page-header">
-  47 |     <h1><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:8px;"></i>Reportes</h1>
-  48 |     <p>Reportes financieros y resúmenes de movimientos</p>
-  49 |   </div>
-  50 | 
-  51 |   <div class="rep-tabs">
-  52 |     <button class="rep-tab active" onclick="switchTab('cargos')"><i class="fas fa-file-invoice"></i> Cargos</button>
-  53 |     <button class="rep-tab" onclick="switchTab('pagos')"><i class="fas fa-money-bill-wave"></i> Pagos</button>
-  54 |     <button class="rep-tab" onclick="switchTab('propietarios')"><i class="fas fa-users"></i> Por Propietario</button>
-  55 |     <button class="rep-tab" onclick="switchTab('proveedores')"><i class="fas fa-truck"></i> Proveedores</button>
-  56 |   </div>
-  57 | 
-  58 |   <!-- ══ CARGOS ══ -->
-  59 |   <div class="rep-panel active" id="panel-cargos">
-  60 |     <div class="card">
-  61 |       <div class="card-header">
-  62 |         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
-  63 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
-  64 |       </div>
-  65 |       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-  66 |         <div>
-  67 |           <label class="field-label" style="margin-top:0;">Propiedad</label>
-  68 |           <select id="rep-prop" style="width:200px;" onchange="loadReportCargos()">
-  69 |             <option value="">Todas</option>
-  70 |           </select>
-  71 |         </div>
-  72 |         <div>
-  73 |           <label class="field-label" style="margin-top:0;">Estado</label>
-  74 |           <select id="rep-status" style="width:150px;" onchange="loadReportCargos()">
-  75 |             <option value="">Todos</option>
-  76 |             <option value="PENDIENTE">Pendiente</option>
-  77 |             <option value="PARCIAL">Parcial</option>
-  78 |             <option value="PAGADO">Pagado</option>
-  79 |           </select>
-  80 |         </div>
-  81 |         <div>
-  82 |           <label class="field-label" style="margin-top:0;">Fecha desde</label>
-  83 |           <input type="date" id="rep-from" style="width:160px;margin-bottom:0;" onchange="loadReportCargos()">
-  84 |         </div>
-  85 |         <div>
-  86 |           <label class="field-label" style="margin-top:0;">Fecha hasta</label>
-  87 |           <input type="date" id="rep-to" style="width:160px;margin-bottom:0;" onchange="loadReportCargos()">
-  88 |         </div>
-  89 |       </div>
-  90 |     </div>
-  91 | 
-  92 |     <div class="summary-row" id="cargos-summary"></div>
-  93 | 
-  94 |     <div class="card">
-  95 |       <div class="card-header">
-  96 |         <h3><i class="fas fa-table"></i> Detalle de Cargos</h3>
-  97 |         <span class="badge badge-primary" id="cargos-count">0</span>
-  98 |       </div>
-  99 |       <div class="table-wrapper">
- 100 |         <table>
- 101 |           <thead>
- 102 |             <tr>
- 103 |               <th>Propietario</th><th>Unidad</th><th>Descripción</th>
- 104 |               <th>Vencimiento</th><th class="td-right">Total</th>
- 105 |               <th class="td-right">Pagado</th><th class="td-right">Saldo</th><th>Estado</th>
- 106 |             </tr>
- 107 |           </thead>
- 108 |           <tbody id="cargos-tbody">
- 109 |             <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
- 110 |           </tbody>
- 111 |         </table>
- 112 |       </div>
- 113 |     </div>
- 114 |   </div>
- 115 | 
- 116 |   <!-- ══ PAGOS ══ -->
- 117 |   <div class="rep-panel" id="panel-pagos">
- 118 |     <div class="card">
- 119 |       <div class="card-header">
- 120 |         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
- 121 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
- 122 |       </div>
- 123 |       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
- 124 |         <div>
- 125 |           <label class="field-label" style="margin-top:0;">Mes</label>
- 126 |           <input type="month" id="rep-month" style="width:160px;margin-bottom:0;" onchange="loadReportPagos()">
- 127 |         </div>
- 128 |       </div>
- 129 |     </div>
- 130 | 
- 131 |     <div class="summary-row" id="pagos-summary"></div>
- 132 | 
- 133 |     <div class="card">
- 134 |       <div class="card-header">
- 135 |         <h3><i class="fas fa-table"></i> Historial de Pagos</h3>
- 136 |         <span class="badge badge-primary" id="pagos-count">0</span>
- 137 |       </div>
- 138 |       <div class="table-wrapper">
- 139 |         <table>
- 140 |           <thead>
- 141 |             <tr>
- 142 |               <th>#</th><th>Propietario</th><th>Fecha</th>
- 143 |               <th>Referencia</th><th class="td-right">Monto</th>
- 144 |               <th>Cargos Aplicados</th>
- 145 |             </tr>
- 146 |           </thead>
- 147 |           <tbody id="pagos-tbody">
- 148 |             <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecciona un mes</td></tr>
- 149 |           </tbody>
- 150 |         </table>
- 151 |       </div>
- 152 |     </div>
- 153 |   </div>
- 154 | 
- 155 |   <!-- ══ POR PROPIETARIO ══ -->
- 156 |   <div class="rep-panel" id="panel-propietarios">
- 157 |     <div class="card">
- 158 |       <div class="card-header">
- 159 |         <h3><i class="fas fa-sliders-h"></i> Seleccionar Propietario</h3>
- 160 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
- 161 |       </div>
- 162 |       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
- 163 |         <div style="flex:1;min-width:200px;">
- 164 |           <label class="field-label" style="margin-top:0;">Propietario</label>
- 165 |           <select id="rep-owner" style="width:100%;" onchange="loadReportOwner()">
- 166 |             <option value="">Seleccione propietario</option>
- 167 |           </select>
- 168 |         </div>
- 169 |       </div>
- 170 |     </div>
- 171 | 
- 172 |     <div id="owner-report-content">
- 173 |       <div style="text-align:center;padding:3rem;color:var(--text-muted);">
- 174 |         <i class="fas fa-user-circle" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
- 175 |         Selecciona un propietario para ver su reporte
- 176 |       </div>
- 177 |     </div>
- 178 |   </div>
- 179 | 
- 180 |   <!-- ══ PROVEEDORES ══ -->
- 181 |   <div class="rep-panel" id="panel-proveedores">
- 182 |     <div class="card">
- 183 |       <div class="card-header">
- 184 |         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
- 185 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
- 186 |       </div>
- 187 |       <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
- 188 |         <div>
- 189 |           <label class="field-label" style="margin-top:0;">Categoría</label>
- 190 |           <select id="rep-cat" style="width:180px;" onchange="loadReportProveedores()">
- 191 |             <option value="">Todas</option>
- 192 |           </select>
- 193 |         </div>
- 194 |       </div>
- 195 |     </div>
- 196 | 
- 197 |     <div class="summary-row" id="prov-summary"></div>
- 198 | 
- 199 |     <div class="card">
- 200 |       <div class="card-header">
- 201 |         <h3><i class="fas fa-table"></i> Resumen por Proveedor</h3>
- 202 |       </div>
- 203 |       <div class="table-wrapper">
- 204 |         <table>
- 205 |           <thead>
- 206 |             <tr>
- 207 |               <th>Proveedor</th><th>Categoría</th><th>RUC</th>
- 208 |               <th class="td-right">Total Pagado</th>
- 209 |               <th class="td-right">Pendiente</th>
- 210 |               <th>Cotizaciones</th>
- 211 |             </tr>
- 212 |           </thead>
- 213 |           <tbody id="prov-tbody">
- 214 |             <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
- 215 |           </tbody>
- 216 |         </table>
- 217 |       </div>
- 218 |     </div>
- 219 |   </div>
- 220 | 
- 221 | </div>
- 222 | <div id="notification"></div>
- 223 | <script src="js/main.js"></script>
- 224 | <script>
- 225 | renderSidebar('reports');
- 226 | 
- 227 | let allChargesCache = [];
- 228 | 
- 229 | function switchTab(tab) {
- 230 |   document.querySelectorAll('.rep-tab').forEach((b,i) => {
- 231 |     b.classList.toggle('active', ['cargos','pagos','propietarios','proveedores'][i] === tab);
- 232 |   });
- 233 |   document.querySelectorAll('.rep-panel').forEach(p => p.classList.remove('active'));
- 234 |   document.getElementById('panel-' + tab).classList.add('active');
- 235 | }
+  16 |     .rep-tab {
+  17 |       padding: 8px 16px; border-radius: var(--radius-md); border: none;
+  18 |       background: transparent; color: var(--text-secondary);
+  19 |       font-family: inherit; font-size: .82rem; font-weight: 600;
+  20 |       cursor: pointer; transition: all .15s;
+  21 |       display: flex; align-items: center; gap: 6px;
+  22 |     }
+  23 |     .rep-tab:hover  { background: var(--accent-soft); color: var(--accent); }
+  24 |     .rep-tab.active { background: var(--accent); color: #fff; }
+  25 |     .rep-panel { display: none; }
+  26 |     .rep-panel.active { display: block; }
+  27 | 
+  28 |     /* ── Filtros ── */
+  29 |     .filters-row {
+  30 |       display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+  31 |       margin-bottom: 14px;
+  32 |     }
+  33 |     .filters-row > div { display: flex; flex-direction: column; }
+  34 |     .filters-row label {
+  35 |       font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  36 |       letter-spacing: .05em; color: var(--text-muted); margin-bottom: 3px;
+  37 |     }
+  38 |     .filters-row select,
+  39 |     .filters-row input { width: auto; min-width: 140px; margin-bottom: 0; }
+  40 | 
+  41 |     /* ── Summary cards ── */
+  42 |     .summary-row {
+  43 |       display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  44 |       gap: 10px; margin-bottom: 18px;
+  45 |     }
+  46 |     .sum-card {
+  47 |       background: var(--card-bg); border: 1px solid var(--border);
+  48 |       border-radius: var(--radius-md); padding: 14px 16px; text-align: center;
+  49 |     }
+  50 |     .sum-card .sv { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
+  51 |     .sum-card .sl { font-size: .7rem; color: var(--text-muted); margin-top: 3px;
+  52 |                     text-transform: uppercase; letter-spacing: .04em; }
+  53 |     .sum-card.danger .sv  { color: var(--danger); }
+  54 |     .sum-card.success .sv { color: var(--success); }
+  55 | 
+  56 |     /* ── Badges de estado en tablas ── */
+  57 |     .badge-PAGADO    { background: #d1fae5; color: #065f46; }
+  58 |     .badge-PENDIENTE { background: #fee2e2; color: #991b1b; }
+  59 |     .badge-PARCIAL   { background: #fef3c7; color: #92400e; }
+  60 | 
+  61 |     /* ── Botones de acción en tabla ── */
+  62 |     .tbl-btn {
+  63 |       padding: 4px 10px; font-size: .73rem; font-weight: 600;
+  64 |       border-radius: 5px; cursor: pointer; font-family: inherit;
+  65 |       display: inline-flex; align-items: center; gap: 4px;
+  66 |       border: 1px solid var(--border); background: var(--card-bg);
+  67 |       color: var(--accent); transition: background .12s;
+  68 |     }
+  69 |     .tbl-btn:hover { background: var(--accent-soft); }
+  70 | 
+  71 |     /* ── Print ── */
+  72 |     @media print {
+  73 |       .rep-tabs, .rep-panel:not(.active), .sidebar, .main-wrapper > :not(.app),
+  74 |       .filters-row, .tbl-btn, #notification { display: none !important; }
+  75 |       .main-wrapper { margin-left: 0 !important; }
+  76 |       .app { padding: 0 !important; }
+  77 |       table { font-size: 11px; }
+  78 |     }
+  79 |   </style>
+  80 | </head>
+  81 | <body>
+  82 | <div class="app">
+  83 |   <div class="page-header">
+  84 |     <h1><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:8px;"></i>Reportes</h1>
+  85 |     <p>Centro centralizado de reportes: estados de cuenta, facturas, pagos y morosos</p>
+  86 |   </div>
+  87 | 
+  88 |   <!-- ══ TABS ══ -->
+  89 |   <div class="rep-tabs">
+  90 |     <button class="rep-tab active" onclick="switchTab('estados')">
+  91 |       <i class="fas fa-file-invoice-dollar"></i> Estados de Cuenta
+  92 |     </button>
+  93 |     <button class="rep-tab" onclick="switchTab('cargos')">
+  94 |       <i class="fas fa-file-invoice"></i> Cargos
+  95 |     </button>
+  96 |     <button class="rep-tab" onclick="switchTab('pagos')">
+  97 |       <i class="fas fa-money-bill-wave"></i> Pagos
+  98 |     </button>
+  99 |     <button class="rep-tab" onclick="switchTab('morosos')">
+ 100 |       <i class="fas fa-exclamation-triangle"></i> Pendientes / Morosos
+ 101 |     </button>
+ 102 |     <button class="rep-tab" onclick="switchTab('aldia')">
+ 103 |       <i class="fas fa-check-circle"></i> Al Día
+ 104 |     </button>
+ 105 |     <button class="rep-tab" onclick="switchTab('proveedores')">
+ 106 |       <i class="fas fa-truck"></i> Proveedores
+ 107 |     </button>
+ 108 |   </div>
+ 109 | 
+ 110 |   <!-- ══════════════════════════════════════════════
+ 111 |        PANEL 1 — ESTADOS DE CUENTA
+ 112 |   ══════════════════════════════════════════════ -->
+ 113 |   <div class="rep-panel active" id="panel-estados">
+ 114 |     <div class="card">
+ 115 |       <div class="card-header">
+ 116 |         <h3><i class="fas fa-sliders-h"></i> Generar Estado de Cuenta</h3>
+ 117 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+ 118 |       </div>
+ 119 |       <div class="card-body">
+ 120 |         <div class="filters-row">
+ 121 |           <div>
+ 122 |             <label>Propietario</label>
+ 123 |             <select id="ec-owner" style="min-width:220px;" onchange="loadEstadoCuenta()">
+ 124 |               <option value="">— Seleccione propietario —</option>
+ 125 |             </select>
+ 126 |           </div>
+ 127 |           <div style="align-self:flex-end;">
+ 128 |             <button class="btn btn-primary" onclick="abrirEstadoCuenta()" style="width:auto;margin:0;">
+ 129 |               <i class="fas fa-external-link-alt"></i> Abrir Estado de Cuenta
+ 130 |             </button>
+ 131 |           </div>
+ 132 |           <div style="align-self:flex-end;">
+ 133 |             <button class="btn btn-secondary" onclick="generarTodosEstados()" style="width:auto;margin:0;font-size:.8rem;">
+ 134 |               <i class="fas fa-list"></i> Resumen Todos
+ 135 |             </button>
+ 136 |           </div>
+ 137 |         </div>
+ 138 |       </div>
+ 139 |     </div>
+ 140 | 
+ 141 |     <!-- Resumen inline del propietario seleccionado -->
+ 142 |     <div id="ec-preview"></div>
+ 143 | 
+ 144 |     <!-- Tabla de todos los propietarios con resumen rápido -->
+ 145 |     <div class="card" id="ec-all-card" style="display:none;">
+ 146 |       <div class="card-header">
+ 147 |         <h3><i class="fas fa-users"></i> Resumen de Todos los Propietarios</h3>
+ 148 |         <span class="badge badge-primary" id="ec-all-count">0</span>
+ 149 |       </div>
+ 150 |       <div class="table-wrapper">
+ 151 |         <table>
+ 152 |           <thead>
+ 153 |             <tr>
+ 154 |               <th>Propietario</th><th>Unidad</th>
+ 155 |               <th class="td-right">Facturado</th>
+ 156 |               <th class="td-right">Pagado</th>
+ 157 |               <th class="td-right">Pendiente</th>
+ 158 |               <th>Estado</th>
+ 159 |               <th>Acción</th>
+ 160 |             </tr>
+ 161 |           </thead>
+ 162 |           <tbody id="ec-all-tbody">
+ 163 |             <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+ 164 |           </tbody>
+ 165 |         </table>
+ 166 |       </div>
+ 167 |     </div>
+ 168 |   </div>
+ 169 | 
+ 170 |   <!-- ══════════════════════════════════════════════
+ 171 |        PANEL 2 — CARGOS
+ 172 |   ══════════════════════════════════════════════ -->
+ 173 |   <div class="rep-panel" id="panel-cargos">
+ 174 |     <div class="card">
+ 175 |       <div class="card-header">
+ 176 |         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
+ 177 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+ 178 |       </div>
+ 179 |       <div class="card-body">
+ 180 |         <div class="filters-row">
+ 181 |           <div>
+ 182 |             <label>Propiedad</label>
+ 183 |             <select id="rep-prop" onchange="loadReportCargos()"><option value="">Todas</option></select>
+ 184 |           </div>
+ 185 |           <div>
+ 186 |             <label>Estado</label>
+ 187 |             <select id="rep-status" onchange="loadReportCargos()">
+ 188 |               <option value="">Todos</option>
+ 189 |               <option value="PENDIENTE">Pendiente</option>
+ 190 |               <option value="PARCIAL">Parcial</option>
+ 191 |               <option value="PAGADO">Pagado</option>
+ 192 |             </select>
+ 193 |           </div>
+ 194 |           <div>
+ 195 |             <label>Propietario</label>
+ 196 |             <select id="rep-cargo-owner" onchange="loadReportCargos()"><option value="">Todos</option></select>
+ 197 |           </div>
+ 198 |           <div>
+ 199 |             <label>Desde</label>
+ 200 |             <input type="date" id="rep-from" onchange="loadReportCargos()" style="min-width:150px;">
+ 201 |           </div>
+ 202 |           <div>
+ 203 |             <label>Hasta</label>
+ 204 |             <input type="date" id="rep-to" onchange="loadReportCargos()" style="min-width:150px;">
+ 205 |           </div>
+ 206 |           <div style="align-self:flex-end;">
+ 207 |             <button class="btn btn-ghost" onclick="clearCargoFilters()" style="width:auto;margin:0;">
+ 208 |               <i class="fas fa-times"></i> Limpiar
+ 209 |             </button>
+ 210 |           </div>
+ 211 |         </div>
+ 212 |       </div>
+ 213 |     </div>
+ 214 |     <div class="summary-row" id="cargos-summary"></div>
+ 215 |     <div class="card">
+ 216 |       <div class="card-header">
+ 217 |         <h3><i class="fas fa-table"></i> Cargos</h3>
+ 218 |         <span class="badge badge-primary" id="cargos-count">0</span>
+ 219 |       </div>
+ 220 |       <div class="table-wrapper">
+ 221 |         <table>
+ 222 |           <thead>
+ 223 |             <tr>
+ 224 |               <th>Propietario</th><th>Unidad</th><th>Descripción</th>
+ 225 |               <th>Vencimiento</th><th class="td-right">Total</th>
+ 226 |               <th class="td-right">Pagado</th><th class="td-right">Saldo</th><th>Estado</th>
+ 227 |             </tr>
+ 228 |           </thead>
+ 229 |           <tbody id="cargos-tbody">
+ 230 |             <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+ 231 |           </tbody>
+ 232 |         </table>
+ 233 |       </div>
+ 234 |     </div>
+ 235 |   </div>
  236 | 
- 237 | async function init() {
- 238 |   // Cargar props para filtro
- 239 |   const props = await apiRequest('/properties') || [];
- 240 |   const repProp = document.getElementById('rep-prop');
- 241 |   props.forEach(p => repProp.innerHTML += `<option value="${p.id}">${p.name}</option>`);
- 242 | 
- 243 |   // Cargar owners para filtro
- 244 |   const owners = await apiRequest('/owners') || [];
- 245 |   const repOwner = document.getElementById('rep-owner');
- 246 |   owners.forEach(o => repOwner.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
- 247 | 
- 248 |   // Cargar categorías proveedores
- 249 |   const cats = await apiRequest('/suppliers/categories') || [];
- 250 |   const repCat = document.getElementById('rep-cat');
- 251 |   cats.forEach(c => repCat.innerHTML += `<option value="${c}">${c}</option>`);
- 252 | 
- 253 |   // Mes actual
- 254 |   const now = new Date();
- 255 |   document.getElementById('rep-month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
- 256 | 
- 257 |   await loadReportCargos();
- 258 |   await loadReportProveedores();
- 259 | }
- 260 | 
- 261 | // ── Reporte de cargos ──────────────────────────
- 262 | async function loadReportCargos() {
- 263 |   const charges = await apiRequest('/finance/charges') || [];
- 264 |   const propId  = document.getElementById('rep-prop').value;
- 265 |   const status  = document.getElementById('rep-status').value;
- 266 |   const from    = document.getElementById('rep-from').value;
- 267 |   const to      = document.getElementById('rep-to').value;
- 268 | 
- 269 |   let filtered = charges;
- 270 |   if (status)  filtered = filtered.filter(c => c.status === status);
- 271 |   if (from)    filtered = filtered.filter(c => c.due_date >= from);
- 272 |   if (to)      filtered = filtered.filter(c => c.due_date <= to);
- 273 | 
- 274 |   // Resumen
- 275 |   const total    = filtered.reduce((s,c) => s + parseFloat(c.amount||0), 0);
- 276 |   const pagado   = filtered.reduce((s,c) => s + (parseFloat(c.amount||0) - parseFloat(c.balance||0)), 0);
- 277 |   const pendiente= filtered.reduce((s,c) => s + parseFloat(c.balance||0), 0);
- 278 |   const pendCount= filtered.filter(c => c.status !== 'PAGADO').length;
- 279 | 
- 280 |   document.getElementById('cargos-summary').innerHTML = `
- 281 |     <div class="sum-card"><div class="sum-val">${filtered.length}</div><div class="sum-lbl">Cargos totales</div></div>
- 282 |     <div class="sum-card"><div class="sum-val">$${formatMoney(total)}</div><div class="sum-lbl">Facturado</div></div>
- 283 |     <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(pagado)}</div><div class="sum-lbl">Cobrado</div></div>
- 284 |     <div class="sum-card"><div class="sum-val" style="color:var(--danger)">$${formatMoney(pendiente)}</div><div class="sum-lbl">Por cobrar</div></div>
- 285 |     <div class="sum-card"><div class="sum-val" style="color:var(--warning)">${pendCount}</div><div class="sum-lbl">Cargos pendientes</div></div>`;
- 286 | 
- 287 |   document.getElementById('cargos-count').textContent = filtered.length;
- 288 |   const tbody = document.getElementById('cargos-tbody');
- 289 | 
- 290 |   if (!filtered.length) {
- 291 |     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
- 292 |     return;
- 293 |   }
- 294 | 
- 295 |   tbody.innerHTML = filtered.map(c => `
- 296 |     <tr>
- 297 |       <td><strong>${c.owner_name || '—'}</strong></td>
- 298 |       <td>${c.unit_number || '—'}</td>
- 299 |       <td>${c.description}</td>
- 300 |       <td>${formatDate(c.due_date)}</td>
- 301 |       <td class="td-right">$${formatMoney(c.amount)}</td>
- 302 |       <td class="td-right" style="color:var(--success);">$${formatMoney(parseFloat(c.amount||0)-parseFloat(c.balance||0))}</td>
- 303 |       <td class="td-right" style="color:var(--danger);font-weight:700;">$${formatMoney(c.balance)}</td>
- 304 |       <td><span class="badge badge-${c.status}">${c.status}</span></td>
- 305 |     </tr>`).join('');
- 306 | }
- 307 | 
- 308 | // ── Reporte de pagos ───────────────────────────
- 309 | async function loadReportPagos() {
- 310 |   // Usamos charges para obtener pagos aplicados
- 311 |   const charges = await apiRequest('/finance/charges') || [];
- 312 |   const month = document.getElementById('rep-month').value;
- 313 | 
- 314 |   // Filtrar por mes si se especificó
- 315 |   // Como no hay endpoint de pagos por mes, mostramos todos los cargos pagados en ese periodo
- 316 |   const filtered = month
- 317 |     ? charges.filter(c => c.status === 'PAGADO' || c.status === 'PARCIAL')
- 318 |     : charges.filter(c => c.status !== 'PENDIENTE');
- 319 | 
- 320 |   const totalCobrado = filtered.reduce((s,c) => s + (parseFloat(c.amount||0) - parseFloat(c.balance||0)), 0);
- 321 | 
- 322 |   document.getElementById('pagos-summary').innerHTML = `
- 323 |     <div class="sum-card"><div class="sum-val">${filtered.length}</div><div class="sum-lbl">Cargos con pago</div></div>
- 324 |     <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(totalCobrado)}</div><div class="sum-lbl">Total cobrado</div></div>`;
- 325 | 
- 326 |   document.getElementById('pagos-count').textContent = filtered.length;
- 327 |   const tbody = document.getElementById('pagos-tbody');
- 328 | 
- 329 |   if (!filtered.length) {
- 330 |     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos en este período</td></tr>`;
- 331 |     return;
- 332 |   }
- 333 | 
- 334 |   tbody.innerHTML = filtered.map((c,i) => `
- 335 |     <tr>
- 336 |       <td class="td-mono">${i+1}</td>
- 337 |       <td><strong>${c.owner_name || '—'}</strong><br><small style="color:var(--text-muted);">Apt. ${c.unit_number||'?'}</small></td>
- 338 |       <td>${formatDate(c.due_date)}</td>
- 339 |       <td style="color:var(--text-muted);font-size:.8rem;">—</td>
- 340 |       <td class="td-right"><strong>$${formatMoney(parseFloat(c.amount||0)-parseFloat(c.balance||0))}</strong></td>
- 341 |       <td><span class="badge badge-${c.status}">${c.status}</span> — ${c.description}</td>
- 342 |     </tr>`).join('');
- 343 | }
- 344 | 
- 345 | // ── Reporte por propietario ────────────────────
- 346 | async function loadReportOwner() {
- 347 |   const ownerId = document.getElementById('rep-owner').value;
- 348 |   if (!ownerId) return;
- 349 | 
- 350 |   const charges = await apiRequest(`/finance/owner-statement/${ownerId}`) || [];
- 351 |   const owners  = await apiRequest('/owners') || [];
- 352 |   const owner   = owners.find(o => o.id === parseInt(ownerId));
- 353 | 
- 354 |   const total     = charges.reduce((s,c) => s + c.total, 0);
- 355 |   const pagado    = charges.reduce((s,c) => s + c.paid, 0);
- 356 |   const pendiente = charges.reduce((s,c) => s + c.balance, 0);
- 357 | 
- 358 |   const content = document.getElementById('owner-report-content');
- 359 |   content.innerHTML = `
- 360 |     <div class="summary-row">
- 361 |       <div class="sum-card"><div class="sum-val">${charges.length}</div><div class="sum-lbl">Cargos totales</div></div>
- 362 |       <div class="sum-card"><div class="sum-val">$${formatMoney(total)}</div><div class="sum-lbl">Facturado</div></div>
- 363 |       <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(pagado)}</div><div class="sum-lbl">Pagado</div></div>
- 364 |       <div class="sum-card"><div class="sum-val" style="color:var(--danger)">$${formatMoney(pendiente)}</div><div class="sum-lbl">Pendiente</div></div>
- 365 |     </div>
- 366 |     <div class="card">
- 367 |       <div class="card-header">
- 368 |         <h3><i class="fas fa-user"></i> ${owner?.full_name || 'Propietario'} — Estado de cuenta completo</h3>
- 369 |         <button class="btn print-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${ownerId}','_blank')">
- 370 |           <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
- 371 |         </button>
- 372 |       </div>
- 373 |       <div class="table-wrapper">
- 374 |         <table>
- 375 |           <thead>
- 376 |             <tr><th>Descripción</th><th>Unidad</th><th>Vence</th>
- 377 |             <th class="td-right">Total</th><th class="td-right">Pagado</th>
- 378 |             <th class="td-right">Saldo</th><th>Estado</th></tr>
- 379 |           </thead>
- 380 |           <tbody>
- 381 |             ${charges.map(c => `
- 382 |               <tr>
- 383 |                 <td>${c.description}</td>
- 384 |                 <td>Apt. ${c.unit_number}</td>
- 385 |                 <td>${formatDate(c.due_date)}</td>
- 386 |                 <td class="td-right">$${formatMoney(c.total)}</td>
- 387 |                 <td class="td-right" style="color:var(--success);">$${formatMoney(c.paid)}</td>
- 388 |                 <td class="td-right" style="color:${c.balance>0?'var(--danger)':'var(--success)'};font-weight:700;">$${formatMoney(c.balance)}</td>
- 389 |                 <td><span class="badge badge-${c.status}">${c.status}</span></td>
- 390 |               </tr>`).join('')}
- 391 |           </tbody>
- 392 |         </table>
+ 237 |   <!-- ══════════════════════════════════════════════
+ 238 |        PANEL 3 — PAGOS
+ 239 |   ══════════════════════════════════════════════ -->
+ 240 |   <div class="rep-panel" id="panel-pagos">
+ 241 |     <div class="card">
+ 242 |       <div class="card-header">
+ 243 |         <h3><i class="fas fa-sliders-h"></i> Filtros de Pagos</h3>
+ 244 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+ 245 |       </div>
+ 246 |       <div class="card-body">
+ 247 |         <div class="filters-row">
+ 248 |           <div>
+ 249 |             <label>Año</label>
+ 250 |             <select id="pay-year" onchange="loadReportPagos()">
+ 251 |               <option value="">Todos</option>
+ 252 |               <option value="2024">2024</option>
+ 253 |               <option value="2025">2025</option>
+ 254 |               <option value="2026">2026</option>
+ 255 |             </select>
+ 256 |           </div>
+ 257 |           <div>
+ 258 |             <label>Mes</label>
+ 259 |             <input type="month" id="rep-month" onchange="loadReportPagos()">
+ 260 |           </div>
+ 261 |           <div>
+ 262 |             <label>Propietario</label>
+ 263 |             <select id="pay-owner" onchange="loadReportPagos()"><option value="">Todos</option></select>
+ 264 |           </div>
+ 265 |           <div style="align-self:flex-end;">
+ 266 |             <button class="btn btn-ghost" onclick="clearPagoFilters()" style="width:auto;margin:0;">
+ 267 |               <i class="fas fa-times"></i> Limpiar
+ 268 |             </button>
+ 269 |           </div>
+ 270 |         </div>
+ 271 |       </div>
+ 272 |     </div>
+ 273 |     <div class="summary-row" id="pagos-summary"></div>
+ 274 |     <div class="card">
+ 275 |       <div class="card-header">
+ 276 |         <h3><i class="fas fa-table"></i> Historial de Pagos</h3>
+ 277 |         <span class="badge badge-primary" id="pagos-count">0</span>
+ 278 |       </div>
+ 279 |       <div class="table-wrapper">
+ 280 |         <table>
+ 281 |           <thead>
+ 282 |             <tr>
+ 283 |               <th>#</th><th>Factura</th><th>Propietario</th><th>Unidad</th>
+ 284 |               <th>Fecha</th><th>Referencia</th>
+ 285 |               <th class="td-right">Monto</th><th>Acción</th>
+ 286 |             </tr>
+ 287 |           </thead>
+ 288 |           <tbody id="pagos-tbody">
+ 289 |             <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecciona un filtro</td></tr>
+ 290 |           </tbody>
+ 291 |         </table>
+ 292 |       </div>
+ 293 |     </div>
+ 294 |   </div>
+ 295 | 
+ 296 |   <!-- ══════════════════════════════════════════════
+ 297 |        PANEL 4 — MOROSOS / PENDIENTES
+ 298 |   ══════════════════════════════════════════════ -->
+ 299 |   <div class="rep-panel" id="panel-morosos">
+ 300 |     <div class="card">
+ 301 |       <div class="card-header">
+ 302 |         <h3><i class="fas fa-sliders-h"></i> Filtros — Apartamentos con Saldo Pendiente</h3>
+ 303 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+ 304 |       </div>
+ 305 |       <div class="card-body">
+ 306 |         <div class="filters-row">
+ 307 |           <div>
+ 308 |             <label>Propiedad</label>
+ 309 |             <select id="mor-prop" onchange="loadMorosos()"><option value="">Todas</option></select>
+ 310 |           </div>
+ 311 |           <div>
+ 312 |             <label>Monto mínimo pendiente</label>
+ 313 |             <input type="number" id="mor-min" placeholder="0.00" min="0" step="0.01"
+ 314 |               oninput="loadMorosos()" style="min-width:140px;">
+ 315 |           </div>
+ 316 |         </div>
+ 317 |       </div>
+ 318 |     </div>
+ 319 |     <div class="summary-row" id="morosos-summary"></div>
+ 320 |     <div class="card">
+ 321 |       <div class="card-header">
+ 322 |         <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Apartamentos con Saldo Pendiente</h3>
+ 323 |         <span class="badge badge-primary" id="morosos-count">0</span>
+ 324 |       </div>
+ 325 |       <div class="table-wrapper">
+ 326 |         <table>
+ 327 |           <thead>
+ 328 |             <tr>
+ 329 |               <th>Propietario</th><th>Unidad</th><th>Propiedad</th>
+ 330 |               <th class="td-right">Total Facturado</th>
+ 331 |               <th class="td-right">Total Pagado</th>
+ 332 |               <th class="td-right">Pendiente</th>
+ 333 |               <th>Estado</th><th>Acción</th>
+ 334 |             </tr>
+ 335 |           </thead>
+ 336 |           <tbody id="morosos-tbody">
+ 337 |             <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+ 338 |           </tbody>
+ 339 |         </table>
+ 340 |       </div>
+ 341 |     </div>
+ 342 |   </div>
+ 343 | 
+ 344 |   <!-- ══════════════════════════════════════════════
+ 345 |        PANEL 5 — AL DÍA
+ 346 |   ══════════════════════════════════════════════ -->
+ 347 |   <div class="rep-panel" id="panel-aldia">
+ 348 |     <div class="card">
+ 349 |       <div class="card-header">
+ 350 |         <h3><i class="fas fa-sliders-h"></i> Apartamentos al Día (Saldo $0.00)</h3>
+ 351 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+ 352 |       </div>
+ 353 |       <div class="card-body">
+ 354 |         <div class="filters-row">
+ 355 |           <div>
+ 356 |             <label>Propiedad</label>
+ 357 |             <select id="aldia-prop" onchange="loadAlDia()"><option value="">Todas</option></select>
+ 358 |           </div>
+ 359 |         </div>
+ 360 |       </div>
+ 361 |     </div>
+ 362 |     <div class="summary-row" id="aldia-summary"></div>
+ 363 |     <div class="card">
+ 364 |       <div class="card-header">
+ 365 |         <h3><i class="fas fa-check-circle" style="color:var(--success);"></i> Propietarios al Día</h3>
+ 366 |         <span class="badge badge-primary" id="aldia-count">0</span>
+ 367 |       </div>
+ 368 |       <div class="table-wrapper">
+ 369 |         <table>
+ 370 |           <thead>
+ 371 |             <tr>
+ 372 |               <th>Propietario</th><th>Unidad</th><th>Propiedad</th>
+ 373 |               <th class="td-right">Total Pagado</th>
+ 374 |               <th>Estado</th><th>Acción</th>
+ 375 |             </tr>
+ 376 |           </thead>
+ 377 |           <tbody id="aldia-tbody">
+ 378 |             <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+ 379 |           </tbody>
+ 380 |         </table>
+ 381 |       </div>
+ 382 |     </div>
+ 383 |   </div>
+ 384 | 
+ 385 |   <!-- ══════════════════════════════════════════════
+ 386 |        PANEL 6 — PROVEEDORES
+ 387 |   ══════════════════════════════════════════════ -->
+ 388 |   <div class="rep-panel" id="panel-proveedores">
+ 389 |     <div class="card">
+ 390 |       <div class="card-header">
+ 391 |         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
+ 392 |         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
  393 |       </div>
- 394 |     </div>`;
- 395 | }
- 396 | 
- 397 | // ── Reporte de proveedores ─────────────────────
- 398 | async function loadReportProveedores() {
- 399 |   const cat = document.getElementById('rep-cat').value;
- 400 |   const suppliers = await apiRequest('/suppliers') || [];
- 401 |   const filtered = cat ? suppliers.filter(s => s.category === cat) : suppliers;
- 402 | 
- 403 |   const totalPagado   = filtered.reduce((s,p) => s + p.total_paid, 0);
- 404 |   const totalPendiente= filtered.reduce((s,p) => s + p.total_pending, 0);
- 405 | 
- 406 |   document.getElementById('prov-summary').innerHTML = `
- 407 |     <div class="sum-card"><div class="sum-val">${filtered.length}</div><div class="sum-lbl">Proveedores</div></div>
- 408 |     <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(totalPagado)}</div><div class="sum-lbl">Total pagado</div></div>
- 409 |     <div class="sum-card"><div class="sum-val" style="color:var(--danger)">$${formatMoney(totalPendiente)}</div><div class="sum-lbl">Pendiente</div></div>`;
- 410 | 
- 411 |   const tbody = document.getElementById('prov-tbody');
- 412 |   if (!filtered.length) {
- 413 |     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin proveedores</td></tr>`;
- 414 |     return;
- 415 |   }
- 416 |   tbody.innerHTML = filtered.map(s => `
- 417 |     <tr>
- 418 |       <td><strong>${s.name}</strong></td>
- 419 |       <td><span class="badge badge-primary">${s.category}</span></td>
- 420 |       <td style="color:var(--text-muted);font-size:.8rem;">${s.ruc || '—'}</td>
- 421 |       <td class="td-right" style="color:var(--success);font-weight:700;">$${formatMoney(s.total_paid)}</td>
- 422 |       <td class="td-right" style="color:${s.total_pending>0?'var(--danger)':'var(--text-muted)'};font-weight:700;">$${formatMoney(s.total_pending)}</td>
- 423 |       <td style="color:var(--text-muted);">—</td>
- 424 |     </tr>`).join('');
- 425 | }
- 426 | 
- 427 | init();
- 428 | </script>
- 429 | </body>
- 430 | </html>
- 431 | 
+ 394 |       <div class="card-body">
+ 395 |         <div class="filters-row">
+ 396 |           <div>
+ 397 |             <label>Estado Pago</label>
+ 398 |             <select id="sup-status" onchange="loadProveedores()">
+ 399 |               <option value="">Todos</option>
+ 400 |               <option value="PAGADO">Pagado</option>
+ 401 |               <option value="PENDIENTE">Pendiente</option>
+ 402 |             </select>
+ 403 |           </div>
+ 404 |           <div>
+ 405 |             <label>Año</label>
+ 406 |             <select id="sup-year" onchange="loadProveedores()">
+ 407 |               <option value="">Todos</option>
+ 408 |               <option value="2024">2024</option>
+ 409 |               <option value="2025">2025</option>
+ 410 |               <option value="2026">2026</option>
+ 411 |             </select>
+ 412 |           </div>
+ 413 |         </div>
+ 414 |       </div>
+ 415 |     </div>
+ 416 |     <div class="summary-row" id="sup-summary"></div>
+ 417 |     <div class="card">
+ 418 |       <div class="card-header">
+ 419 |         <h3><i class="fas fa-table"></i> Pagos a Proveedores</h3>
+ 420 |         <span class="badge badge-primary" id="sup-count">0</span>
+ 421 |       </div>
+ 422 |       <div class="table-wrapper">
+ 423 |         <table>
+ 424 |           <thead>
+ 425 |             <tr>
+ 426 |               <th>Proveedor</th><th>Descripción</th><th>Fecha</th>
+ 427 |               <th class="td-right">Monto</th><th>Estado</th>
+ 428 |             </tr>
+ 429 |           </thead>
+ 430 |           <tbody id="sup-tbody">
+ 431 |             <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+ 432 |           </tbody>
+ 433 |         </table>
+ 434 |       </div>
+ 435 |     </div>
+ 436 |   </div>
+ 437 | 
+ 438 | </div><!-- /app -->
+ 439 | <div id="notification"></div>
+ 440 | <script src="js/main.js"></script>
+ 441 | <script>
+ 442 | renderSidebar('reports');
+ 443 | 
+ 444 | // ═══════════════════════════════════════════════════════
+ 445 | // DATOS GLOBALES
+ 446 | // ═══════════════════════════════════════════════════════
+ 447 | let allCharges   = [];
+ 448 | let allPayments  = [];
+ 449 | let allOwners    = [];
+ 450 | let allUnits     = [];
+ 451 | let allUnitOwners= [];
+ 452 | let allProperties= [];
+ 453 | let allSuppliers = [];
+ 454 | 
+ 455 | // ─── Init ────────────────────────────────────────────
+ 456 | async function initReports() {
+ 457 |   try {
+ 458 |     [allOwners, allUnits, allUnitOwners, allProperties] = await Promise.all([
+ 459 |       apiRequest('/owners')          || [],
+ 460 |       apiRequest('/units')           || [],
+ 461 |       apiRequest('/unit-owners/all').catch(()=> []),
+ 462 |       apiRequest('/properties')      || [],
+ 463 |     ]);
+ 464 | 
+ 465 |     // Llenar selects de propiedad
+ 466 |     ['rep-prop','mor-prop','aldia-prop'].forEach(id => {
+ 467 |       const el = document.getElementById(id);
+ 468 |       if (!el) return;
+ 469 |       allProperties.forEach(p => el.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+ 470 |     });
+ 471 | 
+ 472 |     // Llenar selects de propietario
+ 473 |     ['ec-owner','rep-cargo-owner','pay-owner'].forEach(id => {
+ 474 |       const el = document.getElementById(id);
+ 475 |       if (!el) return;
+ 476 |       allOwners.forEach(o => el.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+ 477 |     });
+ 478 | 
+ 479 |     // Cargar cargos y pagos en background
+ 480 |     [allCharges, allPayments] = await Promise.all([
+ 481 |       apiRequest('/finance/charges').catch(()=> []),
+ 482 |       apiRequest('/finance/all-payments').catch(()=> []),
+ 483 |     ]);
+ 484 | 
+ 485 |     // Cargar panel activo por defecto
+ 486 |     loadEstadoCuenta();
+ 487 |   } catch(e) {
+ 488 |     console.error('Error init reports:', e);
+ 489 |   }
+ 490 | }
+ 491 | 
+ 492 | // ═══════════════════════════════════════════════════════
+ 493 | // HELPERS
+ 494 | // ═══════════════════════════════════════════════════════
+ 495 | function ownerUnit(ownerId) {
+ 496 |   const uo   = (allUnitOwners||[]).find(x => x.owner_id == ownerId && x.is_active);
+ 497 |   const unit = uo ? (allUnits||[]).find(u => u.id === uo.unit_id) : null;
+ 498 |   return unit ? unit.unit_number : '—';
+ 499 | }
+ 500 | function ownerProp(ownerId) {
+ 501 |   const uo   = (allUnitOwners||[]).find(x => x.owner_id == ownerId && x.is_active);
+ 502 |   const unit = uo ? (allUnits||[]).find(u => u.id === uo.unit_id) : null;
+ 503 |   const prop = unit ? (allProperties||[]).find(p => p.id === unit.property_id) : null;
+ 504 |   return prop ? prop.name : '—';
+ 505 | }
+ 506 | function ownerStatement(ownerId) {
+ 507 |   // Calcular saldos desde allCharges
+ 508 |   const charges = (allCharges||[]).filter(c => c.owner_id == ownerId || c.owner_name == ownerName(ownerId));
+ 509 |   let facturado = 0, pagado = 0;
+ 510 |   charges.forEach(c => {
+ 511 |     facturado += parseFloat(c.amount || 0);
+ 512 |     pagado    += parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+ 513 |   });
+ 514 |   return { facturado, pagado, pendiente: facturado - pagado };
+ 515 | }
+ 516 | function ownerName(id) {
+ 517 |   return (allOwners||[]).find(o => o.id == id)?.full_name || '—';
+ 518 | }
+ 519 | function statusBadge(s) {
+ 520 |   const cls = s === 'PAGADO' ? 'badge-PAGADO' : s === 'PARCIAL' ? 'badge-PARCIAL' : 'badge-PENDIENTE';
+ 521 |   return `<span class="badge ${cls}">${s}</span>`;
+ 522 | }
+ 523 | 
+ 524 | // ═══════════════════════════════════════════════════════
+ 525 | // TABS
+ 526 | // ═══════════════════════════════════════════════════════
+ 527 | const TAB_IDS = ['estados','cargos','pagos','morosos','aldia','proveedores'];
+ 528 | function switchTab(tab) {
+ 529 |   document.querySelectorAll('.rep-tab').forEach((b,i) => b.classList.toggle('active', TAB_IDS[i] === tab));
+ 530 |   document.querySelectorAll('.rep-panel').forEach(p => p.classList.remove('active'));
+ 531 |   document.getElementById(`panel-${tab}`).classList.add('active');
+ 532 |   if (tab === 'cargos')     loadReportCargos();
+ 533 |   if (tab === 'pagos')      loadReportPagos();
+ 534 |   if (tab === 'morosos')    loadMorosos();
+ 535 |   if (tab === 'aldia')      loadAlDia();
+ 536 |   if (tab === 'proveedores')loadProveedores();
+ 537 | }
+ 538 | 
+ 539 | // ═══════════════════════════════════════════════════════
+ 540 | // PANEL 1 — ESTADOS DE CUENTA
+ 541 | // ═══════════════════════════════════════════════════════
+ 542 | function loadEstadoCuenta() {
+ 543 |   const id = document.getElementById('ec-owner').value;
+ 544 |   if (!id) { document.getElementById('ec-preview').innerHTML = ''; return; }
+ 545 | 
+ 546 |   // Buscar cargos del propietario
+ 547 |   const owner   = (allOwners||[]).find(o => o.id == id);
+ 548 |   if (!owner) return;
+ 549 | 
+ 550 |   // Mostrar resumen rápido
+ 551 |   const ownerCharges = (allCharges||[]).filter(c => {
+ 552 |     const un = ownerUnit(id);
+ 553 |     return c.unit_number === un || String(c.owner_id) === String(id);
+ 554 |   });
+ 555 | 
+ 556 |   let facturado = 0, pagado = 0;
+ 557 |   ownerCharges.forEach(c => {
+ 558 |     facturado += parseFloat(c.amount || 0);
+ 559 |     pagado    += parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+ 560 |   });
+ 561 |   const pendiente = facturado - pagado;
+ 562 |   const estado = pendiente <= 0 ? 'PAGADO' : 'PENDIENTE';
+ 563 | 
+ 564 |   document.getElementById('ec-preview').innerHTML = `
+ 565 |     <div class="summary-row">
+ 566 |       <div class="sum-card"><div class="sv">$${fmt(facturado)}</div><div class="sl">Facturado</div></div>
+ 567 |       <div class="sum-card success"><div class="sv">$${fmt(pagado)}</div><div class="sl">Pagado</div></div>
+ 568 |       <div class="sum-card ${pendiente > 0 ? 'danger' : 'success'}">
+ 569 |         <div class="sv">$${fmt(pendiente)}</div>
+ 570 |         <div class="sl">Pendiente</div>
+ 571 |         <span class="badge badge-${estado}" style="font-size:.68rem;">${estado}</span>
+ 572 |       </div>
+ 573 |       <div class="sum-card"><div class="sv">${ownerCharges.length}</div><div class="sl">Cargos</div></div>
+ 574 |     </div>`;
+ 575 | }
+ 576 | 
+ 577 | function abrirEstadoCuenta() {
+ 578 |   const id = document.getElementById('ec-owner').value;
+ 579 |   if (!id) { showToast('Selecciona un propietario', 'warning'); return; }
+ 580 |   window.open(`/static/estado_cuenta.html?owner_id=${id}&t=${Date.now()}`, '_blank');
+ 581 | }
+ 582 | 
+ 583 | async function generarTodosEstados() {
+ 584 |   document.getElementById('ec-all-card').style.display = '';
+ 585 |   const tbody = document.getElementById('ec-all-tbody');
+ 586 |   tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Calculando…</td></tr>`;
+ 587 | 
+ 588 |   const rows = allOwners.map(o => {
+ 589 |     const ownerCharges = (allCharges||[]).filter(c =>
+ 590 |       String(c.owner_id) === String(o.id) ||
+ 591 |       c.unit_number === ownerUnit(o.id)
+ 592 |     );
+ 593 |     let fac = 0, pag = 0;
+ 594 |     ownerCharges.forEach(c => {
+ 595 |       fac += parseFloat(c.amount || 0);
+ 596 |       pag += parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+ 597 |     });
+ 598 |     const pend   = fac - pag;
+ 599 |     const estado = pend <= 0 ? 'PAGADO' : 'PENDIENTE';
+ 600 |     return { o, fac, pag, pend, estado };
+ 601 |   });
+ 602 | 
+ 603 |   // Ordenar morosos primero
+ 604 |   rows.sort((a,b) => b.pend - a.pend);
+ 605 |   document.getElementById('ec-all-count').textContent = rows.length;
+ 606 | 
+ 607 |   tbody.innerHTML = rows.map(({o, fac, pag, pend, estado}) => `
+ 608 |     <tr>
+ 609 |       <td><strong>${o.full_name}</strong></td>
+ 610 |       <td>${ownerUnit(o.id)}</td>
+ 611 |       <td class="td-right">$${fmt(fac)}</td>
+ 612 |       <td class="td-right" style="color:var(--success);">$${fmt(pag)}</td>
+ 613 |       <td class="td-right" style="color:${pend>0?'var(--danger)':'var(--success)'};">$${fmt(pend)}</td>
+ 614 |       <td>${statusBadge(estado)}</td>
+ 615 |       <td>
+ 616 |         <button class="tbl-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${o.id}','_blank')">
+ 617 |           <i class="fas fa-external-link-alt"></i> Ver
+ 618 |         </button>
+ 619 |       </td>
+ 620 |     </tr>`).join('');
+ 621 | }
+ 622 | 
+ 623 | // ═══════════════════════════════════════════════════════
+ 624 | // PANEL 2 — CARGOS
+ 625 | // ═══════════════════════════════════════════════════════
+ 626 | function clearCargoFilters() {
+ 627 |   ['rep-prop','rep-status','rep-cargo-owner'].forEach(id => document.getElementById(id).value = '');
+ 628 |   ['rep-from','rep-to'].forEach(id => document.getElementById(id).value = '');
+ 629 |   loadReportCargos();
+ 630 | }
+ 631 | 
+ 632 | function loadReportCargos() {
+ 633 |   const propId  = document.getElementById('rep-prop')?.value       || '';
+ 634 |   const status  = document.getElementById('rep-status')?.value     || '';
+ 635 |   const ownerId = document.getElementById('rep-cargo-owner')?.value || '';
+ 636 |   const from    = document.getElementById('rep-from')?.value       || '';
+ 637 |   const to      = document.getElementById('rep-to')?.value         || '';
+ 638 | 
+ 639 |   let list = [...(allCharges||[])];
+ 640 | 
+ 641 |   if (propId)  list = list.filter(c => {
+ 642 |     const unit = (allUnits||[]).find(u => u.unit_number === c.unit_number);
+ 643 |     return unit && String(unit.property_id) === String(propId);
+ 644 |   });
+ 645 |   if (status)  list = list.filter(c => c.status === status);
+ 646 |   if (ownerId) list = list.filter(c => String(c.owner_id) === ownerId);
+ 647 |   if (from)    list = list.filter(c => c.due_date >= from);
+ 648 |   if (to)      list = list.filter(c => c.due_date <= to);
+ 649 | 
+ 650 |   let totalAmt = 0, totalBal = 0, totalPaid = 0;
+ 651 |   list.forEach(c => {
+ 652 |     totalAmt  += parseFloat(c.amount  || 0);
+ 653 |     totalBal  += parseFloat(c.balance || 0);
+ 654 |     totalPaid += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+ 655 |   });
+ 656 | 
+ 657 |   document.getElementById('cargos-count').textContent = list.length;
+ 658 |   document.getElementById('cargos-summary').innerHTML = `
+ 659 |     <div class="sum-card"><div class="sv">${list.length}</div><div class="sl">Cargos</div></div>
+ 660 |     <div class="sum-card"><div class="sv">$${fmt(totalAmt)}</div><div class="sl">Total Facturado</div></div>
+ 661 |     <div class="sum-card success"><div class="sv">$${fmt(totalPaid)}</div><div class="sl">Total Cobrado</div></div>
+ 662 |     <div class="sum-card ${totalBal>0?'danger':''}"><div class="sv">$${fmt(totalBal)}</div><div class="sl">Por Cobrar</div></div>
+ 663 |   `;
+ 664 | 
+ 665 |   const tbody = document.getElementById('cargos-tbody');
+ 666 |   if (!list.length) {
+ 667 |     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados con los filtros aplicados</td></tr>`;
+ 668 |     return;
+ 669 |   }
+ 670 |   tbody.innerHTML = list.map(c => {
+ 671 |     const paid  = parseFloat(c.amount||0) - parseFloat(c.balance||0);
+ 672 |     return `<tr>
+ 673 |       <td>${c.owner_name || '—'}</td>
+ 674 |       <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
+ 675 |       <td><strong>${c.description}</strong></td>
+ 676 |       <td style="font-size:.82rem;">${fmtDate(c.due_date)}</td>
+ 677 |       <td class="td-right">$${fmt(c.amount)}</td>
+ 678 |       <td class="td-right" style="color:var(--success);">$${fmt(paid)}</td>
+ 679 |       <td class="td-right" style="color:${parseFloat(c.balance)>0?'var(--danger)':'var(--success)'};">
+ 680 |         $${fmt(c.balance)}
+ 681 |       </td>
+ 682 |       <td>${statusBadge(c.status)}</td>
+ 683 |     </tr>`;
+ 684 |   }).join('');
+ 685 | }
+ 686 | 
+ 687 | // ═══════════════════════════════════════════════════════
+ 688 | // PANEL 3 — PAGOS
+ 689 | // ═══════════════════════════════════════════════════════
+ 690 | function clearPagoFilters() {
+ 691 |   ['pay-year','pay-owner'].forEach(id => document.getElementById(id).value = '');
+ 692 |   document.getElementById('rep-month').value = '';
+ 693 |   loadReportPagos();
+ 694 | }
+ 695 | 
+ 696 | function loadReportPagos() {
+ 697 |   const year    = document.getElementById('pay-year').value   || '';
+ 698 |   const month   = document.getElementById('rep-month').value  || '';
+ 699 |   const ownerId = document.getElementById('pay-owner').value  || '';
+ 700 | 
+ 701 |   let list = [...(allPayments||[])];
+ 702 | 
+ 703 |   if (year)  list = list.filter(p => (p.fecha||p.payment_date||'').startsWith(year));
+ 704 |   if (month) list = list.filter(p => (p.fecha||p.payment_date||'').startsWith(month));
+ 705 |   if (ownerId) list = list.filter(p => String(p.owner_id) === ownerId);
+ 706 | 
+ 707 |   const total = list.reduce((s,p) => s + parseFloat(p.monto||p.amount||0), 0);
+ 708 |   document.getElementById('pagos-count').textContent = list.length;
+ 709 |   document.getElementById('pagos-summary').innerHTML = `
+ 710 |     <div class="sum-card"><div class="sv">${list.length}</div><div class="sl">Pagos</div></div>
+ 711 |     <div class="sum-card success"><div class="sv">$${fmt(total)}</div><div class="sl">Total Recaudado</div></div>
+ 712 |   `;
+ 713 | 
+ 714 |   const tbody = document.getElementById('pagos-tbody');
+ 715 |   if (!list.length) {
+ 716 |     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros aplicados</td></tr>`;
+ 717 |     return;
+ 718 |   }
+ 719 |   tbody.innerHTML = list.map((p,i) => `
+ 720 |     <tr>
+ 721 |       <td class="td-mono">${i+1}</td>
+ 722 |       <td>${p.factura||p.invoice_number||'—'}</td>
+ 723 |       <td>${p.owner_name||'—'}</td>
+ 724 |       <td>${p.unit_number ? `Apt. ${p.unit_number}` : '—'}</td>
+ 725 |       <td>${fmtDate(p.fecha||p.payment_date)}</td>
+ 726 |       <td style="font-size:.8rem;">${p.concepto||p.reference||'—'}</td>
+ 727 |       <td class="td-right"><strong>$${fmt(p.monto||p.amount)}</strong></td>
+ 728 |       <td>
+ 729 |         <button class="tbl-btn" onclick="window.open('/static/factura.html?payment_id=${p.payment_id}','_blank')">
+ 730 |           <i class="fas fa-receipt"></i> Factura
+ 731 |         </button>
+ 732 |       </td>
+ 733 |     </tr>`).join('');
+ 734 | }
+ 735 | 
+ 736 | // ═══════════════════════════════════════════════════════
+ 737 | // PANEL 4 — MOROSOS
+ 738 | // ═══════════════════════════════════════════════════════
+ 739 | function loadMorosos() {
+ 740 |   const propId = document.getElementById('mor-prop').value || '';
+ 741 |   const minAmt = parseFloat(document.getElementById('mor-min').value) || 0.01;
+ 742 | 
+ 743 |   const ownerMap = buildOwnerMap();
+ 744 |   const result   = ownerMap.filter(o => o.pendiente >= minAmt);
+ 745 | 
+ 746 |   // Filtrar por propiedad
+ 747 |   const filtered = propId
+ 748 |     ? result.filter(o => {
+ 749 |         const unit = (allUnits||[]).find(u => u.unit_number === o.unitNum);
+ 750 |         return unit && String(unit.property_id) === propId;
+ 751 |       })
+ 752 |     : result;
+ 753 | 
+ 754 |   filtered.sort((a,b) => b.pendiente - a.pendiente);
+ 755 |   const totalPend = filtered.reduce((s,o) => s + o.pendiente, 0);
+ 756 |   document.getElementById('morosos-count').textContent = filtered.length;
+ 757 |   document.getElementById('morosos-summary').innerHTML = `
+ 758 |     <div class="sum-card danger"><div class="sv">${filtered.length}</div><div class="sl">Con Deuda</div></div>
+ 759 |     <div class="sum-card danger"><div class="sv">$${fmt(totalPend)}</div><div class="sl">Total Pendiente</div></div>
+ 760 |   `;
+ 761 | 
+ 762 |   const tbody = document.getElementById('morosos-tbody');
+ 763 |   if (!filtered.length) {
+ 764 |     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">¡Sin morosos! Todos al día.</td></tr>`;
+ 765 |     return;
+ 766 |   }
+ 767 |   tbody.innerHTML = filtered.map(o => `
+ 768 |     <tr>
+ 769 |       <td><strong>${o.name}</strong></td>
+ 770 |       <td>${o.unitNum ? `Apt. ${o.unitNum}` : '—'}</td>
+ 771 |       <td style="font-size:.82rem;">${o.propName}</td>
+ 772 |       <td class="td-right">$${fmt(o.facturado)}</td>
+ 773 |       <td class="td-right" style="color:var(--success);">$${fmt(o.pagado)}</td>
+ 774 |       <td class="td-right" style="color:var(--danger);font-weight:700;">$${fmt(o.pendiente)}</td>
+ 775 |       <td>${statusBadge('PENDIENTE')}</td>
+ 776 |       <td>
+ 777 |         <button class="tbl-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${o.id}','_blank')">
+ 778 |           <i class="fas fa-external-link-alt"></i> Ver
+ 779 |         </button>
+ 780 |       </td>
+ 781 |     </tr>`).join('');
+ 782 | }
+ 783 | 
+ 784 | // ═══════════════════════════════════════════════════════
+ 785 | // PANEL 5 — AL DÍA
+ 786 | // ═══════════════════════════════════════════════════════
+ 787 | function loadAlDia() {
+ 788 |   const propId  = document.getElementById('aldia-prop').value || '';
+ 789 |   const ownerMap = buildOwnerMap();
+ 790 |   let result   = ownerMap.filter(o => o.pendiente <= 0);
+ 791 | 
+ 792 |   if (propId) {
+ 793 |     result = result.filter(o => {
+ 794 |       const unit = (allUnits||[]).find(u => u.unit_number === o.unitNum);
+ 795 |       return unit && String(unit.property_id) === propId;
+ 796 |     });
+ 797 |   }
+ 798 | 
+ 799 |   document.getElementById('aldia-count').textContent = result.length;
+ 800 |   document.getElementById('aldia-summary').innerHTML = `
+ 801 |     <div class="sum-card success"><div class="sv">${result.length}</div><div class="sl">Al Día</div></div>
+ 802 |     <div class="sum-card success"><div class="sv">$${fmt(result.reduce((s,o)=>s+o.pagado,0))}</div><div class="sl">Total Pagado</div></div>
+ 803 |   `;
+ 804 | 
+ 805 |   const tbody = document.getElementById('aldia-tbody');
+ 806 |   if (!result.length) {
+ 807 |     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
+ 808 |     return;
+ 809 |   }
+ 810 |   tbody.innerHTML = result.map(o => `
+ 811 |     <tr>
+ 812 |       <td><strong>${o.name}</strong></td>
+ 813 |       <td>${o.unitNum ? `Apt. ${o.unitNum}` : '—'}</td>
+ 814 |       <td style="font-size:.82rem;">${o.propName}</td>
+ 815 |       <td class="td-right" style="color:var(--success);font-weight:700;">$${fmt(o.pagado)}</td>
+ 816 |       <td>${statusBadge('PAGADO')}</td>
+ 817 |       <td>
+ 818 |         <button class="tbl-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${o.id}','_blank')">
+ 819 |           <i class="fas fa-external-link-alt"></i> Ver
+ 820 |         </button>
+ 821 |       </td>
+ 822 |     </tr>`).join('');
+ 823 | }
+ 824 | 
+ 825 | // ═══════════════════════════════════════════════════════
+ 826 | // PANEL 6 — PROVEEDORES
+ 827 | // ═══════════════════════════════════════════════════════
+ 828 | async function loadProveedores() {
+ 829 |   const status = document.getElementById('sup-status').value || '';
+ 830 |   const year   = document.getElementById('sup-year').value   || '';
+ 831 | 
+ 832 |   if (!allSuppliers.length) {
+ 833 |     allSuppliers = await apiRequest('/suppliers').catch(() => []) || [];
+ 834 |   }
+ 835 | 
+ 836 |   const allSupPay = [];
+ 837 |   for (const s of allSuppliers) {
+ 838 |     const pays = await apiRequest(`/suppliers/${s.id}/payments`).catch(() => []) || [];
+ 839 |     pays.forEach(p => allSupPay.push({ ...p, supplierName: s.name }));
+ 840 |   }
+ 841 | 
+ 842 |   let list = allSupPay;
+ 843 |   if (status) list = list.filter(p => p.status === status);
+ 844 |   if (year)   list = list.filter(p => (p.payment_date||'').startsWith(year));
+ 845 | 
+ 846 |   const total = list.reduce((s,p) => s + parseFloat(p.amount||0), 0);
+ 847 |   document.getElementById('sup-count').textContent = list.length;
+ 848 |   document.getElementById('sup-summary').innerHTML = `
+ 849 |     <div class="sum-card"><div class="sv">${list.length}</div><div class="sl">Pagos</div></div>
+ 850 |     <div class="sum-card"><div class="sv">$${fmt(total)}</div><div class="sl">Total Gastado</div></div>
+ 851 |   `;
+ 852 | 
+ 853 |   const tbody = document.getElementById('sup-tbody');
+ 854 |   if (!list.length) {
+ 855 |     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros aplicados</td></tr>`;
+ 856 |     return;
+ 857 |   }
+ 858 |   tbody.innerHTML = list.map(p => `
+ 859 |     <tr>
+ 860 |       <td><strong>${p.supplierName}</strong></td>
+ 861 |       <td>${p.description}</td>
+ 862 |       <td>${fmtDate(p.payment_date)}</td>
+ 863 |       <td class="td-right"><strong>$${fmt(p.amount)}</strong></td>
+ 864 |       <td>${statusBadge(p.status)}</td>
+ 865 |     </tr>`).join('');
+ 866 | }
+ 867 | 
+ 868 | // ═══════════════════════════════════════════════════════
+ 869 | // HELPER: construir mapa de saldos por propietario
+ 870 | // ═══════════════════════════════════════════════════════
+ 871 | function buildOwnerMap() {
+ 872 |   return (allOwners||[]).map(o => {
+ 873 |     const unitNum  = ownerUnit(o.id);
+ 874 |     const propName = ownerProp(o.id);
+ 875 |     const charges  = (allCharges||[]).filter(c =>
+ 876 |       String(c.owner_id) === String(o.id) || c.unit_number === unitNum
+ 877 |     );
+ 878 |     let fac = 0, pag = 0;
+ 879 |     charges.forEach(c => {
+ 880 |       fac += parseFloat(c.amount  || 0);
+ 881 |       pag += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+ 882 |     });
+ 883 |     return { id: o.id, name: o.full_name, unitNum, propName, facturado: fac, pagado: pag, pendiente: fac - pag };
+ 884 |   });
+ 885 | }
+ 886 | 
+ 887 | // ── Helpers de formato ──
+ 888 | function fmt(v) {
+ 889 |   return parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2,maximumFractionDigits:2});
+ 890 | }
+ 891 | function fmtDate(str) {
+ 892 |   if (!str) return '—';
+ 893 |   try { const [y,m,d] = str.split('T')[0].split('-'); return `${d}/${m}/${y}`; } catch(_){ return str; }
+ 894 | }
+ 895 | 
+ 896 | // ── Clase print-btn local ──
+ 897 | document.head.insertAdjacentHTML('beforeend', `<style>
+ 898 |   .print-btn { background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);width:auto;margin-top:0;padding:7px 14px;font-size:.8rem; }
+ 899 | </style>`);
+ 900 | 
+ 901 | initReports();
+ 902 | </script>
+ 903 | </body>
+ 904 | </html>
+ 905 | 
 
 --------------------------------------------------------------------------------
 

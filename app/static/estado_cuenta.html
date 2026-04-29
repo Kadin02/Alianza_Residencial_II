@@ -1,619 +1,142 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estado de Cuenta | Alianza Residencial</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #e8eef4 0%, #dce3ec 100%);
-  padding: 40px 20px;
-  color: #1a2c3e;
-}
-
-/* CONTENEDOR PRINCIPAL */
-.page {
-  max-width: 1100px;
-  margin: 0 auto;
-  background: #ffffff;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  transition: all 0.3s ease;
-}
-
-/* HEADER MEJORADO */
-.doc-header {
-  background: linear-gradient(135deg, #0a2c5e 0%, #0f3b6e 100%);
-  padding: 32px 36px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 4px solid #f59e0b;
-  position: relative;
-  overflow: hidden;
-}
-
-.doc-header::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%);
-  border-radius: 50%;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  position: relative;
-  z-index: 1;
-}
-
-.brand img {
-  width: 65px;
-  height: 65px;
-  object-fit: contain;
-  background: white;
-  border-radius: 12px;
-  padding: 8px;
-}
-
-.brand-info h1 {
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: #ffffff;
-  margin-bottom: 4px;
-}
-
-.brand-info p {
-  font-size: 0.75rem;
-  color: #cbd5e1;
-  font-weight: 400;
-}
-
-.header-right {
-  text-align: right;
-  position: relative;
-  z-index: 1;
-}
-
-.header-right .badge {
-  background: rgba(255,255,255,0.15);
-  padding: 8px 16px;
-  border-radius: 40px;
-  display: inline-block;
-}
-
-.header-right .factura {
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: #fcd34d;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-}
-
-.header-right .fecha {
-  font-size: 0.75rem;
-  color: #cbd5e1;
-}
-
-/* SECCIONES DE INFORMACIÓN */
-.section {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-bottom: 1px solid #e9eef3;
-  background: #fafcff;
-}
-
-.cell {
-  padding: 20px 24px;
-  border-right: 1px solid #e9eef3;
-  transition: background 0.2s;
-}
-
-.cell:last-child {
-  border-right: none;
-}
-
-.cell:hover {
-  background: #f8fafd;
-}
-
-.lbl {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-weight: 700;
-  color: #6c86a3;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.lbl i {
-  font-size: 0.7rem;
-}
-
-.val {
-  font-weight: 700;
-  font-size: 1rem;
-  color: #1a2c3e;
-}
-
-/* RESUMEN FINANCIERO - TARJETAS */
-.summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: #e9eef3;
-  padding: 0;
-}
-
-.sum {
-  background: #ffffff;
-  padding: 24px 20px;
-  text-align: center;
-  transition: all 0.2s;
-}
-
-.sum:hover {
-  transform: translateY(-2px);
-}
-
-.sum .title {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 700;
-  color: #6c86a3;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.sum .value {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -1px;
-}
-
-.sum .value.green {
-  color: #10b981;
-}
-
-.sum .value.red {
-  color: #ef4444;
-}
-
-.sum .value.blue {
-  color: #0a2c5e;
-}
-
-/* TABLA MEJORADA */
-.table-wrap {
-  padding: 28px 24px 20px 24px;
-  background: #ffffff;
-}
-
-.table-header-tools {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e9eef3;
-}
-
-.table-header-tools h3 {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #1a2c3e;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.table-header-tools h3 i {
-  color: #f59e0b;
-}
-
-.btn-print {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #1a2c3e;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-print:hover {
-  background: #0a2c5e;
-  color: white;
-  border-color: #0a2c5e;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-th {
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  padding: 14px 12px;
-  color: #475569;
-}
-
-th.right {
-  text-align: right;
-}
-
-td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #f0f2f5;
-  font-size: 0.85rem;
-  color: #334155;
-}
-
-td.right {
-  text-align: right;
-}
-
-tbody tr {
-  transition: background 0.2s;
-}
-
-tbody tr:hover {
-  background: #fafcff;
-}
-
-/* Badges de estado */
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.status-paid {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-pending {
-  background: #fed7aa;
-  color: #9a3412;
-}
-
-.status-partial {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-/* FOOTER MEJORADO */
-.footer {
-  margin: 0 24px 24px 24px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 16px;
-  border-left: 4px solid #f59e0b;
-  font-family: 'Playfair Display', serif;
-  font-size: 0.8rem;
-  color: #475569;
-  line-height: 1.7;
-}
-
-.footer strong {
-  color: #0a2c5e;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.footer i {
-  color: #f59e0b;
-  margin-right: 6px;
-}
-
-/* FIRMA */
-.signature {
-  padding: 20px 36px 36px 36px;
-  text-align: right;
-}
-
-.signature div {
-  border-top: 2px solid #cbd5e1;
-  width: 220px;
-  margin-left: auto;
-  padding-top: 12px;
-  font-size: 0.7rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-/* MEDIA PRINT */
-@media print {
-  body {
-    background: white;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .page {
-    box-shadow: none;
-    border-radius: 0;
-  }
-  
-  .btn-print {
-    display: none;
-  }
-  
-  .doc-header {
-    background: #0a2c5e;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  
-  .summary {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  
-  .footer {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
-
-/* ANIMACIONES */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.page {
-  animation: fadeInUp 0.5s ease;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estado de Cuenta | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/doc_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
-
-<div class="page">
-
-<!-- HEADER MEJORADO -->
-<div class="doc-header">
-  <div class="brand">
-    <img src="/static/Logo_2.png" alt="Logo" onerror="this.style.display='none'">
-    <div class="brand-info">
-      <h1>MERCEDES BIENES RAÍCES</h1>
-      <p>Administración Profesional | Alianza Residencial</p>
+  <div class="document-wrapper">
+    <div class="action-bar">
+      <span><i class="fas fa-file-invoice-dollar"></i> Estado de Cuenta</span>
+      <button class="btn-action btn-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimir
+      </button>
+        <button class="btn-action btn-download" onclick="window.open(location.href)" style="font-size:.75rem;">
+          <i class="fas fa-sync-alt"></i> Refrescar
+        </button>
+      <button class="btn-action btn-close" onclick="window.close()">
+        <i class="fas fa-times"></i> Cerrar
+      </button>
+    </div>
+    <div class="document" id="doc">
+      <div style="text-align:center;padding:3rem;color:var(--doc-muted);">
+        <i class="fas fa-spinner fa-spin"></i> Cargando estado de cuenta...
+      </div>
     </div>
   </div>
-  <div class="header-right">
-    <div class="badge">
-      <div class="factura" id="factura">—</div>
-      <div class="fecha" id="fecha">—</div>
-    </div>
-  </div>
-</div>
-
-<!-- INFORMACIÓN PROPIEDAD -->
-<div class="section">
-  <div class="cell">
-    <div class="lbl"><i class="fas fa-building"></i> EDIFICIO</div>
-    <div class="val" id="prop">—</div>
-  </div>
-  <div class="cell">
-    <div class="lbl"><i class="fas fa-location-dot"></i> DIRECCIÓN</div>
-    <div class="val" id="direccion">Av. 17B Nte, Panamá, Panamá</div>
-  </div>
-  <div class="cell">
-    <div class="lbl"><i class="fas fa-phone-alt"></i> CONTACTO</div>
-    <div class="val">+507 6971-4177</div>
-  </div>
-</div>
-
-<!-- INFORMACIÓN CLIENTE -->
-<div class="section">
-  <div class="cell">
-    <div class="lbl"><i class="fas fa-user"></i> PROPIETARIO</div>
-    <div class="val" id="owner">—</div>
-  </div>
-  <div class="cell">
-    <div class="lbl"><i class="fas fa-door-open"></i> UNIDAD</div>
-    <div class="val" id="unit">—</div>
-  </div>
-  <div class="cell">
-    <div class="lbl"><i class="fas fa-envelope"></i> CORREO ELECTRÓNICO</div>
-    <div class="val" id="email">—</div>
-  </div>
-</div>
-
-<!-- RESUMEN FINANCIERO -->
-<div class="summary">
-  <div class="sum">
-    <div class="title"><i class="fas fa-receipt"></i> FACTURADO</div>
-    <div class="value blue" id="total">$0.00</div>
-  </div>
-  <div class="sum">
-    <div class="title"><i class="fas fa-check-circle"></i> PAGADO</div>
-    <div class="value green" id="paid">$0.00</div>
-  </div>
-  <div class="sum">
-    <div class="title"><i class="fas fa-clock"></i> PENDIENTE</div>
-    <div class="value red" id="pending">$0.00</div>
-  </div>
-</div>
-
-<!-- TABLA DE MOVIMIENTOS -->
-<div class="table-wrap">
-  <div class="table-header-tools">
-    <h3><i class="fas fa-list-ul"></i> Detalle de Movimientos</h3>
-    <button class="btn-print" onclick="window.print()">
-      <i class="fas fa-print"></i> Imprimir / Guardar PDF
-    </button>
-  </div>
-  
-  <div style="overflow-x: auto;">
-    <table>
-      <thead>
-        <tr>
-          <th>Concepto</th>
-          <th>Fecha de Pago</th>
-          <th class="right">Cargo</th>
-          <th class="right">Abono</th>
-          <th class="right">Saldo</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="5" style="text-align:center;padding:40px;">
-          <i class="fas fa-spinner fa-spin"></i> Cargando estado de cuenta...
-        </td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- NOTA INFORMATIVA -->
-<div class="footer">
-  <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
-  Este estado de cuenta refleja los movimientos registrados en el sistema de administración. 
-  Los saldos mostrados corresponden al histórico de transacciones hasta la fecha de emisión. 
-  Para cualquier aclaración o detalle adicional, favor contactar a la administración.
-</div>
-
-<div class="signature">
-  <div>Firma Autorizada<br>Administración Alianza Residencial</div>
-</div>
-
-</div>
 
 <script>
 const fmoney = v => parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2});
-const fdate = s => s ? new Date(s).toLocaleDateString('es-PA') : '—';
+const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '—';
 
 (async()=>{
   const params = new URLSearchParams(location.search);
   const ownerId = params.get('owner_id');
 
   if (!ownerId) {
-    document.getElementById('tbody').innerHTML = `
-      <tr><td colspan="5" style="text-align:center;padding:40px;color:#ef4444;">
-        <i class="fas fa-exclamation-triangle"></i> No se especificó un propietario válido
-      </td></tr>
-    `;
+    document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-muted);">Propietario no especificado.</div>`;
     return;
   }
 
   try {
     const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`).then(r=>r.json());
 
-    document.getElementById('fecha').textContent = new Date().toLocaleDateString('es-PA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    const facturaNum = `${ownerId}-${Date.now().toString().slice(-6)}`;
-    document.getElementById('factura').textContent = `N° Documento: ${facturaNum}`;
-
-    document.getElementById('owner').textContent = data.owner_name || '—';
-    document.getElementById('unit').textContent = data.unit_number || '—';
-    document.getElementById('prop').textContent = data.property_name || 'Alianza Residencial';
-    document.getElementById('email').textContent = data.email || 'No registrado';
-
-    let totalFacturado = 0;
-    let totalPagado = 0;
-    let saldoActual = 0;
-
-    const tbody = document.getElementById('tbody');
-    tbody.innerHTML = '';
+    let totalFacturado = 0, totalPagado = 0, saldoActual = 0;
+    let tbody = '';
 
     if (data.statement && data.statement.length > 0) {
       data.statement.forEach(item => {
         totalFacturado += item.amount || 0;
         totalPagado += item.paid || 0;
         saldoActual += item.balance || 0;
-
-        const fechaPago = item.payments?.length > 0 
-          ? fdate(item.payments[0].payment_date) 
-          : '—';
-
-        const row = `
-          <tr>
-            <td style="font-weight:500;">${item.description || '—'}</td>
-            <td>${fechaPago}</td>
+        const isPending = item.balance > 0;
+        tbody += `
+          <tr class="${isPending ? 'bg-danger-light' : ''}">
+            <td>${item.description || '—'}</td>
+            <td>${fdate(item.due_date)}</td>
             <td class="right">$${fmoney(item.amount)}</td>
             <td class="right" style="color:#10b981;">$${fmoney(item.paid)}</td>
-            <td class="right" style="font-weight:600;">$${fmoney(item.balance)}</td>
-          </tr>
-        `;
-        tbody.innerHTML += row;
+            <td class="right ${isPending ? 'text-danger' : ''}">
+              $${fmoney(item.balance)}
+              ${isPending ? '<br><span class="badge-pendiente">PENDIENTE</span>' : ''}
+            </td>
+          </tr>`;
       });
     } else {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align:center;padding:40px;color:#6c86a3;">
-            <i class="fas fa-folder-open"></i> No hay movimientos registrados
-          </td>
-        </tr>
-      `;
+      tbody = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin movimientos registrados</td></tr>`;
     }
 
-    document.getElementById('total').textContent = `$${fmoney(totalFacturado)}`;
-    document.getElementById('paid').textContent = `$${fmoney(totalPagado)}`;
-    document.getElementById('pending').textContent = `$${fmoney(saldoActual)}`;
+    document.getElementById('doc').innerHTML = `
+      <div class="doc-header">
+        <div>
+          <h1>ALIANZA RESIDENCIAL</h1>
+          <div class="sub-info">Sistema de Administración de Propiedades</div>
+        </div>
+        <div class="doc-title">
+          <h2>Estado de Cuenta</h2>
+          <div class="date" id="doc-date"></div>
+        </div>
+      </div>
 
-  } catch (error) {
-    console.error('Error al cargar estado de cuenta:', error);
-    document.getElementById('tbody').innerHTML = `
-      <tr><td colspan="5" style="text-align:center;padding:40px;color:#ef4444;">
-        <i class="fas fa-exclamation-circle"></i> Error al cargar los datos. Verifique su conexión.
-      </td></tr>
+      <div class="info-grid">
+        <div class="info-cell">
+          <div class="ic-lbl">Propietario</div>
+          <div class="ic-val">${data.owner_name || '—'}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">Unidad</div>
+          <div class="ic-val">Apt. ${data.unit_number || '—'}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">Propiedad / Edificio</div>
+          <div class="ic-val">${data.property_name || 'Alianza Residencial'}</div>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="sum-card">
+          <div class="sv">$${fmoney(totalFacturado)}</div>
+          <div class="sl">Facturado</div>
+        </div>
+        <div class="sum-card success">
+          <div class="sv">$${fmoney(totalPagado)}</div>
+          <div class="sl">Pagado</div>
+        </div>
+        <div class="sum-card danger">
+          <div class="sv">$${fmoney(saldoActual)}</div>
+          <div class="sl">Pendiente</div>
+          ${saldoActual > 0 ? '<span class="badge-pendiente">CON DEUDA</span>' : ''}
+        </div>
+      </div>
+
+      <table class="doc-table">
+        <thead>
+          <tr><th>Concepto</th><th>Vencimiento</th><th class="right">Cargo</th><th class="right">Abono</th><th class="right">Saldo</th></tr>
+        </thead>
+        <tbody>${tbody}</tbody>
+      </table>
+
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="sig-name">Mercedes Bienes Raíces</div>
+          <div class="sig-title">Administración</div>
+        </div>
+      </div>
+
+      <div class="doc-footer-note">
+        <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+        Este estado de cuenta refleja los movimientos registrados en el sistema de administración Alianza Residencial. Para cualquier aclaración o detalle adicional, favor contactar a la administración.
+      </div>
     `;
+    document.getElementById('doc-date').textContent = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
+  } catch (error) {
+    document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-danger);">Error al cargar el estado de cuenta.</div>`;
   }
 })();
 </script>
-
 </body>
 </html>

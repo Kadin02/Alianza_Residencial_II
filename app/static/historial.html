@@ -504,6 +504,8 @@ function fdate(s) {
   } catch { return s; }
 }
 
+// ── Reemplazo de la función generarReporte() en historial.html ──
+/* INICIO generarReporte() */
 function generarReporte() 
 {
   const content = document.getElementById('reporte-content');
@@ -530,42 +532,29 @@ function generarReporte()
                : desde ? `Desde ${fdate(desde)}`
                : hasta ? `Hasta ${fdate(hasta)}` : 'Histórico completo';
 
-  // Resumen por concepto para chips
-  const porC = {};
-  pagos.forEach(p => { porC[p.concepto] = (porC[p.concepto] || 0) + p.monto; });
-
-  // Generar filas de la tabla
   let tableRows = '';
   pagos.forEach(p => {
     tableRows += `
       <tr>
-        <td class="td-mono" style="font-size:.78rem;">${p.factura}</td>
+        <td style="font-size:.78rem;">${p.factura}</td>
         <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
         <td>${razonTag(p.concepto)}</td>
-        <td class="r"><strong>$${formatMoney(p.monto)}</strong></td>
+        <td class="right"><strong>$${formatMoney(p.monto)}</strong></td>
       </tr>
     `;
   });
 
-  // Generar chips de resumen por concepto
-  let conceptChips = '';
-  Object.entries(porC).forEach(([k, v]) => {
-    conceptChips += `<div class="sum-chip"><strong>$${formatMoney(v)}</strong><span>${k}</span></div>`;
-  });
-
+  // Usamos las clases de doc_style.css para unificar visualmente
   content.innerHTML = `
-    <div id="pdf-doc" class="pdf-doc">
-      <div class="doc-head">
-        <div class="brand">
-          <div class="brand-logo" id="pdf-logo-box">AR</div>
-          <div class="brand-name">
-            <h1>ALIANZA RESIDENCIAL</h1>
-            <p>Centro de Cobros · Panamá</p>
-          </div>
+    <link rel="stylesheet" href="/static/css/doc_style.css">
+      <div class="doc-header">
+        <div>
+          <h1>ALIANZA RESIDENCIAL</h1>
+          <div class="sub-info">Sistema de Administración de Propiedades</div>
         </div>
         <div class="doc-title">
           <h2>REPORTE DE PAGOS</h2>
-          <p>${hoy}</p>
+          <div class="date">${hoy}</div>
         </div>
       </div>
 
@@ -584,21 +573,18 @@ function generarReporte()
         </div>
       </div>
 
-      <div class="section-title">Resumen por concepto</div>
-      <div class="sum-row">
-        <div class="sum-chip"><strong>${pagos.length}</strong><span>Registros</span></div>
-        <div class="sum-chip"><strong>$${formatMoney(total)}</strong><span>Total</span></div>
-        ${conceptChips}
+      <div class="summary-cards">
+        <div class="sum-card"><div class="sv">${pagos.length}</div><div class="sl">Registros</div></div>
+        <div class="sum-card"><div class="sv">$${formatMoney(total)}</div><div class="sl">Total</div></div>
       </div>
 
-      <div class="section-title">Detalle de pagos</div>
-      <table>
+      <table class="doc-table">
         <thead>
           <tr>
             <th># Factura</th>
             <th>Fecha</th>
             <th>Concepto</th>
-            <th class="r">Monto</th>
+            <th class="right">Monto</th>
           </tr>
         </thead>
         <tbody>
@@ -606,27 +592,27 @@ function generarReporte()
         </tbody>
       </table>
 
-      <div class="total-line">
-        <div><span class="tl">TOTAL PAGADO</span></div>
-        <div><span class="tv">$${formatMoney(total)}</span></div>
+      <div class="total-line" style="border-top: 2px solid var(--doc-accent); padding-top: 10px; display: flex; justify-content: flex-end; gap: 20px; margin-top: 20px;">
+        <span style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--doc-muted);">TOTAL</span>
+        <span style="font-size:1.1rem; font-weight:900; color:var(--doc-accent);">$${formatMoney(total)}</span>
       </div>
 
-      <div class="legal-notice">
-        <p><strong>Nota informativa</strong><br>Este documento refleja los pagos registrados en el sistema. Para aclaraciones, contactar administración.</p>
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="sig-name">Mercedes Bienes Raíces</div>
+          <div class="sig-title">Administración</div>
+        </div>
       </div>
 
-      <div class="doc-footer">
-        <div class="doc-footer-left">
-          Alianza Residencial · ${new Date().getFullYear()}<br>
-          Documento generado electrónicamente
-        </div>
-        <div class="firma-line">
-          Administración
-        </div>
+      <div class="doc-footer-note">
+        <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+        Documento generado electrónicamente por el Sistema de Administración de Propiedades Alianza Residencial. Para aclaraciones, contactar administración.
       </div>
-    </div>
   `;
 }
+
+/* FINAL DE LA FUNCION generarReporte() */
 
 /* ── Imprimir / Exportar PDF ─────────────────────────── */
 function imprimirPDF() {

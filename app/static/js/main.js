@@ -141,7 +141,7 @@ const NAV_PAGES = [
   { href: '/static/suppliers.html',  label: 'Proveedores',      icon: 'fa-truck',        id: 'suppliers',  roles: ['ADMIN', 'USER'] },
   // FIX: conflicto git resuelto — Agenda solo para ADMIN y USER (no GARITA)
   { href: '/static/agenda.html',     label: 'Agenda',           icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER'] },
-  { href: '/static/reports.html',    label: 'Reportes',         icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
+  //{ href: '/static/reports.html',    label: 'Reportes',         icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
   { href: '/static/imports.html',    label: 'Importar/Exp.',    icon: 'fa-file-import',  id: 'imports',    roles: ['ADMIN', 'USER'] },
   { href: '/static/historial.html',  label: 'Historial',        icon: 'fa-history',      id: 'historial',  roles: ['ADMIN', 'USER'] },
   // Administración: solo ADMIN
