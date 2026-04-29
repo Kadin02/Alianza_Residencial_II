@@ -536,17 +536,17 @@ function generarReporte()
   pagos.forEach(p => {
     tableRows += `
       <tr>
-        <td style="font-size:.78rem;">${p.factura}</td>
+        <td style="font-family:monospace;font-size:.78rem;">${p.factura || '—'}</td>
         <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
-        <td>${razonTag(p.concepto)}</td>
+        <td>${concepto || '—'}</td>
         <td class="right"><strong>$${formatMoney(p.monto)}</strong></td>
       </tr>
     `;
   });
 
-  // Usamos las clases de doc_style.css para unificar visualmente
   content.innerHTML = `
     <link rel="stylesheet" href="/static/css/doc_style.css">
+    <div id="pdf-doc" style="background:white;padding:20px;">
       <div class="doc-header">
         <div>
           <h1>ALIANZA RESIDENCIAL</h1>
@@ -561,7 +561,7 @@ function generarReporte()
       <div class="info-grid">
         <div class="info-cell">
           <div class="ic-lbl">APARTAMENTO</div>
-          <div class="ic-val">${apto}</div>
+          <div class="ic-val">Apt. ${apto}</div>
         </div>
         <div class="info-cell">
           <div class="ic-lbl">PROPIETARIO</div>
@@ -575,7 +575,7 @@ function generarReporte()
 
       <div class="summary-cards">
         <div class="sum-card"><div class="sv">${pagos.length}</div><div class="sl">Registros</div></div>
-        <div class="sum-card"><div class="sv">$${formatMoney(total)}</div><div class="sl">Total</div></div>
+        <div class="sum-card"><div class="sv">$${formatMoney(total)}</div><div class="sl">Total Pagado</div></div>
       </div>
 
       <table class="doc-table">
@@ -587,13 +587,11 @@ function generarReporte()
             <th class="right">Monto</th>
           </tr>
         </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
+        <tbody>${tableRows}</tbody>
       </table>
 
-      <div class="total-line" style="border-top: 2px solid var(--doc-accent); padding-top: 10px; display: flex; justify-content: flex-end; gap: 20px; margin-top: 20px;">
-        <span style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--doc-muted);">TOTAL</span>
+      <div style="border-top: 2px solid var(--doc-accent); padding-top: 10px; display: flex; justify-content: flex-end; gap: 20px; margin-top: 20px;">
+        <span style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--doc-muted);">TOTAL PAGADO</span>
         <span style="font-size:1.1rem; font-weight:900; color:var(--doc-accent);">$${formatMoney(total)}</span>
       </div>
 
@@ -609,9 +607,9 @@ function generarReporte()
         <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
         Documento generado electrónicamente por el Sistema de Administración de Propiedades Alianza Residencial. Para aclaraciones, contactar administración.
       </div>
+    </div>
   `;
 }
-
 /* FINAL DE LA FUNCION generarReporte() */
 
 /* ── Imprimir / Exportar PDF ─────────────────────────── */

@@ -14,9 +14,9 @@
       <button class="btn-action btn-print" onclick="window.print()">
         <i class="fas fa-print"></i> Imprimir
       </button>
-        <button class="btn-action btn-download" onclick="window.open(location.href)" style="font-size:.75rem;">
-          <i class="fas fa-sync-alt"></i> Refrescar
-        </button>
+      <button class="btn-action" onclick="window.open(location.href)" style="font-size:.75rem;">
+        <i class="fas fa-sync-alt"></i> Refrescar
+      </button>
       <button class="btn-action btn-close" onclick="window.close()">
         <i class="fas fa-times"></i> Cerrar
       </button>
@@ -30,7 +30,10 @@
 
 <script>
 const fmoney = v => parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2});
-const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '—';
+const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA', {
+  year: 'numeric', month: 'long', day: 'numeric'
+}) : '—';
+const fdateshort = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '—';
 
 (async()=>{
   const params = new URLSearchParams(location.search);
@@ -42,6 +45,7 @@ const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '
   }
 
   try {
+    // Obtener datos del estado de cuenta detallado
     const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`).then(r=>r.json());
 
     let totalFacturado = 0, totalPagado = 0, saldoActual = 0;
@@ -53,15 +57,27 @@ const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '
         totalPagado += item.paid || 0;
         saldoActual += item.balance || 0;
         const isPending = item.balance > 0;
+        
+        // Construir los números de factura desde los pagos vinculados
+        let facturasHTML = '—';
+        if (item.payments && item.payments.length > 0) {
+          facturasHTML = item.payments.map(p => {
+            if (p.fiscal_invoice_number) {
+              return `<span style="font-family:monospace;font-weight:600;">${p.fiscal_invoice_number}</span>`;
+            }
+            return '';
+          }).filter(f => f !== '').join(', ') || '—';
+        }
+        
         tbody += `
           <tr class="${isPending ? 'bg-danger-light' : ''}">
             <td>${item.description || '—'}</td>
-            <td>${fdate(item.due_date)}</td>
+            <td style="font-size:.82rem;">${facturasHTML}</td>
             <td class="right">$${fmoney(item.amount)}</td>
             <td class="right" style="color:#10b981;">$${fmoney(item.paid)}</td>
             <td class="right ${isPending ? 'text-danger' : ''}">
               $${fmoney(item.balance)}
-              ${isPending ? '<br><span class="badge-pendiente">PENDIENTE</span>' : ''}
+              ${isPending ? '<br><span class="badge-pendiente">PENDIENTE</span>' : '<span class="badge-pagado">PAGADO</span>'}
             </td>
           </tr>`;
       });
@@ -72,8 +88,8 @@ const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '
     document.getElementById('doc').innerHTML = `
       <div class="doc-header">
         <div>
-          <h1>ALIANZA RESIDENCIAL</h1>
-          <div class="sub-info">Sistema de Administración de Propiedades</div>
+          <h1>MERCEDES BIENES RAÍCES</h1>
+          <div class="sub-info">AR | Sistema de Administración de Propiedades</div>
         </div>
         <div class="doc-title">
           <h2>Estado de Cuenta</h2>
@@ -108,13 +124,19 @@ const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '
         <div class="sum-card danger">
           <div class="sv">$${fmoney(saldoActual)}</div>
           <div class="sl">Pendiente</div>
-          ${saldoActual > 0 ? '<span class="badge-pendiente">CON DEUDA</span>' : ''}
+          ${saldoActual > 0 ? '<span class="badge-pendiente">CON DEUDA</span>' : '<span class="badge-pagado">AL DÍA</span>'}
         </div>
       </div>
 
       <table class="doc-table">
         <thead>
-          <tr><th>Concepto</th><th>Vencimiento</th><th class="right">Cargo</th><th class="right">Abono</th><th class="right">Saldo</th></tr>
+          <tr>
+            <th>Concepto</th>
+            <th># Factura</th>
+            <th class="right">Cargo</th>
+            <th class="right">Abono</th>
+            <th class="right">Saldo</th>
+          </tr>
         </thead>
         <tbody>${tbody}</tbody>
       </table>
