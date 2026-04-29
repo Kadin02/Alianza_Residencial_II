@@ -538,7 +538,7 @@ function generarReporte()
       <tr>
         <td style="font-family:monospace;font-size:.78rem;">${p.factura || '—'}</td>
         <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
-        <td>${concepto || '—'}</td>
+        <td>${p.concepto || p.factura || '—'}</td>
         <td class="right"><strong>$${formatMoney(p.monto)}</strong></td>
       </tr>
     `;
@@ -616,9 +616,48 @@ function generarReporte()
 function imprimirPDF() {
   const apto = document.getElementById('rep-apto').value;
   if (!apto) { showToast('Selecciona un apartamento primero','warning'); return; }
+  
   const doc = document.getElementById('pdf-doc');
   if (!doc)  { showToast('Genera el reporte primero','warning'); return; }
-  window.print();
+  
+  // Crear ventana temporal solo con el contenido del reporte
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Reporte Apt. ${apto}</title>
+      <link rel="stylesheet" href="/static/css/doc_style.css">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: 'Inter', system-ui, sans-serif;
+          background: white; 
+          padding: 36px 40px;
+          color: #1a2639;
+        }
+        @media print {
+          body { padding: 36px 40px; }
+          @page { size: A4; margin: 0; }
+        }
+      </style>
+    </head>
+    <body>
+      ${doc.innerHTML}
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  
+  // Esperar a que se carguen los estilos y luego imprimir
+  setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+    // Cerrar después de imprimir (o cancelar)
+    printWindow.onafterprint = function() {
+      printWindow.close();
+    };
+  }, 500);
 }
 
 /* ── Excel del reporte ───────────────────────────────── */

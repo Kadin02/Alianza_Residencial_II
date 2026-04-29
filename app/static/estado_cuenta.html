@@ -62,11 +62,17 @@ const fdateshort = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA'
         let facturasHTML = '—';
         if (item.payments && item.payments.length > 0) {
           facturasHTML = item.payments.map(p => {
-            if (p.fiscal_invoice_number) {
-              return `<span style="font-family:monospace;font-weight:600;">${p.fiscal_invoice_number}</span>`;
+            // Primero intentar con fiscal_invoice_number, luego invoice_number del pago
+            const num = p.fiscal_invoice_number || p.reference || '';
+            if (num) {
+              return `<span style="font-family:monospace;font-weight:600;">${num}</span>`;
             }
             return '';
           }).filter(f => f !== '').join(', ') || '—';
+        }
+        // Si no hay facturas en payments, intentar obtener el último payment_id
+        if (facturasHTML === '—' && item.payment_id) {
+          facturasHTML = `<span style="font-family:monospace;font-weight:600;">Pago #${item.payment_id}</span>`;
         }
         
         tbody += `
