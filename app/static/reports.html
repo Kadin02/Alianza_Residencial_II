@@ -7,37 +7,74 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    .rep-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
-    .rep-tab {
-      padding:7px 16px; border-radius:8px; border:1px solid var(--border);
-      background:var(--card-bg); color:var(--text-secondary); font-size:.82rem;
-      font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit;
+    /* ── Tabs ── */
+    .rep-tabs {
+      display: flex; gap: 4px; flex-wrap: wrap;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 6px; margin-bottom: 20px;
     }
-    .rep-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .rep-panel { display:none; }
-    .rep-panel.active { display:block; }
+    .rep-tab {
+      padding: 8px 16px; border-radius: var(--radius-md); border: none;
+      background: transparent; color: var(--text-secondary);
+      font-family: inherit; font-size: .82rem; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .rep-tab:hover  { background: var(--accent-soft); color: var(--accent); }
+    .rep-tab.active { background: var(--accent); color: #fff; }
+    .rep-panel { display: none; }
+    .rep-panel.active { display: block; }
 
+    /* ── Filtros ── */
+    .filters-row {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+      margin-bottom: 14px;
+    }
+    .filters-row > div { display: flex; flex-direction: column; }
+    .filters-row label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--text-muted); margin-bottom: 3px;
+    }
+    .filters-row select,
+    .filters-row input { width: auto; min-width: 140px; margin-bottom: 0; }
+
+    /* ── Summary cards ── */
     .summary-row {
-      display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:12px; margin-bottom:20px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+      gap: 10px; margin-bottom: 18px;
     }
     .sum-card {
-      background:var(--card-bg); border:1px solid var(--border);
-      border-radius:var(--radius-md); padding:14px 16px; text-align:center;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px 16px; text-align: center;
     }
-    .sum-card .sum-val { font-size:1.4rem; font-weight:800; color:var(--accent); }
-    .sum-card .sum-lbl { font-size:.72rem; color:var(--text-muted); margin-top:2px; text-transform:uppercase; letter-spacing:.04em; }
+    .sum-card .sv { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
+    .sum-card .sl { font-size: .7rem; color: var(--text-muted); margin-top: 3px;
+                    text-transform: uppercase; letter-spacing: .04em; }
+    .sum-card.danger .sv  { color: var(--danger); }
+    .sum-card.success .sv { color: var(--success); }
 
-    .print-btn {
-      background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-soft);
-      width:auto; margin-top:0; padding:7px 16px; font-size:.82rem;
+    /* ── Badges de estado en tablas ── */
+    .badge-PAGADO    { background: #d1fae5; color: #065f46; }
+    .badge-PENDIENTE { background: #fee2e2; color: #991b1b; }
+    .badge-PARCIAL   { background: #fef3c7; color: #92400e; }
+
+    /* ── Botones de acción en tabla ── */
+    .tbl-btn {
+      padding: 4px 10px; font-size: .73rem; font-weight: 600;
+      border-radius: 5px; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 4px;
+      border: 1px solid var(--border); background: var(--card-bg);
+      color: var(--accent); transition: background .12s;
     }
+    .tbl-btn:hover { background: var(--accent-soft); }
+
+    /* ── Print ── */
     @media print {
-      .rep-tabs, .rep-panel:not(.active), .topbar, .sidebar,
-      .sidebar-toggle, .print-btn, #notification { display:none !important; }
-      .main-wrapper { margin-left:0 !important; }
-      .app { padding:0 !important; }
-      table { font-size:11px; }
+      .rep-tabs, .rep-panel:not(.active), .sidebar, .main-wrapper > :not(.app),
+      .filters-row, .tbl-btn, #notification { display: none !important; }
+      .main-wrapper { margin-left: 0 !important; }
+      .app { padding: 0 !important; }
+      table { font-size: 11px; }
     }
   </style>
 </head>
@@ -45,55 +82,139 @@
 <div class="app">
   <div class="page-header">
     <h1><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:8px;"></i>Reportes</h1>
-    <p>Reportes financieros y resúmenes de movimientos</p>
+    <p>Centro centralizado de reportes: estados de cuenta, facturas, pagos y morosos</p>
   </div>
 
+  <!-- ══ TABS ══ -->
   <div class="rep-tabs">
-    <button class="rep-tab active" onclick="switchTab('cargos')"><i class="fas fa-file-invoice"></i> Cargos</button>
-    <button class="rep-tab" onclick="switchTab('pagos')"><i class="fas fa-money-bill-wave"></i> Pagos</button>
-    <button class="rep-tab" onclick="switchTab('propietarios')"><i class="fas fa-users"></i> Por Propietario</button>
-    <button class="rep-tab" onclick="switchTab('proveedores')"><i class="fas fa-truck"></i> Proveedores</button>
+    <button class="rep-tab active" onclick="switchTab('estados')">
+      <i class="fas fa-file-invoice-dollar"></i> Estados de Cuenta
+    </button>
+    <button class="rep-tab" onclick="switchTab('cargos')">
+      <i class="fas fa-file-invoice"></i> Cargos
+    </button>
+    <button class="rep-tab" onclick="switchTab('pagos')">
+      <i class="fas fa-money-bill-wave"></i> Pagos
+    </button>
+    <button class="rep-tab" onclick="switchTab('morosos')">
+      <i class="fas fa-exclamation-triangle"></i> Pendientes / Morosos
+    </button>
+    <button class="rep-tab" onclick="switchTab('aldia')">
+      <i class="fas fa-check-circle"></i> Al Día
+    </button>
+    <button class="rep-tab" onclick="switchTab('proveedores')">
+      <i class="fas fa-truck"></i> Proveedores
+    </button>
   </div>
 
-  <!-- ══ CARGOS ══ -->
-  <div class="rep-panel active" id="panel-cargos">
+  <!-- ══════════════════════════════════════════════
+       PANEL 1 — ESTADOS DE CUENTA
+  ══════════════════════════════════════════════ -->
+  <div class="rep-panel active" id="panel-estados">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-sliders-h"></i> Generar Estado de Cuenta</h3>
+        <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+      </div>
+      <div class="card-body">
+        <div class="filters-row">
+          <div>
+            <label>Propietario</label>
+            <select id="ec-owner" style="min-width:220px;" onchange="loadEstadoCuenta()">
+              <option value="">— Seleccione propietario —</option>
+            </select>
+          </div>
+          <div style="align-self:flex-end;">
+            <button class="btn btn-primary" onclick="abrirEstadoCuenta()" style="width:auto;margin:0;">
+              <i class="fas fa-external-link-alt"></i> Abrir Estado de Cuenta
+            </button>
+          </div>
+          <div style="align-self:flex-end;">
+            <button class="btn btn-secondary" onclick="generarTodosEstados()" style="width:auto;margin:0;font-size:.8rem;">
+              <i class="fas fa-list"></i> Resumen Todos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen inline del propietario seleccionado -->
+    <div id="ec-preview"></div>
+
+    <!-- Tabla de todos los propietarios con resumen rápido -->
+    <div class="card" id="ec-all-card" style="display:none;">
+      <div class="card-header">
+        <h3><i class="fas fa-users"></i> Resumen de Todos los Propietarios</h3>
+        <span class="badge badge-primary" id="ec-all-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Propietario</th><th>Unidad</th>
+              <th class="td-right">Facturado</th>
+              <th class="td-right">Pagado</th>
+              <th class="td-right">Pendiente</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="ec-all-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL 2 — CARGOS
+  ══════════════════════════════════════════════ -->
+  <div class="rep-panel" id="panel-cargos">
     <div class="card">
       <div class="card-header">
         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
       </div>
-      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div>
-          <label class="field-label" style="margin-top:0;">Propiedad</label>
-          <select id="rep-prop" style="width:200px;" onchange="loadReportCargos()">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label" style="margin-top:0;">Estado</label>
-          <select id="rep-status" style="width:150px;" onchange="loadReportCargos()">
-            <option value="">Todos</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="PARCIAL">Parcial</option>
-            <option value="PAGADO">Pagado</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label" style="margin-top:0;">Fecha desde</label>
-          <input type="date" id="rep-from" style="width:160px;margin-bottom:0;" onchange="loadReportCargos()">
-        </div>
-        <div>
-          <label class="field-label" style="margin-top:0;">Fecha hasta</label>
-          <input type="date" id="rep-to" style="width:160px;margin-bottom:0;" onchange="loadReportCargos()">
+      <div class="card-body">
+        <div class="filters-row">
+          <div>
+            <label>Propiedad</label>
+            <select id="rep-prop" onchange="loadReportCargos()"><option value="">Todas</option></select>
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="rep-status" onchange="loadReportCargos()">
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="PARCIAL">Parcial</option>
+              <option value="PAGADO">Pagado</option>
+            </select>
+          </div>
+          <div>
+            <label>Propietario</label>
+            <select id="rep-cargo-owner" onchange="loadReportCargos()"><option value="">Todos</option></select>
+          </div>
+          <div>
+            <label>Desde</label>
+            <input type="date" id="rep-from" onchange="loadReportCargos()" style="min-width:150px;">
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input type="date" id="rep-to" onchange="loadReportCargos()" style="min-width:150px;">
+          </div>
+          <div style="align-self:flex-end;">
+            <button class="btn btn-ghost" onclick="clearCargoFilters()" style="width:auto;margin:0;">
+              <i class="fas fa-times"></i> Limpiar
+            </button>
+          </div>
         </div>
       </div>
     </div>
-
     <div class="summary-row" id="cargos-summary"></div>
-
     <div class="card">
       <div class="card-header">
-        <h3><i class="fas fa-table"></i> Detalle de Cargos</h3>
+        <h3><i class="fas fa-table"></i> Cargos</h3>
         <span class="badge badge-primary" id="cargos-count">0</span>
       </div>
       <div class="table-wrapper">
@@ -106,30 +227,50 @@
             </tr>
           </thead>
           <tbody id="cargos-tbody">
-            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- ══ PAGOS ══ -->
+  <!-- ══════════════════════════════════════════════
+       PANEL 3 — PAGOS
+  ══════════════════════════════════════════════ -->
   <div class="rep-panel" id="panel-pagos">
     <div class="card">
       <div class="card-header">
-        <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
+        <h3><i class="fas fa-sliders-h"></i> Filtros de Pagos</h3>
         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
       </div>
-      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div>
-          <label class="field-label" style="margin-top:0;">Mes</label>
-          <input type="month" id="rep-month" style="width:160px;margin-bottom:0;" onchange="loadReportPagos()">
+      <div class="card-body">
+        <div class="filters-row">
+          <div>
+            <label>Año</label>
+            <select id="pay-year" onchange="loadReportPagos()">
+              <option value="">Todos</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+          <div>
+            <label>Mes</label>
+            <input type="month" id="rep-month" onchange="loadReportPagos()">
+          </div>
+          <div>
+            <label>Propietario</label>
+            <select id="pay-owner" onchange="loadReportPagos()"><option value="">Todos</option></select>
+          </div>
+          <div style="align-self:flex-end;">
+            <button class="btn btn-ghost" onclick="clearPagoFilters()" style="width:auto;margin:0;">
+              <i class="fas fa-times"></i> Limpiar
+            </button>
+          </div>
         </div>
       </div>
     </div>
-
     <div class="summary-row" id="pagos-summary"></div>
-
     <div class="card">
       <div class="card-header">
         <h3><i class="fas fa-table"></i> Historial de Pagos</h3>
@@ -139,292 +280,625 @@
         <table>
           <thead>
             <tr>
-              <th>#</th><th>Propietario</th><th>Fecha</th>
-              <th>Referencia</th><th class="td-right">Monto</th>
-              <th>Cargos Aplicados</th>
+              <th>#</th><th>Factura</th><th>Propietario</th><th>Unidad</th>
+              <th>Fecha</th><th>Referencia</th>
+              <th class="td-right">Monto</th><th>Acción</th>
             </tr>
           </thead>
           <tbody id="pagos-tbody">
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecciona un mes</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecciona un filtro</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- ══ POR PROPIETARIO ══ -->
-  <div class="rep-panel" id="panel-propietarios">
+  <!-- ══════════════════════════════════════════════
+       PANEL 4 — MOROSOS / PENDIENTES
+  ══════════════════════════════════════════════ -->
+  <div class="rep-panel" id="panel-morosos">
     <div class="card">
       <div class="card-header">
-        <h3><i class="fas fa-sliders-h"></i> Seleccionar Propietario</h3>
+        <h3><i class="fas fa-sliders-h"></i> Filtros — Apartamentos con Saldo Pendiente</h3>
         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
       </div>
-      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="flex:1;min-width:200px;">
-          <label class="field-label" style="margin-top:0;">Propietario</label>
-          <select id="rep-owner" style="width:100%;" onchange="loadReportOwner()">
-            <option value="">Seleccione propietario</option>
-          </select>
+      <div class="card-body">
+        <div class="filters-row">
+          <div>
+            <label>Propiedad</label>
+            <select id="mor-prop" onchange="loadMorosos()"><option value="">Todas</option></select>
+          </div>
+          <div>
+            <label>Monto mínimo pendiente</label>
+            <input type="number" id="mor-min" placeholder="0.00" min="0" step="0.01"
+              oninput="loadMorosos()" style="min-width:140px;">
+          </div>
         </div>
       </div>
     </div>
-
-    <div id="owner-report-content">
-      <div style="text-align:center;padding:3rem;color:var(--text-muted);">
-        <i class="fas fa-user-circle" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
-        Selecciona un propietario para ver su reporte
+    <div class="summary-row" id="morosos-summary"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Apartamentos con Saldo Pendiente</h3>
+        <span class="badge badge-primary" id="morosos-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Propietario</th><th>Unidad</th><th>Propiedad</th>
+              <th class="td-right">Total Facturado</th>
+              <th class="td-right">Total Pagado</th>
+              <th class="td-right">Pendiente</th>
+              <th>Estado</th><th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="morosos-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- ══ PROVEEDORES ══ -->
+  <!-- ══════════════════════════════════════════════
+       PANEL 5 — AL DÍA
+  ══════════════════════════════════════════════ -->
+  <div class="rep-panel" id="panel-aldia">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-sliders-h"></i> Apartamentos al Día (Saldo $0.00)</h3>
+        <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+      </div>
+      <div class="card-body">
+        <div class="filters-row">
+          <div>
+            <label>Propiedad</label>
+            <select id="aldia-prop" onchange="loadAlDia()"><option value="">Todas</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="summary-row" id="aldia-summary"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-check-circle" style="color:var(--success);"></i> Propietarios al Día</h3>
+        <span class="badge badge-primary" id="aldia-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Propietario</th><th>Unidad</th><th>Propiedad</th>
+              <th class="td-right">Total Pagado</th>
+              <th>Estado</th><th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="aldia-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL 6 — PROVEEDORES
+  ══════════════════════════════════════════════ -->
   <div class="rep-panel" id="panel-proveedores">
     <div class="card">
       <div class="card-header">
         <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
         <button class="btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
       </div>
-      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div>
-          <label class="field-label" style="margin-top:0;">Categoría</label>
-          <select id="rep-cat" style="width:180px;" onchange="loadReportProveedores()">
-            <option value="">Todas</option>
-          </select>
+      <div class="card-body">
+        <div class="filters-row">
+          <div>
+            <label>Estado Pago</label>
+            <select id="sup-status" onchange="loadProveedores()">
+              <option value="">Todos</option>
+              <option value="PAGADO">Pagado</option>
+              <option value="PENDIENTE">Pendiente</option>
+            </select>
+          </div>
+          <div>
+            <label>Año</label>
+            <select id="sup-year" onchange="loadProveedores()">
+              <option value="">Todos</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
-
-    <div class="summary-row" id="prov-summary"></div>
-
+    <div class="summary-row" id="sup-summary"></div>
     <div class="card">
       <div class="card-header">
-        <h3><i class="fas fa-table"></i> Resumen por Proveedor</h3>
+        <h3><i class="fas fa-table"></i> Pagos a Proveedores</h3>
+        <span class="badge badge-primary" id="sup-count">0</span>
       </div>
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>Proveedor</th><th>Categoría</th><th>RUC</th>
-              <th class="td-right">Total Pagado</th>
-              <th class="td-right">Pendiente</th>
-              <th>Cotizaciones</th>
+              <th>Proveedor</th><th>Descripción</th><th>Fecha</th>
+              <th class="td-right">Monto</th><th>Estado</th>
             </tr>
           </thead>
-          <tbody id="prov-tbody">
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+          <tbody id="sup-tbody">
+            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando…</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-</div>
+</div><!-- /app -->
 <div id="notification"></div>
 <script src="js/main.js"></script>
 <script>
 renderSidebar('reports');
 
-let allChargesCache = [];
+// ═══════════════════════════════════════════════════════
+// DATOS GLOBALES
+// ═══════════════════════════════════════════════════════
+let allCharges   = [];
+let allPayments  = [];
+let allOwners    = [];
+let allUnits     = [];
+let allUnitOwners= [];
+let allProperties= [];
+let allSuppliers = [];
 
-function switchTab(tab) {
-  document.querySelectorAll('.rep-tab').forEach((b,i) => {
-    b.classList.toggle('active', ['cargos','pagos','propietarios','proveedores'][i] === tab);
+// ─── Init ────────────────────────────────────────────
+async function initReports() {
+  try {
+    [allOwners, allUnits, allUnitOwners, allProperties] = await Promise.all([
+      apiRequest('/owners')          || [],
+      apiRequest('/units')           || [],
+      apiRequest('/unit-owners/all').catch(()=> []),
+      apiRequest('/properties')      || [],
+    ]);
+
+    // Llenar selects de propiedad
+    ['rep-prop','mor-prop','aldia-prop'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      allProperties.forEach(p => el.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+    });
+
+    // Llenar selects de propietario
+    ['ec-owner','rep-cargo-owner','pay-owner'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      allOwners.forEach(o => el.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+    });
+
+    // Cargar cargos y pagos en background
+    [allCharges, allPayments] = await Promise.all([
+      apiRequest('/finance/charges').catch(()=> []),
+      apiRequest('/finance/all-payments').catch(()=> []),
+    ]);
+
+    // Cargar panel activo por defecto
+    loadEstadoCuenta();
+  } catch(e) {
+    console.error('Error init reports:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function ownerUnit(ownerId) {
+  const uo   = (allUnitOwners||[]).find(x => x.owner_id == ownerId && x.is_active);
+  const unit = uo ? (allUnits||[]).find(u => u.id === uo.unit_id) : null;
+  return unit ? unit.unit_number : '—';
+}
+function ownerProp(ownerId) {
+  const uo   = (allUnitOwners||[]).find(x => x.owner_id == ownerId && x.is_active);
+  const unit = uo ? (allUnits||[]).find(u => u.id === uo.unit_id) : null;
+  const prop = unit ? (allProperties||[]).find(p => p.id === unit.property_id) : null;
+  return prop ? prop.name : '—';
+}
+function ownerStatement(ownerId) {
+  // Calcular saldos desde allCharges
+  const charges = (allCharges||[]).filter(c => c.owner_id == ownerId || c.owner_name == ownerName(ownerId));
+  let facturado = 0, pagado = 0;
+  charges.forEach(c => {
+    facturado += parseFloat(c.amount || 0);
+    pagado    += parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
   });
+  return { facturado, pagado, pendiente: facturado - pagado };
+}
+function ownerName(id) {
+  return (allOwners||[]).find(o => o.id == id)?.full_name || '—';
+}
+function statusBadge(s) {
+  const cls = s === 'PAGADO' ? 'badge-PAGADO' : s === 'PARCIAL' ? 'badge-PARCIAL' : 'badge-PENDIENTE';
+  return `<span class="badge ${cls}">${s}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+const TAB_IDS = ['estados','cargos','pagos','morosos','aldia','proveedores'];
+function switchTab(tab) {
+  document.querySelectorAll('.rep-tab').forEach((b,i) => b.classList.toggle('active', TAB_IDS[i] === tab));
   document.querySelectorAll('.rep-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+  if (tab === 'cargos')     loadReportCargos();
+  if (tab === 'pagos')      loadReportPagos();
+  if (tab === 'morosos')    loadMorosos();
+  if (tab === 'aldia')      loadAlDia();
+  if (tab === 'proveedores')loadProveedores();
 }
 
-async function init() {
-  // Cargar props para filtro
-  const props = await apiRequest('/properties') || [];
-  const repProp = document.getElementById('rep-prop');
-  props.forEach(p => repProp.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+// ═══════════════════════════════════════════════════════
+// PANEL 1 — ESTADOS DE CUENTA
+// ═══════════════════════════════════════════════════════
+function loadEstadoCuenta() {
+  const id = document.getElementById('ec-owner').value;
+  if (!id) { document.getElementById('ec-preview').innerHTML = ''; return; }
 
-  // Cargar owners para filtro
-  const owners = await apiRequest('/owners') || [];
-  const repOwner = document.getElementById('rep-owner');
-  owners.forEach(o => repOwner.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+  // Buscar cargos del propietario
+  const owner   = (allOwners||[]).find(o => o.id == id);
+  if (!owner) return;
 
-  // Cargar categorías proveedores
-  const cats = await apiRequest('/suppliers/categories') || [];
-  const repCat = document.getElementById('rep-cat');
-  cats.forEach(c => repCat.innerHTML += `<option value="${c}">${c}</option>`);
+  // Mostrar resumen rápido
+  const ownerCharges = (allCharges||[]).filter(c => {
+    const un = ownerUnit(id);
+    return c.unit_number === un || String(c.owner_id) === String(id);
+  });
 
-  // Mes actual
-  const now = new Date();
-  document.getElementById('rep-month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let facturado = 0, pagado = 0;
+  ownerCharges.forEach(c => {
+    facturado += parseFloat(c.amount || 0);
+    pagado    += parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+  });
+  const pendiente = facturado - pagado;
+  const estado = pendiente <= 0 ? 'PAGADO' : 'PENDIENTE';
 
-  await loadReportCargos();
-  await loadReportProveedores();
-}
-
-// ── Reporte de cargos ──────────────────────────
-async function loadReportCargos() {
-  const charges = await apiRequest('/finance/charges') || [];
-  const propId  = document.getElementById('rep-prop').value;
-  const status  = document.getElementById('rep-status').value;
-  const from    = document.getElementById('rep-from').value;
-  const to      = document.getElementById('rep-to').value;
-
-  let filtered = charges;
-  if (status)  filtered = filtered.filter(c => c.status === status);
-  if (from)    filtered = filtered.filter(c => c.due_date >= from);
-  if (to)      filtered = filtered.filter(c => c.due_date <= to);
-
-  // Resumen
-  const total    = filtered.reduce((s,c) => s + parseFloat(c.amount||0), 0);
-  const pagado   = filtered.reduce((s,c) => s + (parseFloat(c.amount||0) - parseFloat(c.balance||0)), 0);
-  const pendiente= filtered.reduce((s,c) => s + parseFloat(c.balance||0), 0);
-  const pendCount= filtered.filter(c => c.status !== 'PAGADO').length;
-
-  document.getElementById('cargos-summary').innerHTML = `
-    <div class="sum-card"><div class="sum-val">${filtered.length}</div><div class="sum-lbl">Cargos totales</div></div>
-    <div class="sum-card"><div class="sum-val">$${formatMoney(total)}</div><div class="sum-lbl">Facturado</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(pagado)}</div><div class="sum-lbl">Cobrado</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:var(--danger)">$${formatMoney(pendiente)}</div><div class="sum-lbl">Por cobrar</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:var(--warning)">${pendCount}</div><div class="sum-lbl">Cargos pendientes</div></div>`;
-
-  document.getElementById('cargos-count').textContent = filtered.length;
-  const tbody = document.getElementById('cargos-tbody');
-
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filtered.map(c => `
-    <tr>
-      <td><strong>${c.owner_name || '—'}</strong></td>
-      <td>${c.unit_number || '—'}</td>
-      <td>${c.description}</td>
-      <td>${formatDate(c.due_date)}</td>
-      <td class="td-right">$${formatMoney(c.amount)}</td>
-      <td class="td-right" style="color:var(--success);">$${formatMoney(parseFloat(c.amount||0)-parseFloat(c.balance||0))}</td>
-      <td class="td-right" style="color:var(--danger);font-weight:700;">$${formatMoney(c.balance)}</td>
-      <td><span class="badge badge-${c.status}">${c.status}</span></td>
-    </tr>`).join('');
-}
-
-// ── Reporte de pagos ───────────────────────────
-async function loadReportPagos() {
-  // Usamos charges para obtener pagos aplicados
-  const charges = await apiRequest('/finance/charges') || [];
-  const month = document.getElementById('rep-month').value;
-
-  // Filtrar por mes si se especificó
-  // Como no hay endpoint de pagos por mes, mostramos todos los cargos pagados en ese periodo
-  const filtered = month
-    ? charges.filter(c => c.status === 'PAGADO' || c.status === 'PARCIAL')
-    : charges.filter(c => c.status !== 'PENDIENTE');
-
-  const totalCobrado = filtered.reduce((s,c) => s + (parseFloat(c.amount||0) - parseFloat(c.balance||0)), 0);
-
-  document.getElementById('pagos-summary').innerHTML = `
-    <div class="sum-card"><div class="sum-val">${filtered.length}</div><div class="sum-lbl">Cargos con pago</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(totalCobrado)}</div><div class="sum-lbl">Total cobrado</div></div>`;
-
-  document.getElementById('pagos-count').textContent = filtered.length;
-  const tbody = document.getElementById('pagos-tbody');
-
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos en este período</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filtered.map((c,i) => `
-    <tr>
-      <td class="td-mono">${i+1}</td>
-      <td><strong>${c.owner_name || '—'}</strong><br><small style="color:var(--text-muted);">Apt. ${c.unit_number||'?'}</small></td>
-      <td>${formatDate(c.due_date)}</td>
-      <td style="color:var(--text-muted);font-size:.8rem;">—</td>
-      <td class="td-right"><strong>$${formatMoney(parseFloat(c.amount||0)-parseFloat(c.balance||0))}</strong></td>
-      <td><span class="badge badge-${c.status}">${c.status}</span> — ${c.description}</td>
-    </tr>`).join('');
-}
-
-// ── Reporte por propietario ────────────────────
-async function loadReportOwner() {
-  const ownerId = document.getElementById('rep-owner').value;
-  if (!ownerId) return;
-
-  const charges = await apiRequest(`/finance/owner-statement/${ownerId}`) || [];
-  const owners  = await apiRequest('/owners') || [];
-  const owner   = owners.find(o => o.id === parseInt(ownerId));
-
-  const total     = charges.reduce((s,c) => s + c.total, 0);
-  const pagado    = charges.reduce((s,c) => s + c.paid, 0);
-  const pendiente = charges.reduce((s,c) => s + c.balance, 0);
-
-  const content = document.getElementById('owner-report-content');
-  content.innerHTML = `
+  document.getElementById('ec-preview').innerHTML = `
     <div class="summary-row">
-      <div class="sum-card"><div class="sum-val">${charges.length}</div><div class="sum-lbl">Cargos totales</div></div>
-      <div class="sum-card"><div class="sum-val">$${formatMoney(total)}</div><div class="sum-lbl">Facturado</div></div>
-      <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(pagado)}</div><div class="sum-lbl">Pagado</div></div>
-      <div class="sum-card"><div class="sum-val" style="color:var(--danger)">$${formatMoney(pendiente)}</div><div class="sum-lbl">Pendiente</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header">
-        <h3><i class="fas fa-user"></i> ${owner?.full_name || 'Propietario'} — Estado de cuenta completo</h3>
-        <button class="btn print-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${ownerId}','_blank')">
-          <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
-        </button>
+      <div class="sum-card"><div class="sv">$${fmt(facturado)}</div><div class="sl">Facturado</div></div>
+      <div class="sum-card success"><div class="sv">$${fmt(pagado)}</div><div class="sl">Pagado</div></div>
+      <div class="sum-card ${pendiente > 0 ? 'danger' : 'success'}">
+        <div class="sv">$${fmt(pendiente)}</div>
+        <div class="sl">Pendiente</div>
+        <span class="badge badge-${estado}" style="font-size:.68rem;">${estado}</span>
       </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Descripción</th><th>Unidad</th><th>Vence</th>
-            <th class="td-right">Total</th><th class="td-right">Pagado</th>
-            <th class="td-right">Saldo</th><th>Estado</th></tr>
-          </thead>
-          <tbody>
-            ${charges.map(c => `
-              <tr>
-                <td>${c.description}</td>
-                <td>Apt. ${c.unit_number}</td>
-                <td>${formatDate(c.due_date)}</td>
-                <td class="td-right">$${formatMoney(c.total)}</td>
-                <td class="td-right" style="color:var(--success);">$${formatMoney(c.paid)}</td>
-                <td class="td-right" style="color:${c.balance>0?'var(--danger)':'var(--success)'};font-weight:700;">$${formatMoney(c.balance)}</td>
-                <td><span class="badge badge-${c.status}">${c.status}</span></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
+      <div class="sum-card"><div class="sv">${ownerCharges.length}</div><div class="sl">Cargos</div></div>
     </div>`;
 }
 
-// ── Reporte de proveedores ─────────────────────
-async function loadReportProveedores() {
-  const cat = document.getElementById('rep-cat').value;
-  const suppliers = await apiRequest('/suppliers') || [];
-  const filtered = cat ? suppliers.filter(s => s.category === cat) : suppliers;
+function abrirEstadoCuenta() {
+  const id = document.getElementById('ec-owner').value;
+  if (!id) { showToast('Selecciona un propietario', 'warning'); return; }
+  window.open(`/static/estado_cuenta.html?owner_id=${id}&t=${Date.now()}`, '_blank');
+}
 
-  const totalPagado   = filtered.reduce((s,p) => s + p.total_paid, 0);
-  const totalPendiente= filtered.reduce((s,p) => s + p.total_pending, 0);
+async function generarTodosEstados() {
+  document.getElementById('ec-all-card').style.display = '';
+  const tbody = document.getElementById('ec-all-tbody');
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Calculando…</td></tr>`;
 
-  document.getElementById('prov-summary').innerHTML = `
-    <div class="sum-card"><div class="sum-val">${filtered.length}</div><div class="sum-lbl">Proveedores</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:var(--success)">$${formatMoney(totalPagado)}</div><div class="sum-lbl">Total pagado</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:var(--danger)">$${formatMoney(totalPendiente)}</div><div class="sum-lbl">Pendiente</div></div>`;
+  const rows = allOwners.map(o => {
+    const ownerCharges = (allCharges||[]).filter(c =>
+      String(c.owner_id) === String(o.id) ||
+      c.unit_number === ownerUnit(o.id)
+    );
+    let fac = 0, pag = 0;
+    ownerCharges.forEach(c => {
+      fac += parseFloat(c.amount || 0);
+      pag += parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+    });
+    const pend   = fac - pag;
+    const estado = pend <= 0 ? 'PAGADO' : 'PENDIENTE';
+    return { o, fac, pag, pend, estado };
+  });
 
-  const tbody = document.getElementById('prov-tbody');
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin proveedores</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = filtered.map(s => `
+  // Ordenar morosos primero
+  rows.sort((a,b) => b.pend - a.pend);
+  document.getElementById('ec-all-count').textContent = rows.length;
+
+  tbody.innerHTML = rows.map(({o, fac, pag, pend, estado}) => `
     <tr>
-      <td><strong>${s.name}</strong></td>
-      <td><span class="badge badge-primary">${s.category}</span></td>
-      <td style="color:var(--text-muted);font-size:.8rem;">${s.ruc || '—'}</td>
-      <td class="td-right" style="color:var(--success);font-weight:700;">$${formatMoney(s.total_paid)}</td>
-      <td class="td-right" style="color:${s.total_pending>0?'var(--danger)':'var(--text-muted)'};font-weight:700;">$${formatMoney(s.total_pending)}</td>
-      <td style="color:var(--text-muted);">—</td>
+      <td><strong>${o.full_name}</strong></td>
+      <td>${ownerUnit(o.id)}</td>
+      <td class="td-right">$${fmt(fac)}</td>
+      <td class="td-right" style="color:var(--success);">$${fmt(pag)}</td>
+      <td class="td-right" style="color:${pend>0?'var(--danger)':'var(--success)'};">$${fmt(pend)}</td>
+      <td>${statusBadge(estado)}</td>
+      <td>
+        <button class="tbl-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${o.id}','_blank')">
+          <i class="fas fa-external-link-alt"></i> Ver
+        </button>
+      </td>
     </tr>`).join('');
 }
 
-init();
+// ═══════════════════════════════════════════════════════
+// PANEL 2 — CARGOS
+// ═══════════════════════════════════════════════════════
+function clearCargoFilters() {
+  ['rep-prop','rep-status','rep-cargo-owner'].forEach(id => document.getElementById(id).value = '');
+  ['rep-from','rep-to'].forEach(id => document.getElementById(id).value = '');
+  loadReportCargos();
+}
+
+function loadReportCargos() {
+  const propId  = document.getElementById('rep-prop')?.value       || '';
+  const status  = document.getElementById('rep-status')?.value     || '';
+  const ownerId = document.getElementById('rep-cargo-owner')?.value || '';
+  const from    = document.getElementById('rep-from')?.value       || '';
+  const to      = document.getElementById('rep-to')?.value         || '';
+
+  let list = [...(allCharges||[])];
+
+  if (propId)  list = list.filter(c => {
+    const unit = (allUnits||[]).find(u => u.unit_number === c.unit_number);
+    return unit && String(unit.property_id) === String(propId);
+  });
+  if (status)  list = list.filter(c => c.status === status);
+  if (ownerId) list = list.filter(c => String(c.owner_id) === ownerId);
+  if (from)    list = list.filter(c => c.due_date >= from);
+  if (to)      list = list.filter(c => c.due_date <= to);
+
+  let totalAmt = 0, totalBal = 0, totalPaid = 0;
+  list.forEach(c => {
+    totalAmt  += parseFloat(c.amount  || 0);
+    totalBal  += parseFloat(c.balance || 0);
+    totalPaid += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+  });
+
+  document.getElementById('cargos-count').textContent = list.length;
+  document.getElementById('cargos-summary').innerHTML = `
+    <div class="sum-card"><div class="sv">${list.length}</div><div class="sl">Cargos</div></div>
+    <div class="sum-card"><div class="sv">$${fmt(totalAmt)}</div><div class="sl">Total Facturado</div></div>
+    <div class="sum-card success"><div class="sv">$${fmt(totalPaid)}</div><div class="sl">Total Cobrado</div></div>
+    <div class="sum-card ${totalBal>0?'danger':''}"><div class="sv">$${fmt(totalBal)}</div><div class="sl">Por Cobrar</div></div>
+  `;
+
+  const tbody = document.getElementById('cargos-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados con los filtros aplicados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(c => {
+    const paid  = parseFloat(c.amount||0) - parseFloat(c.balance||0);
+    return `<tr>
+      <td>${c.owner_name || '—'}</td>
+      <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
+      <td><strong>${c.description}</strong></td>
+      <td style="font-size:.82rem;">${fmtDate(c.due_date)}</td>
+      <td class="td-right">$${fmt(c.amount)}</td>
+      <td class="td-right" style="color:var(--success);">$${fmt(paid)}</td>
+      <td class="td-right" style="color:${parseFloat(c.balance)>0?'var(--danger)':'var(--success)'};">
+        $${fmt(c.balance)}
+      </td>
+      <td>${statusBadge(c.status)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PANEL 3 — PAGOS
+// ═══════════════════════════════════════════════════════
+function clearPagoFilters() {
+  ['pay-year','pay-owner'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('rep-month').value = '';
+  loadReportPagos();
+}
+
+function loadReportPagos() {
+  const year    = document.getElementById('pay-year').value   || '';
+  const month   = document.getElementById('rep-month').value  || '';
+  const ownerId = document.getElementById('pay-owner').value  || '';
+
+  let list = [...(allPayments||[])];
+
+  if (year)  list = list.filter(p => (p.fecha||p.payment_date||'').startsWith(year));
+  if (month) list = list.filter(p => (p.fecha||p.payment_date||'').startsWith(month));
+  if (ownerId) list = list.filter(p => String(p.owner_id) === ownerId);
+
+  const total = list.reduce((s,p) => s + parseFloat(p.monto||p.amount||0), 0);
+  document.getElementById('pagos-count').textContent = list.length;
+  document.getElementById('pagos-summary').innerHTML = `
+    <div class="sum-card"><div class="sv">${list.length}</div><div class="sl">Pagos</div></div>
+    <div class="sum-card success"><div class="sv">$${fmt(total)}</div><div class="sl">Total Recaudado</div></div>
+  `;
+
+  const tbody = document.getElementById('pagos-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros aplicados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((p,i) => `
+    <tr>
+      <td class="td-mono">${i+1}</td>
+      <td>${p.factura||p.invoice_number||'—'}</td>
+      <td>${p.owner_name||'—'}</td>
+      <td>${p.unit_number ? `Apt. ${p.unit_number}` : '—'}</td>
+      <td>${fmtDate(p.fecha||p.payment_date)}</td>
+      <td style="font-size:.8rem;">${p.concepto||p.reference||'—'}</td>
+      <td class="td-right"><strong>$${fmt(p.monto||p.amount)}</strong></td>
+      <td>
+        <button class="tbl-btn" onclick="window.open('/static/factura.html?payment_id=${p.payment_id}','_blank')">
+          <i class="fas fa-receipt"></i> Factura
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PANEL 4 — MOROSOS
+// ═══════════════════════════════════════════════════════
+function loadMorosos() {
+  const propId = document.getElementById('mor-prop').value || '';
+  const minAmt = parseFloat(document.getElementById('mor-min').value) || 0.01;
+
+  const ownerMap = buildOwnerMap();
+  const result   = ownerMap.filter(o => o.pendiente >= minAmt);
+
+  // Filtrar por propiedad
+  const filtered = propId
+    ? result.filter(o => {
+        const unit = (allUnits||[]).find(u => u.unit_number === o.unitNum);
+        return unit && String(unit.property_id) === propId;
+      })
+    : result;
+
+  filtered.sort((a,b) => b.pendiente - a.pendiente);
+  const totalPend = filtered.reduce((s,o) => s + o.pendiente, 0);
+  document.getElementById('morosos-count').textContent = filtered.length;
+  document.getElementById('morosos-summary').innerHTML = `
+    <div class="sum-card danger"><div class="sv">${filtered.length}</div><div class="sl">Con Deuda</div></div>
+    <div class="sum-card danger"><div class="sv">$${fmt(totalPend)}</div><div class="sl">Total Pendiente</div></div>
+  `;
+
+  const tbody = document.getElementById('morosos-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">¡Sin morosos! Todos al día.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(o => `
+    <tr>
+      <td><strong>${o.name}</strong></td>
+      <td>${o.unitNum ? `Apt. ${o.unitNum}` : '—'}</td>
+      <td style="font-size:.82rem;">${o.propName}</td>
+      <td class="td-right">$${fmt(o.facturado)}</td>
+      <td class="td-right" style="color:var(--success);">$${fmt(o.pagado)}</td>
+      <td class="td-right" style="color:var(--danger);font-weight:700;">$${fmt(o.pendiente)}</td>
+      <td>${statusBadge('PENDIENTE')}</td>
+      <td>
+        <button class="tbl-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${o.id}','_blank')">
+          <i class="fas fa-external-link-alt"></i> Ver
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PANEL 5 — AL DÍA
+// ═══════════════════════════════════════════════════════
+function loadAlDia() {
+  const propId  = document.getElementById('aldia-prop').value || '';
+  const ownerMap = buildOwnerMap();
+  let result   = ownerMap.filter(o => o.pendiente <= 0);
+
+  if (propId) {
+    result = result.filter(o => {
+      const unit = (allUnits||[]).find(u => u.unit_number === o.unitNum);
+      return unit && String(unit.property_id) === propId;
+    });
+  }
+
+  document.getElementById('aldia-count').textContent = result.length;
+  document.getElementById('aldia-summary').innerHTML = `
+    <div class="sum-card success"><div class="sv">${result.length}</div><div class="sl">Al Día</div></div>
+    <div class="sum-card success"><div class="sv">$${fmt(result.reduce((s,o)=>s+o.pagado,0))}</div><div class="sl">Total Pagado</div></div>
+  `;
+
+  const tbody = document.getElementById('aldia-tbody');
+  if (!result.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin resultados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = result.map(o => `
+    <tr>
+      <td><strong>${o.name}</strong></td>
+      <td>${o.unitNum ? `Apt. ${o.unitNum}` : '—'}</td>
+      <td style="font-size:.82rem;">${o.propName}</td>
+      <td class="td-right" style="color:var(--success);font-weight:700;">$${fmt(o.pagado)}</td>
+      <td>${statusBadge('PAGADO')}</td>
+      <td>
+        <button class="tbl-btn" onclick="window.open('/static/estado_cuenta.html?owner_id=${o.id}','_blank')">
+          <i class="fas fa-external-link-alt"></i> Ver
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PANEL 6 — PROVEEDORES
+// ═══════════════════════════════════════════════════════
+async function loadProveedores() {
+  const status = document.getElementById('sup-status').value || '';
+  const year   = document.getElementById('sup-year').value   || '';
+
+  if (!allSuppliers.length) {
+    allSuppliers = await apiRequest('/suppliers').catch(() => []) || [];
+  }
+
+  const allSupPay = [];
+  for (const s of allSuppliers) {
+    const pays = await apiRequest(`/suppliers/${s.id}/payments`).catch(() => []) || [];
+    pays.forEach(p => allSupPay.push({ ...p, supplierName: s.name }));
+  }
+
+  let list = allSupPay;
+  if (status) list = list.filter(p => p.status === status);
+  if (year)   list = list.filter(p => (p.payment_date||'').startsWith(year));
+
+  const total = list.reduce((s,p) => s + parseFloat(p.amount||0), 0);
+  document.getElementById('sup-count').textContent = list.length;
+  document.getElementById('sup-summary').innerHTML = `
+    <div class="sum-card"><div class="sv">${list.length}</div><div class="sl">Pagos</div></div>
+    <div class="sum-card"><div class="sv">$${fmt(total)}</div><div class="sl">Total Gastado</div></div>
+  `;
+
+  const tbody = document.getElementById('sup-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros aplicados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td><strong>${p.supplierName}</strong></td>
+      <td>${p.description}</td>
+      <td>${fmtDate(p.payment_date)}</td>
+      <td class="td-right"><strong>$${fmt(p.amount)}</strong></td>
+      <td>${statusBadge(p.status)}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPER: construir mapa de saldos por propietario
+// ═══════════════════════════════════════════════════════
+function buildOwnerMap() {
+  return (allOwners||[]).map(o => {
+    const unitNum  = ownerUnit(o.id);
+    const propName = ownerProp(o.id);
+    const charges  = (allCharges||[]).filter(c =>
+      String(c.owner_id) === String(o.id) || c.unit_number === unitNum
+    );
+    let fac = 0, pag = 0;
+    charges.forEach(c => {
+      fac += parseFloat(c.amount  || 0);
+      pag += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+    });
+    return { id: o.id, name: o.full_name, unitNum, propName, facturado: fac, pagado: pag, pendiente: fac - pag };
+  });
+}
+
+// ── Helpers de formato ──
+function fmt(v) {
+  return parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtDate(str) {
+  if (!str) return '—';
+  try { const [y,m,d] = str.split('T')[0].split('-'); return `${d}/${m}/${y}`; } catch(_){ return str; }
+}
+
+// ── Clase print-btn local ──
+document.head.insertAdjacentHTML('beforeend', `<style>
+  .print-btn { background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);width:auto;margin-top:0;padding:7px 14px;font-size:.8rem; }
+</style>`);
+
+initReports();
 </script>
 </body>
 </html>

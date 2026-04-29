@@ -2,305 +2,465 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Estado de Cuenta | Alianza Residencial</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estado de Cuenta | Alianza Residencial | Mercedes Bienes Raíces</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2pdf para descarga con colores -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Lato',sans-serif; background:#f4f4f4; color:#222; font-size:12.5px; }
-
-    .print-bar {
-      background:#1a1a2e; padding:10px 24px;
-      display:flex; align-items:center; gap:10px; justify-content:center;
-    }
-    .print-bar button {
-      padding:7px 20px; border:none; border-radius:5px;
-      font-family:inherit; font-size:.82rem; font-weight:700; cursor:pointer;
-    }
-    .btn-print { background:#fff; color:#1a1a2e; }
-    .btn-back  { background:transparent; color:rgba(255,255,255,.8); border:1px solid rgba(255,255,255,.3)!important; }
-    .btn-print:hover,.btn-back:hover { opacity:.85; }
-
-    .page {
-      width:210mm; min-height:277mm; margin:20px auto;
-      background:#fff; padding:12mm 14mm 14mm;
-      box-shadow:0 2px 20px rgba(0,0,0,.1);
+    /* ═══════════════════════════════════════════════
+       VARIABLES  — cambia aquí para toda la plantilla
+    ═══════════════════════════════════════════════ */
+    :root {
+      --brand-dark:   #0a2c5e;
+      --brand-mid:    #1e4a8c;
+      --brand-light:  #e8f0fb;
+      --accent:       #1e4a8c;
+      --success:      #10b981;
+      --danger:       #ef4444;
+      --warning:      #f59e0b;
+      --text:         #1a2639;
+      --text-muted:   #6b7280;
+      --border:       #e5e7eb;
+      --white:        #ffffff;
     }
 
-    .doc-head {
-      display:flex; justify-content:space-between; align-items:flex-start;
-      margin-bottom:18px; padding-bottom:14px; border-bottom:2px solid #1a1a2e;
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: var(--text); font-size: 14px; }
+
+    /* ── Barra de acciones (solo pantalla) ── */
+    .action-bar {
+      background: var(--brand-dark);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
-    .brand { display:flex; align-items:center; gap:10px; }
-    .brand-logo {
-      width:48px; height:48px; background:#1a1a2e; border-radius:8px;
-      display:flex; align-items:center; justify-content:center;
-      color:#fff; font-weight:900; font-size:.95rem; overflow:hidden;
+    .action-bar span { color: #7aa8d4; font-size: .82rem; }
+    .btn-action {
+      padding: 7px 18px; border: none; border-radius: 6px;
+      font-family: inherit; font-size: .82rem; font-weight: 700;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      transition: opacity .15s;
     }
-    .brand-logo img { width:100%; height:100%; object-fit:contain; }
-    .brand-name h1 { font-size:1rem; font-weight:900; color:#1a1a2e; }
-    .brand-name p  { font-size:.7rem; color:#888; margin-top:2px; line-height:1.5; }
-    .doc-title { text-align:right; }
-    .doc-title h2 { font-size:1.1rem; font-weight:900; color:#1a1a2e; text-transform:uppercase; letter-spacing:.08em; }
-    .doc-title .doc-date { font-size:.72rem; color:#888; margin-top:3px; }
+    .btn-action:hover { opacity: .85; }
+    .btn-download { background: var(--success);   color: #fff; }
+    .btn-print    { background: var(--brand-mid);  color: #fff; }
+    .btn-close    { background: transparent; color: #7aa8d4; font-size: .8rem; margin-left: auto; }
 
-    .owner-section { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
-    .owner-cell .lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#999; margin-bottom:3px; }
-    .owner-cell .val { font-size:.88rem; font-weight:700; color:#1a1a2e; }
-
-    .fin-summary {
-      display:grid; grid-template-columns:1fr 1fr 1fr;
-      gap:0; margin-bottom:18px;
-      border:1px solid #e0e0e0; border-radius:6px; overflow:hidden;
+    /* ── Contenedor del documento ── */
+    .doc-wrapper {
+      max-width: 820px;
+      margin: 24px auto;
+      padding: 0 16px 40px;
     }
-    .fin-cell { padding:10px 14px; border-right:1px solid #e0e0e0; }
-    .fin-cell:last-child { border-right:none; }
-    .fin-cell .fc-lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#999; margin-bottom:4px; }
-    .fin-cell .fc-val { font-size:1.05rem; font-weight:900; color:#1a1a2e; }
-    .fin-cell.is-pending .fc-val { color:#c0392b; }
-    .fin-cell.is-paid    .fc-val { color:#27ae60; }
 
-    .section-title { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#999; margin-bottom:8px; }
-
-    table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:.82rem; }
-    thead tr { border-bottom:2px solid #1a1a2e; }
-    thead th { padding:6px 10px; text-align:left; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#1a1a2e; }
-    thead th.r { text-align:right; }
-    tbody tr { border-bottom:1px solid #f0f0f0; }
-    tbody tr:last-child { border-bottom:none; }
-    tbody td { padding:7px 10px; color:#333; vertical-align:middle; }
-    tbody td.r { text-align:right; }
-    tbody td.b { font-weight:700; }
-    tbody td.muted { color:#999; }
-
-    .st { display:inline-block; padding:2px 8px; border-radius:3px; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
-    .st-PAGADO    { background:#eafaf1; color:#1e8449; border:1px solid #a9dfbf; }
-    .st-PARCIAL   { background:#fef9e7; color:#b7950b; border:1px solid #f9e79f; }
-    .st-PENDIENTE { background:#fdedec; color:#c0392b; border:1px solid #f1948a; }
-
-    /* Sub-filas de pagos */
-    .pay-detail-row td { padding:0 10px 5px 30px; border-bottom:none; }
-    .pay-detail-inner {
-      background:#f9f9f9; border-left:2px solid #ddd;
-      border-radius:0 4px 4px 0; padding:5px 10px;
-      font-size:.75rem; color:#666;
-      display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+    /* ══ DOCUMENTO ══════════════════════════════════ */
+    #doc {
+      background: var(--white);
+      border-radius: 10px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.1);
+      overflow: hidden;
     }
-    .pay-detail-inner span { white-space:nowrap; }
-    .pay-detail-inner strong { color:#333; }
-    .btn-factura-mini {
-      display:inline-flex; align-items:center; gap:4px;
-      padding:2px 10px; border-radius:4px; font-size:.68rem; font-weight:700;
-      background:#e8f0fe; color:#1a73e8; border:1px solid #c5d8fc;
-      cursor:pointer; text-decoration:none; white-space:nowrap;
-    }
-    .btn-factura-mini:hover { background:#d2e3fc; }
 
-    .legal-notice {
-      margin-top:16px; padding:10px 14px;
-      background:#f8f8f8; border:1px solid #e8e8e8;
-      border-left:3px solid #1a1a2e; border-radius:0 4px 4px 0;
+    /* ── Cabecera del documento ── */
+    .doc-header {
+      background: var(--brand-dark);
+      padding: 28px 36px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
     }
-    .legal-notice p { font-size:.64rem; color:#777; line-height:1.7; margin:0; }
-    .legal-notice strong { color:#555; }
+    .doc-header-left { display: flex; align-items: center; gap: 16px; }
 
+    /*
+     * ╔══════════════════════════════════════════╗
+     * ║  LOGO — reemplaza el bloque .doc-logo    ║
+     * ║  con una etiqueta <img src="...">        ║
+     * ║  para usar un logo personalizado         ║
+     * ╚══════════════════════════════════════════╝
+     */
+    .doc-logo {
+      width: 54px; height: 54px;
+      background: var(--brand-mid);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 900; color: var(--white);
+      flex-shrink: 0;
+    }
+    /* Si usas imagen: .doc-logo img { width:100%; height:100%; object-fit:cover; border-radius:10px; } */
+
+    .doc-brand h1 {
+      font-size: 1.15rem; font-weight: 800; color: var(--white);
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .doc-brand p { font-size: .75rem; color: #7aa8d4; margin-top: 2px; }
+
+    .doc-title-block { text-align: right; }
+    .doc-title-block h2 {
+      font-size: 1rem; font-weight: 700; color: var(--white);
+      text-transform: uppercase; letter-spacing: .1em;
+    }
+    .doc-title-block p { font-size: .75rem; color: #7aa8d4; margin-top: 3px; }
+
+    /* ── Resumen de totales ── */
+    .doc-totals {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .total-cell {
+      flex: 1; padding: 20px 28px; border-right: 1px solid var(--border);
+    }
+    .total-cell:last-child { border-right: none; }
+    .total-cell .lbl {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .total-cell .val {
+      font-size: 1.6rem; font-weight: 900;
+    }
+    .val-billed  { color: var(--text); }
+    .val-paid    { color: var(--success); }
+    .val-pending { color: var(--danger); }
+    .val-zero    { color: var(--text-muted); }
+
+    /* Badge de estado PAGADO / PENDIENTE */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 14px; border-radius: 20px;
+      font-size: .72rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-top: 6px;
+    }
+    .status-PAGADO    { background: #d1fae5; color: #065f46; }
+    .status-PENDIENTE { background: #fee2e2; color: #991b1b; }
+    .status-PARCIAL   { background: #fef3c7; color: #92400e; }
+
+    /* ── Info del propietario ── */
+    .doc-info {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .info-cell {
+      flex: 1; padding: 14px 28px;
+      border-right: 1px solid var(--border);
+      min-width: 160px;
+    }
+    .info-cell:last-child { border-right: none; }
+    .info-cell .lbl {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted); margin-bottom: 4px;
+    }
+    .info-cell .val { font-size: .92rem; font-weight: 700; color: var(--text); }
+
+    /* ── Tabla de movimientos ── */
+    .doc-table-wrap { padding: 0 28px 20px; }
+    table.doc-table {
+      width: 100%; border-collapse: collapse; margin-top: 16px;
+    }
+    .doc-table thead tr {
+      background: var(--brand-light);
+    }
+    .doc-table th {
+      padding: 9px 12px; text-align: left;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--brand-dark);
+      border-bottom: 2px solid var(--brand-mid);
+    }
+    .doc-table th.right, .doc-table td.right { text-align: right; }
+    .doc-table td {
+      padding: 9px 12px; font-size: .85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .doc-table tbody tr:hover { background: #fafbff; }
+    .doc-table td .desc-main { font-weight: 600; color: var(--text); }
+    .doc-table td .desc-sub  { font-size: .75rem; color: var(--text-muted); margin-top: 1px; }
+    .doc-table td.saldo-zero   { color: var(--success); font-weight: 700; }
+    .doc-table td.saldo-pend   { color: var(--danger);  font-weight: 700; }
+    .doc-table td.saldo-parcial{ color: var(--warning); font-weight: 700; }
+
+    /* ── Nota / pie de documento ── */
     .doc-footer {
-      margin-top:20px; padding-top:12px; border-top:1px solid #e0e0e0;
-      display:flex; justify-content:space-between; align-items:flex-end;
+      margin: 0 28px 24px;
+      padding: 12px 16px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 7px;
+      font-size: .78rem;
+      color: #78350f;
     }
-    .doc-footer-left { font-size:.67rem; color:#aaa; line-height:1.8; }
-    .firma-line { border-top:1px solid #bbb; margin-top:36px; padding-top:5px; font-size:.67rem; color:#aaa; text-align:center; min-width:140px; }
+    .doc-footer strong { display: block; margin-bottom: 3px; }
 
-    #loading { text-align:center; padding:60px; color:#999; font-size:.9rem; }
+    .doc-sign {
+      display: flex; justify-content: flex-end;
+      padding: 0 28px 28px;
+    }
+    .doc-sign-block { text-align: center; }
+    .doc-sign-block .line {
+      width: 180px; border-top: 1px solid var(--text);
+      margin: 0 auto 6px;
+    }
+    .doc-sign-block p { font-size: .75rem; color: var(--text-muted); }
 
+    /* ── Loading / error ── */
+    .loading-box {
+      text-align: center; padding: 60px 20px; color: var(--text-muted);
+    }
+    .loading-box i { font-size: 2rem; margin-bottom: 12px; display: block; opacity: .4; }
+
+    /* ══ IMPRESIÓN — se preservan colores ══ */
     @media print {
-      body { background:#fff; }
-      .print-bar { display:none; }
-      .btn-factura-mini { display:none; }  /* ocultar botones en impresión */
-      .page { margin:0; box-shadow:none; padding:8mm 12mm; width:100%; min-height:auto; }
-      @page { size:A4; margin:0; }
+      body { background: white !important; }
+      .action-bar { display: none !important; }
+      .doc-wrapper { margin: 0; padding: 0; }
+      #doc { box-shadow: none; border-radius: 0; }
+      .doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .doc-totals, .doc-info, .doc-table { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .doc-footer  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .status-badge{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .doc-table thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
 <body>
 
-<div class="print-bar">
-  <button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
-  <button class="btn-back"  onclick="window.close()">← Cerrar</button>
+<!-- ── Barra de acciones (oculta al imprimir/descargar) ── -->
+<div class="action-bar" id="actionBar">
+  <span><i class="fas fa-file-invoice-dollar"></i> Estado de Cuenta</span>
+  <button class="btn-action btn-download" onclick="descargarPDF()">
+    <i class="fas fa-download"></i> Descargar PDF
+  </button>
+  <button class="btn-action btn-print" onclick="window.print()">
+    <i class="fas fa-print"></i> Imprimir
+  </button>
+  <button class="btn-action btn-close" onclick="window.close()">
+    <i class="fas fa-times"></i> Cerrar
+  </button>
 </div>
 
-<div id="loading">Cargando estado de cuenta...</div>
-
-<div class="page" id="stmt-page" style="display:none;">
-
-  <div class="doc-head">
-    <div class="brand">
-      <div class="brand-logo" id="stmt-logo">AR</div>
-      <div class="brand-name">
-        <h1>ALIANZA RESIDENCIAL</h1>
-        <p id="stmt-prop-addr">Administración de Propiedades</p>
-      </div>
-    </div>
-    <div class="doc-title">
-      <h2>Estado de Cuenta</h2>
-      <div class="doc-date" id="stmt-date"></div>
+<div class="doc-wrapper">
+  <div id="doc">
+    <div class="loading-box" id="loadingBox">
+      <i class="fas fa-spinner fa-spin"></i>
+      Cargando estado de cuenta…
     </div>
   </div>
-
-  <div class="owner-section">
-    <div class="owner-cell">
-      <div class="lbl">Propietario</div>
-      <div class="val" id="s-owner">—</div>
-    </div>
-    <div class="owner-cell">
-      <div class="lbl">Unidad</div>
-      <div class="val" id="s-unit">—</div>
-    </div>
-    <div class="owner-cell">
-      <div class="lbl">Propiedad</div>
-      <div class="val" id="s-prop">—</div>
-    </div>
-  </div>
-
-  <div class="fin-summary">
-    <div class="fin-cell">
-      <div class="fc-lbl">Total facturado</div>
-      <div class="fc-val" id="sum-total">—</div>
-    </div>
-    <div class="fin-cell is-paid">
-      <div class="fc-lbl">Total pagado</div>
-      <div class="fc-val" id="sum-paid">—</div>
-    </div>
-    <div class="fin-cell is-pending">
-      <div class="fc-lbl">Saldo pendiente</div>
-      <div class="fc-val" id="sum-pend">—</div>
-    </div>
-  </div>
-
-  <div class="section-title">Historial de cargos</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Descripción</th>
-        <th>Vencimiento</th>
-        <th class="r">Cargo</th>
-        <th class="r">Pagado</th>
-        <th class="r">Saldo</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody id="stmt-tbody"></tbody>
-  </table>
-
-  <div class="legal-notice">
-    <p>
-      <strong>DOCUMENTO NO FISCAL —</strong>
-      Este estado de cuenta es un documento informativo generado por el sistema de administración
-      de Alianza Residencial y <strong>no constituye una factura fiscal ni comprobante de pago
-      con validez tributaria</strong> ante la Dirección General de Ingresos (DGI) u otra autoridad
-      competente. No tiene valor legal como documento de cobro judicial. Para efectos fiscales y
-      legales, solicite el recibo o factura oficial emitido al momento del pago.
-    </p>
-  </div>
-
-  <div class="doc-footer">
-    <div class="doc-footer-left">
-      Alianza Residencial &bull; Sistema de Administración de Propiedades<br>
-      Generado el <span id="gen-date"></span>
-    </div>
-    <div class="firma-line">Firma Administración</div>
-  </div>
-
 </div>
 
 <script>
-const fmoney = v => parseFloat(v||0).toLocaleString('es-PA',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fdate  = s => {
-  if (!s) return '—';
+// ── Obtener token y owner_id de la URL ──────────────────
+const TOKEN_KEY = 'alianza_token';
+function token() { return localStorage.getItem(TOKEN_KEY); }
+
+async function apiGet(endpoint) {
+  const res = await fetch(`/api${endpoint}`, {
+    headers: { 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+function fmt(v) {
+  return parseFloat(v || 0).toLocaleString('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtDate(str) {
+  if (!str || str === '—') return '—';
+  try { const [y,m,d] = str.split('T')[0].split('-'); return `${d}/${m}/${y}`; } catch(_){ return str; }
+}
+
+// Determinar estado general del propietario
+function estadoGeneral(pendiente) {
+  if (pendiente <= 0) return 'PAGADO';
+  return 'PENDIENTE';
+}
+
+async function init() {
+  const params   = new URLSearchParams(window.location.search);
+  const ownerId  = params.get('owner_id');
+  if (!ownerId) { showError('No se especificó propietario.'); return; }
+
   try {
-    const [y,m,d] = s.split('T')[0].split('-');
-    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
-  } catch { return s; }
-};
+    const [owner, statement, unitOwners, units, properties] = await Promise.all([
+      apiGet(`/owners/${ownerId}`),
+      apiGet(`/finance/statement/${ownerId}`),
+      apiGet('/unit-owners/all').catch(() => []),
+      apiGet('/units').catch(()  => []),
+      apiGet('/properties').catch(()=> []),
+    ]);
 
-(async () => {
-  const params  = new URLSearchParams(location.search);
-  const ownerId = params.get('owner_id');
-  if (!ownerId) { document.getElementById('loading').textContent='No se especificó un propietario.'; return; }
+    // Resolver unidad y propiedad del propietario
+    const uo   = (unitOwners || []).find(x => x.owner_id == ownerId && x.is_active);
+    const unit = uo ? (units  || []).find(u => u.id === uo.unit_id) : null;
+    const prop = unit ? (properties || []).find(p => p.id === unit.property_id) : null;
 
-  try {
-    const token   = localStorage.getItem('access_token');
-    const headers = token ? {'Authorization':`Bearer ${token}`} : {};
+    const unitNum  = unit ? unit.unit_number : '—';
+    const propName = prop ? prop.name        : 'Alianza Residencial';
 
-    const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`,{headers})
-      .then(r => { if (!r.ok) throw new Error('No encontrado'); return r.json(); });
-
-    const logoEl = document.getElementById('stmt-logo');
-    const img    = new Image();
-    img.onload   = () => { logoEl.innerHTML=`<img src="/static/logo.png" alt="Logo">`; };
-    img.src      = '/static/logo.png';
-
-    const today = new Date().toLocaleDateString('es-PA',{year:'numeric',month:'long',day:'numeric'});
-    document.getElementById('stmt-date').textContent      = today;
-    document.getElementById('gen-date').textContent       = today;
-    document.getElementById('s-owner').textContent        = data.owner_name    || '—';
-    document.getElementById('s-unit').textContent         = data.unit_number   ? `Apt. ${data.unit_number}` : '—';
-    document.getElementById('s-prop').textContent         = data.property_name || '—';
-    document.getElementById('stmt-prop-addr').textContent = data.property_address || 'Administración de Propiedades';
-
-    const stmt = data.statement || [];
-    let tFact=0, tPaid=0, tPend=0;
-    stmt.forEach(c => { tFact+=c.amount||0; tPaid+=c.paid||0; tPend+=c.balance||0; });
-    document.getElementById('sum-total').textContent = `$${fmoney(tFact)}`;
-    document.getElementById('sum-paid').textContent  = `$${fmoney(tPaid)}`;
-    document.getElementById('sum-pend').textContent  = `$${fmoney(tPend)}`;
-
-    const tbody = document.getElementById('stmt-tbody');
-
-    if (!stmt.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#bbb;">Sin cargos registrados</td></tr>`;
-    } else {
-      stmt.forEach(c => {
-        tbody.innerHTML += `
-          <tr>
-            <td class="b">${c.description}</td>
-            <td class="muted">${fdate(c.due_date)}</td>
-            <td class="r">$${fmoney(c.amount)}</td>
-            <td class="r">$${fmoney(c.paid)}</td>
-            <td class="r b" style="color:${c.balance>0?'#c0392b':'#27ae60'}">$${fmoney(c.balance)}</td>
-            <td><span class="st st-${c.status}">${c.status}</span></td>
-          </tr>`;
-
-        if (c.payments?.length) {
-          // Mostrar cada pago con su # referencia/factura y botón Ver Factura
-          const pagosHtml = c.payments.map(p => {
-            const ref = p.fiscal_invoice_number
-              ? `<span>Factura: <strong>${p.fiscal_invoice_number}</strong></span>`
-              : (p.reference ? `<span>Ref: <strong>${p.reference}</strong></span>` : '');
-            
-            return `
-              <span>✓ <strong>$${fmoney(p.applied_amount)}</strong></span>
-              <span>${fdate(p.payment_date)}</span>
-              ${ref}
-              ${btnFactura}`;
-          }).join('<span style="color:#ccc;margin:0 4px;">|</span>');
-
-          tbody.innerHTML += `<tr class="pay-detail-row">
-            <td colspan="6">
-              <div class="pay-detail-inner">${pagosHtml}</div>
-            </td>
-          </tr>`;
-        }
-      });
-    }
-
-    document.getElementById('loading').style.display   = 'none';
-    document.getElementById('stmt-page').style.display = 'block';
-
+    renderDoc(owner, statement, unitNum, propName);
   } catch(e) {
-    document.getElementById('loading').textContent = `Error: ${e.message}`;
+    showError('Error al cargar los datos: ' + e.message);
   }
-})();
+}
+
+function renderDoc(owner, statement, unitNum, propName) {
+  const charges = statement.charges || statement || [];
+  const now     = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
+
+  // Calcular totales
+  let totalCargo  = 0, totalPagado = 0;
+  charges.forEach(c => {
+    totalCargo  += parseFloat(c.amount  || 0);
+    totalPagado += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+  });
+  const totalPendiente = totalCargo - totalPagado;
+  const estado = estadoGeneral(totalPendiente);
+
+  // Filas de la tabla
+  const rows = charges.map(c => {
+    const pagado   = parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
+    const saldo    = parseFloat(c.balance || 0);
+    const isPaid   = saldo <= 0;
+    const isPartial= !isPaid && pagado > 0;
+    const saldoClass = isPaid ? 'saldo-zero' : (isPartial ? 'saldo-parcial' : 'saldo-pend');
+    const fechaPago  = c.payment_date || c.paid_date || (isPaid ? 'Pagado' : '—');
+
+    return `<tr>
+      <td>
+        <div class="desc-main">${c.description || c.razon || '—'}</div>
+        ${c.charge_number ? `<div class="desc-sub">Cargo #${c.charge_number}</div>` : ''}
+      </td>
+      <td>${fmtDate(typeof fechaPago === 'string' && fechaPago.includes('-') ? fechaPago : null) !== '—'
+           ? fmtDate(fechaPago)
+           : (isPaid ? '<span style="color:var(--success);font-size:.75rem;">✓ Pagado</span>' : '—')}</td>
+      <td class="right">$${fmt(c.amount)}</td>
+      <td class="right" style="color:var(--success);">$${fmt(pagado)}</td>
+      <td class="right ${saldoClass}">$${fmt(saldo)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('doc').innerHTML = `
+    <!-- Cabecera -->
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <!--
+          ╔════════════════════════════════════════════╗
+          ║  LOGO — cambia el div.doc-logo por:        ║
+          ║  <img src="/static/img/logo.png"           ║
+          ║       style="width:54px;border-radius:10px"> ║
+          ╚════════════════════════════════════════════╝
+        -->
+        <div class="doc-logo">MR</div>
+        <div class="doc-brand">
+          <h1>${propName}</h1>
+          <p>Sistema de Administración de Propiedades</p>
+        </div>
+      </div>
+      <div class="doc-title-block">
+        <h2>Estado de Cuenta</h2>
+        <p>${now}</p>
+      </div>
+    </div>
+
+    <!-- Totales -->
+    <div class="doc-totals">
+      <div class="total-cell">
+        <div class="lbl">Total Facturado</div>
+        <div class="val val-billed">$${fmt(totalCargo)}</div>
+      </div>
+      <div class="total-cell">
+        <div class="lbl">Total Pagado</div>
+        <div class="val val-paid">$${fmt(totalPagado)}</div>
+      </div>
+      <div class="total-cell">
+        <div class="lbl">Pendiente</div>
+        <div class="val ${totalPendiente > 0 ? 'val-pending' : 'val-zero'}">$${fmt(totalPendiente)}</div>
+        <span class="status-badge status-${estado}">${estado}</span>
+      </div>
+    </div>
+
+    <!-- Info propietario -->
+    <div class="doc-info">
+      <div class="info-cell">
+        <div class="lbl">Propietario</div>
+        <div class="val">${owner.full_name || owner.name || '—'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="lbl">Unidad</div>
+        <div class="val">${unitNum}</div>
+      </div>
+      <div class="info-cell">
+        <div class="lbl">Propiedad</div>
+        <div class="val">${propName}</div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="doc-table-wrap">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th>Fecha de Pago</th>
+            <th class="right">Cargo</th>
+            <th class="right">Pagado</th>
+            <th class="right">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.length ? rows : `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin cargos registrados</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Nota -->
+    <div class="doc-footer">
+      <strong><i class="fas fa-info-circle"></i> Nota</strong>
+      Este documento es generado automáticamente por el Sistema de Administración de Propiedades.
+      Para consultas comuníquese con la administración del edificio.
+    </div>
+
+    <!-- Firma -->
+    <div class="doc-sign">
+      <div class="doc-sign-block">
+        <div class="line"></div>
+        <p>Firma Administración</p>
+      </div>
+    </div>
+  `;
+}
+
+function showError(msg) {
+  document.getElementById('doc').innerHTML = `
+    <div class="loading-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>${msg}</p>
+    </div>`;
+}
+
+// ── Descargar con colores usando html2pdf ────────────────
+function descargarPDF() {
+  const bar = document.getElementById('actionBar');
+  bar.style.display = 'none';
+  const opt = {
+    margin:       [8, 8, 8, 8],
+    filename:     'estado_de_cuenta.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+  };
+  html2pdf().set(opt).from(document.getElementById('doc')).save().then(() => {
+    bar.style.display = '';
+  });
+}
+
+init();
 </script>
 </body>
 </html>
