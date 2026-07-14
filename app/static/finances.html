@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     /* =========================
       ESTILOS EXISTENTES
@@ -553,9 +554,14 @@
   <div class="modal-box" style="width:820px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <h3><i class="fas fa-chart-bar" style="color:var(--accent);"></i> Reporte</h3>
-      <button class="btn btn-muted" onclick="closeReporteFlexModal()" style="width:auto;margin:0;">
-        <i class="fas fa-times"></i> Cerrar
-      </button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary" onclick="descargarReporteFlexPDF()" style="width:auto;margin:0;">
+          <i class="fas fa-file-pdf"></i> Descargar PDF
+        </button>
+        <button class="btn btn-muted" onclick="closeReporteFlexModal()" style="width:auto;margin:0;">
+          <i class="fas fa-times"></i> Cerrar
+        </button>
+      </div>
     </div>
     <div id="reporte-flex-content" style="max-height:70vh;overflow-y:auto;"></div>
   </div>
@@ -1226,6 +1232,24 @@ async function generarReporteFlexible() {
 
 function closeReporteFlexModal() {
   document.getElementById('reporte-flex-modal').classList.remove('open');
+}
+
+function descargarReporteFlexPDF() {
+  const doc = document.getElementById('pdf-doc');
+  if (!doc) { showToast('Genera el reporte primero','warning'); return; }
+
+  const type = document.getElementById('rpt-type')?.value;
+  const filename = (REPORT_TYPES[type]?.run ? document.querySelector('#pdf-doc .doc-title h2')?.textContent : 'reporte') || 'reporte';
+
+  const opt = {
+    margin:       [8, 8, 8, 8],
+    filename:     `${filename.toLowerCase().replace(/\s+/g, '_')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+  };
+  html2pdf().set(opt).from(doc).save();
 }
 
 // ══════════════════════════════════════════════

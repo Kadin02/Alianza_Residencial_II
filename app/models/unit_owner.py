@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Date, Boolean
+from sqlalchemy import Column, Integer, ForeignKey, Date, Boolean, Index
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -18,3 +18,13 @@ class UnitOwner(Base):
 
     unit = relationship("Unit", backref="ownerships")
     owner = relationship("Owner", backref="units")
+
+    __table_args__ = (
+        Index(
+            "idx_unit_owners_unit_active",
+            "unit_id",
+            unique=True,
+            postgresql_where=(is_active == True),
+            sqlite_where=(is_active == 1),
+        ),
+    )

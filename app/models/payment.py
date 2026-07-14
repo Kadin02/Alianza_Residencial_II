@@ -29,6 +29,7 @@ class Payment(Base):
     concept = Column(String, nullable=True)
 
     property = relationship("Property")
+    owner = relationship("Owner")
 
     applications = relationship(
         "PaymentApplication",

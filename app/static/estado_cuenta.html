@@ -6,11 +6,15 @@
   <title>Estado de Cuenta | Alianza Residencial</title>
   <link rel="stylesheet" href="css/doc_style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
   <div class="document-wrapper">
-    <div class="action-bar">
+    <div class="action-bar" id="actionBar">
       <span><i class="fas fa-file-invoice-dollar"></i> Estado de Cuenta</span>
+      <button class="btn-action btn-download" onclick="descargarPDF()">
+        <i class="fas fa-download"></i> Descargar PDF
+      </button>
       <button class="btn-action btn-print" onclick="window.print()">
         <i class="fas fa-print"></i> Imprimir
       </button>
@@ -213,6 +217,22 @@ async function loadStatement(unitId) {
   currentUnitId = unitId;
   await loadStatement(currentUnitId);
 })();
+
+function descargarPDF() {
+  const bar = document.getElementById('actionBar');
+  bar.style.display = 'none';
+  const opt = {
+    margin:       [8, 8, 8, 8],
+    filename:     `estado_cuenta_alianza.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+  };
+  html2pdf().set(opt).from(document.getElementById('doc')).save().then(() => {
+    bar.style.display = '';
+  });
+}
 </script>
 </body>
 </html>
