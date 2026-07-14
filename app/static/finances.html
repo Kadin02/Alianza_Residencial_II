@@ -1071,13 +1071,23 @@ function ownerPropNameFlex(ownerId) {
   const prop = unit ? allPropsCache.find(p => p.id === unit.property_id) : null;
   return prop ? prop.name : '—';
 }
-function buildOwnerBalanceMapFlex() {
+function chargeYearOptionsHtml() {
+  const years = [...new Set(
+    (allChargesCache || [])
+      .map(c => c.date_created ? new Date(c.date_created).getFullYear() : null)
+      .filter(Boolean)
+  )].sort((a, b) => b - a);
+  return `<option value="">Todos</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+}
+
+function buildOwnerBalanceMapFlex(year) {
   return (allOwnersCache || []).map(o => {
     const unitNum  = ownerUnitNumberFlex(o.id);
     const propName = ownerPropNameFlex(o.id);
-    const charges  = (allChargesCache || []).filter(c =>
+    let charges  = (allChargesCache || []).filter(c =>
       String(c.owner_id) === String(o.id) || c.unit_number === unitNum
     );
+    if (year) charges = charges.filter(c => c.date_created && new Date(c.date_created).getFullYear() === Number(year));
     let fac = 0, pag = 0;
     charges.forEach(c => {
       fac += parseFloat(c.amount  || 0);
@@ -1092,20 +1102,23 @@ const REPORT_TYPES = {
     filtersHtml: () => `
       <label class="field-label">Propiedad</label>
       <select id="rpt-f-prop"><option value="">Todas</option>${propOptionsHtml()}</select>
+      <label class="field-label">Año</label>
+      <select id="rpt-f-year">${chargeYearOptionsHtml()}</select>
       <label class="field-label">Monto mínimo pendiente</label>
       <input type="number" id="rpt-f-min" placeholder="0.00" min="0" step="0.01">
     `,
     run: () => {
       const propId = document.getElementById('rpt-f-prop')?.value || '';
+      const year    = document.getElementById('rpt-f-year')?.value || '';
       const minAmt  = parseFloat(document.getElementById('rpt-f-min')?.value) || 0.01;
-      let result = buildOwnerBalanceMapFlex().filter(o => o.pendiente >= minAmt);
+      let result = buildOwnerBalanceMapFlex(year).filter(o => o.pendiente >= minAmt);
       if (propId) result = result.filter(o => {
         const unit = allUnitsCache.find(u => u.unit_number === o.unitNum);
         return unit && String(unit.property_id) === propId;
       });
       result.sort((a, b) => b.pendiente - a.pendiente);
       return {
-        title: 'Apartamentos con Saldo Pendiente',
+        title: 'Apartamentos con Saldo Pendiente' + (year ? ` — ${year}` : ''),
         columns: ['Propietario', 'Unidad', 'Propiedad', 'Facturado', 'Pagado', 'Pendiente'],
         rightCols: [3, 4, 5],
         rows: result.map(o => [o.name, o.unitNum ? `Apt. ${o.unitNum}` : '—', o.propName,
