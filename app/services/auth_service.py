@@ -72,9 +72,8 @@ def create_default_admin(db: Session):
     Crea el usuario admin si no existe usando las variables del .env:
       DEFAULT_ADMIN_USER / DEFAULT_ADMIN_PASS
     """
-    import os
-    username = getattr(settings, "DEFAULT_ADMIN_USER", "admin")
-    password = getattr(settings, "DEFAULT_ADMIN_PASS", "Admin123")
+    username = settings.DEFAULT_ADMIN_USER
+    password = settings.DEFAULT_ADMIN_PASS
 
     if not db.query(User).filter(User.username == username).first():
         db.add(User(

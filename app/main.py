@@ -3,17 +3,23 @@ app/main.py — Aplicación principal FastAPI
 Versión Railway: maneja proxy HTTPS y crea admin por defecto
 """
 
+import logging
+
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 import os
 
+from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.routers import property, unit, owner, unit_owner, finance, charges, auth
 from app.routers import suppliers, agenda
 from app.routers import garita
+from app.routers import concepts
+
+logger = logging.getLogger(__name__)
 
 # ── Crear tablas ─────────────────────────────
 Base.metadata.create_all(bind=engine)
@@ -53,16 +59,29 @@ async def https_redirect_middleware(request: Request, call_next):
     response = await call_next(request)
     return response
 
+allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 # ── Sub-app de API bajo /api ──────────────────
 api_app = FastAPI(title="Alianza API")
+
+
+@api_app.exception_handler(Exception)
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Error no manejado en %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor"},
+    )
 
 api_app.include_router(property.router)
 api_app.include_router(unit.router)
@@ -74,6 +93,7 @@ api_app.include_router(auth.router)
 api_app.include_router(suppliers.router)
 api_app.include_router(agenda.router)
 api_app.include_router(garita.router)
+api_app.include_router(concepts.router)
 
 app.mount("/api", api_app)
 
