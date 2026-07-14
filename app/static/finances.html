@@ -402,7 +402,7 @@
       <button class="btn btn-secondary" onclick="openStatementModal()"><i class="fas fa-file-alt"></i> Generar Estado de Cuenta</button>
 
       <div class="dropdown-wrap" id="reporte-dd-wrap">
-        <button class="btn btn-secondary" onclick="toggleDropdown('reporte-dd-wrap')">
+        <button class="btn btn-secondary" onclick="toggleDropdown('reporte-dd-wrap'); renderReportTypeFilters();">
           <i class="fas fa-chart-bar"></i> Reporte <i class="fas fa-caret-down" style="margin-left:2px;"></i>
         </button>
         <div class="dropdown-panel" id="reporte-dd-panel">
@@ -1118,7 +1118,7 @@ const REPORT_TYPES = {
       });
       result.sort((a, b) => b.pendiente - a.pendiente);
       return {
-        title: 'Apartamentos con Saldo Pendiente' + (year ? ` — ${year}` : ''),
+        title: 'Apartamentos con Saldo Pendiente',
         columns: ['Propietario', 'Unidad', 'Propiedad', 'Facturado', 'Pagado', 'Pendiente'],
         rightCols: [3, 4, 5],
         rows: result.map(o => [o.name, o.unitNum ? `Apt. ${o.unitNum}` : '—', o.propName,
@@ -2649,8 +2649,10 @@ function exportarReporteExcel() {
 });
 
 renderSidebar('finances');
-init();
-renderReportTypeFilters();
+(async () => {
+  await init();
+  renderReportTypeFilters();
+})();
 </script>
 </body>
 </html>
