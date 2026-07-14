@@ -14,5 +14,9 @@ class Property(Base):
     address = Column(String, nullable=False)
     max_units = Column(Integer, default=50)
 
+    phone   = Column(String, nullable=True)
+    email   = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 

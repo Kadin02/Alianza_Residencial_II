@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Administración | Alianza Residencial</title>
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     .adm-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;
@@ -93,6 +93,9 @@
       </button>
       <button class="adm-tab" onclick="switchTab('cargos')">
         <i class="fas fa-file-invoice"></i> Gestión de Cargos
+      </button>
+      <button class="adm-tab" onclick="switchTab('conceptos')">
+        <i class="fas fa-tags"></i> Conceptos
       </button>
     </div>
 
@@ -268,6 +271,49 @@
       </div>
     </div>
 
+    <!-- ══ CONCEPTOS ══ -->
+    <div class="adm-panel" id="panel-conceptos">
+      <div class="two-col">
+
+        <!-- Formulario nuevo concepto -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header">
+            <h3><i class="fas fa-tag"></i> Nuevo Concepto</h3>
+          </div>
+          <div class="card-body">
+            <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">
+              Estos conceptos aparecerán como lista desplegable al crear un cargo en el módulo Financiero.
+            </p>
+            <label class="field-label">Nombre del concepto *</label>
+            <input type="text" id="new-concept-name" placeholder="Ej: Mantenimiento, Cuota de Ascensor...">
+
+            <button onclick="createConcept()">
+              <i class="fas fa-plus"></i> Agregar Concepto
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de conceptos -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header">
+            <h3><i class="fas fa-list"></i> Conceptos Registrados</h3>
+            <span class="badge badge-primary" id="concepts-count">0</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr>
+              </thead>
+              <tbody id="concepts-tbody">
+                <tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /admin-content -->
 </div>
 
@@ -354,6 +400,30 @@
   </div>
 </div>
 
+<!-- ══ MODAL EDITAR CONCEPTO ══ -->
+<div class="modal-overlay" id="edit-concept-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fas fa-edit"></i> Editar Concepto</h3>
+      <button class="modal-close" onclick="closeEditConcept()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-concept-id">
+      <label class="field-label">Nombre *</label>
+      <input type="text" id="edit-concept-name">
+      <label class="field-label">Estado</label>
+      <select id="edit-concept-active">
+        <option value="true">Activo (visible al crear cargos)</option>
+        <option value="false">Inactivo (oculto)</option>
+      </select>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button onclick="confirmEditConcept()" style="flex:1;margin-top:0;"><i class="fas fa-save"></i> Guardar</button>
+        <button onclick="closeEditConcept()" class="btn btn-muted" style="width:auto;margin-top:0;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="notification"></div>
 <script src="js/main.js"></script>
 <script>
@@ -390,14 +460,15 @@ let editingPwdUserId = null;
 // ── Tabs ─────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.adm-tab').forEach((b, i) => {
-    const ids = ['usuarios','pagos','cargos'];
+    const ids = ['usuarios','pagos','cargos','conceptos'];
     b.classList.toggle('active', ids[i] === tab);
   });
   document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`panel-${tab}`).classList.add('active');
 
-  if (tab === 'pagos')  loadPayments();
-  if (tab === 'cargos') loadCharges();
+  if (tab === 'pagos')     loadPayments();
+  if (tab === 'cargos')    loadCharges();
+  if (tab === 'conceptos') loadConcepts();
 }
 
 // ── Init ─────────────────────────────────────────────────
@@ -689,8 +760,78 @@ async function deleteCharge(id, desc) {
   if (r) { showToast('Cargo eliminado', 'success'); loadCharges(); loadPayments(); }
 }
 
+// ── Conceptos ────────────────────────────────────────────
+let allConcepts = [];
+
+async function loadConcepts() {
+  allConcepts = await apiRequest('/concepts/?only_active=false') || [];
+  document.getElementById('concepts-count').textContent = allConcepts.length;
+
+  const tbody = document.getElementById('concepts-tbody');
+  if (!allConcepts.length) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin conceptos registrados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = allConcepts.map(c => `
+    <tr>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.active
+        ? '<span class="active-dot"></span>Activo'
+        : '<span class="inactive-dot"></span>Inactivo'}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-edit" onclick="editConcept(${c.id})"><i class="fas fa-pencil-alt"></i></button>
+          <button class="btn-del" onclick="deleteConcept(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i class="fas fa-trash-alt"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function createConcept() {
+  const nameEl = document.getElementById('new-concept-name');
+  const name = nameEl.value.trim();
+  if (!name) { showToast('Ingresa el nombre del concepto', 'error'); return; }
+
+  const r = await apiRequest('/concepts/', 'POST', { name });
+  if (r) {
+    showToast('Concepto agregado correctamente');
+    nameEl.value = '';
+    loadConcepts();
+  }
+}
+
+function editConcept(id) {
+  const c = allConcepts.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('edit-concept-id').value     = c.id;
+  document.getElementById('edit-concept-name').value   = c.name;
+  document.getElementById('edit-concept-active').value = c.active ? 'true' : 'false';
+  document.getElementById('edit-concept-modal').classList.add('open');
+}
+
+function closeEditConcept() {
+  document.getElementById('edit-concept-modal').classList.remove('open');
+}
+
+async function confirmEditConcept() {
+  const id     = document.getElementById('edit-concept-id').value;
+  const name   = document.getElementById('edit-concept-name').value.trim();
+  const active = document.getElementById('edit-concept-active').value === 'true';
+  if (!name) { showToast('El nombre no puede estar vacío', 'error'); return; }
+
+  const r = await apiRequest(`/concepts/${id}`, 'PUT', { name, active });
+  if (r) { showToast('Concepto actualizado'); closeEditConcept(); loadConcepts(); }
+}
+
+async function deleteConcept(id, name) {
+  if (!confirm(`¿Eliminar el concepto "${name}"?\n\nEsto no afecta cargos ya creados con este texto — solo lo quita de la lista al crear nuevos cargos.`)) return;
+  const r = await apiRequest(`/concepts/${id}`, 'DELETE');
+  if (r) { showToast('Concepto eliminado', 'success'); loadConcepts(); }
+}
+
 // Cerrar modales al click fuera
-['pwd-modal','edit-payment-modal','edit-charge-modal'].forEach(id => {
+['pwd-modal','edit-payment-modal','edit-charge-modal','edit-concept-modal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
   });

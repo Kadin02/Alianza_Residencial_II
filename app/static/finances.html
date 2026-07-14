@@ -3,39 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Finanzas | Alianza Residencial</title>
-  <link rel="stylesheet" href="css/main.css">
+  <title>Financiero | Alianza Residencial</title>
+  <link rel="stylesheet" href="css/main.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     /* =========================
       ESTILOS EXISTENTES
     ========================= */
-    .fin-tabs {
-      display: flex; gap: 6px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 6px;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
+    .fin-section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .95rem; font-weight: 700; color: var(--navy);
+      margin-bottom: 14px;
     }
+    .fin-section-title i { color: var(--accent); }
 
-    .fin-tab {
-      padding: 9px 20px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-family: inherit;
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.18s;
-      display: flex; align-items: center; gap: 7px;
+    /* Barra de acciones de Movimientos */
+    .mov-toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 1.25rem;
+      position: relative;
+      z-index: 20;
     }
+    .mov-toolbar button { width: auto; margin-top: 0; }
 
-    .fin-tab:hover  { background: var(--accent-soft); color: var(--accent); }
-    .fin-tab.active { background: var(--accent); color: #fff; }
+    /* ── Dropdowns de la barra superior (Reporte ▾ / Más acciones ▾) ── */
+    .dropdown-wrap { position: relative; }
+    .dropdown-panel {
+      display: none;
+      position: absolute; top: calc(100% + 6px); left: 0;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+      padding: 14px; min-width: 260px; z-index: 30;
+    }
+    .dropdown-wrap.open .dropdown-panel { display: block; }
+    .dropdown-panel select,
+    .dropdown-panel input { margin-bottom: 10px; }
+    .dropdown-panel-list { padding: 6px; min-width: 220px; }
+    .dropdown-panel-list button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: transparent; color: var(--text-primary); border: none;
+      padding: 9px 10px; border-radius: 8px; font-size: .82rem; font-weight: 500;
+      text-align: left; cursor: pointer; box-shadow: none; margin: 0;
+    }
+    .dropdown-panel-list button:hover { background: var(--accent-soft); color: var(--accent); }
+    .dropdown-panel-list button i { width: 16px; color: var(--text-muted); }
+
+    /* ── Tarjetas resumen de Movimientos (reusa .stat-card de Inicio) ── */
+    #mov-summary-cards.stats-grid { margin-bottom: 1.25rem; }
+
+    /* ── Menú de acciones "⋮" por fila ── */
+    .kebab-wrap { position: relative; display: inline-block; }
+    .kebab-btn {
+      width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--text-secondary); cursor: pointer;
+      font-size: 1rem; line-height: 1; padding: 0; margin: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .kebab-btn:hover { background: var(--accent-soft); color: var(--accent); }
+    .kebab-menu {
+      display: none;
+      position: absolute; right: 0; top: calc(100% + 4px);
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+      min-width: 160px; z-index: 40; padding: 6px;
+    }
+    .kebab-menu.open { display: block; }
+    .kebab-menu button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: transparent; color: var(--text-primary); border: none;
+      padding: 8px 10px; border-radius: 8px; font-size: .8rem; font-weight: 500;
+      text-align: left; cursor: pointer; box-shadow: none; margin: 0;
+    }
+    .kebab-menu button:hover { background: var(--accent-soft); color: var(--accent); }
+    .kebab-menu button.danger { color: var(--danger); }
+    .kebab-menu button.danger:hover { background: var(--danger-bg); color: var(--danger); }
+
+    /* ── Headers de tabla ordenables ── */
+    th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    th.sortable:hover { color: var(--accent); }
+    th.sortable .sort-icon { font-size: .68rem; margin-left: 4px; opacity: .5; }
+    th.sortable.sort-active .sort-icon { opacity: 1; color: var(--accent); }
+
+    .badge-CARGO { background: #fef3c7; color: #92400e; }
+    .badge-PAGO  { background: #d1fae5; color: #065f46; }
+    .badge-PENDIENTE { background: #fee2e2; color: #991b1b; }
+    .badge-PARCIAL   { background: #fef3c7; color: #92400e; }
+
+    /* ── Sub-pestañas de Movimientos (Pendientes/Pagados/Todos) --
+       mismos botones .btn/.btn-primary/.btn-secondary que la barra
+       superior (Nuevo Pago, Estado de Cuenta, Reporte), con ícono +
+       badge de conteo. La activa queda sólida (btn-primary), el resto
+       en outline (btn-secondary). ── */
+    .mov-subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .mov-subtab .badge {
+      background: rgba(255,255,255,0.25); color: inherit;
+      font-size: .68rem; font-weight: 700; padding: 1px 8px; margin-left: 2px;
+    }
+    .mov-subtab.btn-secondary .badge { background: var(--accent-soft); color: var(--accent); }
+
+    .filters-row {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+      margin-bottom: 14px;
+    }
+    .filters-row > div { display: flex; flex-direction: column; }
+    .filters-row label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--text-muted); margin-bottom: 3px;
+    }
+    .filters-row select,
+    .filters-row input { width: auto; min-width: 140px; margin-bottom: 0; }
+
+    .summary-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+      gap: 10px; margin-bottom: 18px;
+    }
+    .summary-row .sum-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px 16px; text-align: center;
+    }
+    .summary-row .sum-card .sv { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
+    .summary-row .sum-card .sl { font-size: .7rem; color: var(--text-muted); margin-top: 3px;
+                    text-transform: uppercase; letter-spacing: .04em; }
+    .summary-row .sum-card.danger .sv  { color: var(--danger); }
+    .summary-row .sum-card.success .sv { color: var(--success); }
+
+    .tbl-btn {
+      padding: 4px 10px; font-size: .73rem; font-weight: 600;
+      border-radius: 5px; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 4px;
+      border: 1px solid var(--border); background: var(--card-bg);
+      color: var(--accent); transition: background .12s;
+    }
+    .tbl-btn:hover { background: var(--accent-soft); }
+
+    /* Acciones por fila (editar/anular) — mismo patrón que owners.html/admin.html */
+    .action-btns { display:flex; gap:6px; }
+    .btn-edit { background:var(--accent-soft); color:var(--accent); border:1px solid var(--border); padding:4px 10px; font-size:.75rem; border-radius:5px; cursor:pointer; font-family:inherit; font-weight:600; }
+    .btn-edit:hover { background:var(--accent); color:#fff; }
+    .btn-del  { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:4px 10px; font-size:.75rem; border-radius:5px; cursor:pointer; font-family:inherit; font-weight:600; }
+    .btn-del:hover  { background:#dc2626; color:#fff; }
 
     .fin-panel { display: none; animation: fadeUp 0.2s ease; }
     .fin-panel.active { display: block; }
@@ -84,14 +192,14 @@
 
     /* PRIMARY */
     .btn-primary,
-    button:not(.fin-tab):not(.toggle-btn):not(.btn-secondary):not(.btn-muted) {
+    button:not(.toggle-btn):not(.btn-secondary):not(.btn-muted) {
       background: var(--accent);
       color: #fff;
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
 
     .btn-primary:hover,
-    button:not(.fin-tab):not(.toggle-btn):not(.btn-secondary):not(.btn-muted):hover {
+    button:not(.toggle-btn):not(.btn-secondary):not(.btn-muted):hover {
       transform: translateY(-1px);
       box-shadow: 0 4px 10px rgba(0,0,0,0.12);
       opacity: 0.95;
@@ -119,18 +227,6 @@
       background: #e2e8f0;
     }
 
-    /* TABS MÁS LIMPIOS */
-    .fin-tab {
-      border-radius: 8px;
-      padding: 8px 16px;
-    }
-
-    .fin-tab.active {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    }
-
     /* TOGGLE */
     .toggle-btn {
       border-radius: 8px;
@@ -148,6 +244,141 @@
     .toggle-btn:hover {
       background: #f1f5f9;
     }
+
+    /* =========================
+      HISTORIAL DE PAGOS (migrado de historial.html)
+    ========================= */
+    .filter-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+    .filter-row > div { display:flex; flex-direction:column; }
+    .filter-row label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:4px; }
+    .filter-row input, .filter-row select { width:auto; margin-bottom:0; min-width:140px; }
+
+    .summary-chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .s-chip { padding:8px 16px; border-radius:var(--radius-md); border:1px solid var(--border); background:var(--card-bg); font-size:.78rem; }
+    .s-chip strong { display:block; font-size:1rem; font-weight:800; color:var(--accent); }
+    .s-chip span   { color:var(--text-muted); }
+
+    .razon-tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:.7rem; font-weight:700; }
+    .tag-mant  { background:#dbeafe; color:#1d4ed8; }
+    .tag-gas   { background:#fef3c7; color:#b45309; }
+    .tag-asc   { background:#d1fae5; color:#065f46; }
+    .tag-admin { background:#ede9fe; color:#6d28d9; }
+    .tag-otros { background:#f3f4f6; color:#374151; }
+
+    /* ── Modal reporte por apartamento (nombres propios para no chocar con .modal-overlay/.modal-box) ── */
+    .rep-modal-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(10,20,40,.5); z-index:500;
+      align-items:flex-start; justify-content:center;
+      backdrop-filter:blur(2px); padding:20px; overflow-y:auto;
+    }
+    .rep-modal-overlay.open { display:flex; }
+    .rep-modal-box {
+      background:var(--card-bg); border-radius:var(--radius-xl);
+      width:820px; max-width:98vw; box-shadow:var(--shadow-lg);
+      animation:modalIn .2s ease; margin:auto;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(.97) translateY(10px); }
+      to   { opacity:1; transform:scale(1)   translateY(0); }
+    }
+    .rep-modal-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:18px 24px 14px; border-bottom:1px solid var(--border);
+    }
+    .rep-modal-header h3 { font-size:1rem; font-weight:700; color:var(--text-primary); }
+    .rep-modal-close { background:transparent; border:none; font-size:1.1rem; cursor:pointer; color:var(--text-muted); padding:4px 8px; border-radius:6px; transition:background .12s; width:auto; margin-top:0; }
+    .rep-modal-close:hover { background:var(--border); }
+    .rep-modal-body { padding:20px 24px; }
+    .rep-modal-selectors { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px; }
+    .rep-modal-selectors > div { display:flex; flex-direction:column; }
+    .rep-modal-selectors label.field-label { font-size:.7rem; }
+    .rep-modal-selectors select, .rep-modal-selectors input { min-width:160px; margin-bottom:0; }
+
+    /* ══ DOCUMENTO PDF (modal "Reporte por Apartamento") ══
+       Antes se inyectaba <link href="doc_style.css"> vía innerHTML dentro
+       de #reporte-content, lo que cargaba esa hoja de estilo GLOBALMENTE en
+       toda la SPA (un <link> insertado por innerHTML sí se ejecuta) y podía
+       pisar estilos del shell de la app. Ahora el mismo look de documento
+       (doc-header/summary-cards/doc-table/etc., igual que estado_cuenta.html
+       y Factura.html) vive acá mismo, con reglas ESCOPADAS a #pdf-doc, sin
+       tocar el resto de la página. */
+    #pdf-doc {
+      --doc-accent: var(--navy);
+      --doc-text:   var(--text-primary);
+      --doc-muted:  var(--text-secondary);
+      --doc-light:  var(--text-muted);
+      --doc-border: var(--border);
+      font-family: 'Inter', 'Lato', sans-serif;
+      color: var(--doc-text);
+      font-size: 12.5px;
+    }
+    #pdf-doc .doc-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 2px solid var(--doc-accent);
+      padding-bottom: 16px; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+    }
+    #pdf-doc .doc-header h1 { font-size: 1.15rem; font-weight: 800; color: var(--doc-accent); text-transform: uppercase; letter-spacing: .04em; }
+    #pdf-doc .sub-info { font-size: .75rem; color: var(--doc-muted); }
+    #pdf-doc .doc-title { text-align: right; }
+    #pdf-doc .doc-title h2 { font-size: .95rem; font-weight: 700; color: var(--doc-accent); }
+    #pdf-doc .doc-title .date { font-size: .72rem; color: var(--doc-muted); }
+
+    #pdf-doc .info-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+      border: 1px solid var(--doc-border); border-radius: 6px; overflow: hidden;
+      margin-bottom: 16px;
+    }
+    #pdf-doc .info-cell { padding: 10px 14px; border-right: 1px solid var(--doc-border); }
+    #pdf-doc .info-cell:last-child { border-right: none; }
+    #pdf-doc .info-cell .ic-lbl { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--doc-light); margin-bottom: 3px; }
+    #pdf-doc .info-cell .ic-val { font-size: .88rem; font-weight: 700; color: var(--doc-text); }
+
+    #pdf-doc .summary-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 10px; margin-bottom: 16px; }
+    #pdf-doc .sum-card { text-align: center; padding: 12px; border-radius: 6px; border: 1px solid var(--doc-border); }
+    #pdf-doc .sum-card .sv { font-size: 1.1rem; font-weight: 800; color: var(--doc-accent); }
+    #pdf-doc .sum-card .sl { font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--doc-muted); margin-top: 3px; }
+
+    #pdf-doc table.doc-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: 14px 0; }
+    #pdf-doc .doc-table thead tr { background: var(--surface); }
+    #pdf-doc .doc-table th { padding: 8px 10px; text-align: left; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--doc-muted); border-bottom: 2px solid var(--doc-border); }
+    #pdf-doc .doc-table th.right { text-align: right; }
+    #pdf-doc .doc-table td { padding: 7px 10px; border-bottom: 1px solid var(--doc-border); }
+    #pdf-doc .doc-table td.right { text-align: right; }
+
+    #pdf-doc .signature-section { display: flex; justify-content: flex-end; margin-top: 28px; padding-top: 16px; }
+    #pdf-doc .signature-block { text-align: center; min-width: 180px; }
+    #pdf-doc .signature-line { border-top: 1.5px solid var(--doc-text); margin-bottom: 6px; }
+    #pdf-doc .sig-name { font-size: .8rem; font-weight: 700; color: var(--doc-text); }
+    #pdf-doc .sig-title { font-size: .68rem; color: var(--doc-muted); }
+
+    #pdf-doc .doc-footer-note {
+      margin-top: 20px; padding: 12px 16px; background: var(--warning-bg);
+      border: 1px solid var(--warning-brd); border-left: 4px solid var(--warning);
+      border-radius: 0 8px 8px 0; font-size: .72rem; color: var(--doc-muted); line-height: 1.6;
+    }
+    #pdf-doc .doc-footer-note strong { color: var(--doc-text); display: block; margin-bottom: 4px; }
+
+    /* ── Print del modal de reporte ── */
+    @media print {
+      * { visibility: hidden; }
+      #pdf-doc,
+      #pdf-doc * { visibility: visible; }
+      #pdf-doc {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        padding: 12mm 14mm !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        font-size: 12.5px !important;
+      }
+      @page {
+        size: A4;
+        margin: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -156,100 +387,307 @@
 
 <div class="app">
   <div class="page-header">
-    <h1><i class="fas fa-chart-line" style="color:var(--accent);margin-right:8px;"></i>Finanzas</h1>
-    <p>Cargos, pagos, facturación y estados de cuenta</p>
+    <h1><i class="fas fa-chart-line" style="color:var(--accent);margin-right:8px;"></i><span id="fin-page-title">Financiero</span></h1>
+    <p id="fin-page-subtitle">Registra pagos y cargos en una sola vista</p>
   </div>
 
-  <!-- TABS DE NAVEGACIÓN -->
-  <div class="fin-tabs">
-    <button class="fin-tab active" onclick="switchTab('pagos')">
-      <i class="fas fa-money-bill-wave"></i> Registrar Pago
-    </button>
-    <button class="fin-tab" onclick="switchTab('cargos')">
-      <i class="fas fa-file-invoice"></i> Crear Cargo
-    </button>
-    <button class="fin-tab" onclick="switchTab('historial')">
-      <i class="fas fa-table"></i> Historial de Cargos
-    </button>
-    <button class="fin-tab" onclick="switchTab('estados')">
-      <i class="fas fa-file-alt"></i> Estados de Cuenta
-    </button>
-  </div>
+  <!-- ══════════════════ MOVIMIENTOS (Cargos + Pagos unificados) ══════════════════ -->
+  <div class="fin-panel active" id="panel-main">
 
-  <!-- ══════════════════ TAB: REGISTRAR PAGO ══════════════════ -->
-  <div class="fin-panel active" id="panel-pagos">
-    <div class="two-col">
+    <!-- Barra de acciones fija -->
+    <div class="mov-toolbar">
+      <button class="btn btn-primary" onclick="openChargeModal()"><i class="fas fa-file-invoice"></i> Nuevo Cargo</button>
+      <button class="btn btn-primary" onclick="openPaymentModal()"><i class="fas fa-money-bill-wave"></i> Nuevo Pago</button>
+      <button class="btn btn-secondary" onclick="openStatementModal()"><i class="fas fa-file-alt"></i> Generar Estado de Cuenta</button>
 
-      <!-- Columna izquierda: selector + cargos -->
-      <div>
-        <div class="card">
-          <div class="card-header">
-            <h3><i class="fas fa-search"></i> Buscar por</h3>
+      <div class="dropdown-wrap" id="reporte-dd-wrap">
+        <button class="btn btn-secondary" onclick="toggleDropdown('reporte-dd-wrap')">
+          <i class="fas fa-chart-bar"></i> Reporte <i class="fas fa-caret-down" style="margin-left:2px;"></i>
+        </button>
+        <div class="dropdown-panel" id="reporte-dd-panel">
+          <label class="field-label">Tipo de reporte</label>
+          <select id="rpt-type" onchange="renderReportTypeFilters()">
+            <option value="morosos">Apartamentos con Saldo Pendiente</option>
+            <option value="aldia">Unidades Paz y Salvo</option>
+            <option value="proveedores">Proveedores</option>
+          </select>
+          <div id="rpt-type-filters"></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px;" onclick="generarReporteFlexible()">
+            <i class="fas fa-file-alt"></i> Generar
+          </button>
+        </div>
+      </div>
+
+      <div class="dropdown-wrap" id="mas-dd-wrap">
+        <button class="btn btn-ghost" onclick="toggleDropdown('mas-dd-wrap')">
+          <i class="fas fa-ellipsis-h"></i> Más acciones <i class="fas fa-caret-down" style="margin-left:2px;"></i>
+        </button>
+        <div class="dropdown-panel dropdown-panel-list" id="mas-dd-panel">
+          <button onclick="closeDropdowns(); openMonthlyModal()"><i class="fas fa-calendar-check"></i> Generar Cuotas del Mes</button>
+          <button onclick="closeDropdowns(); openLateFeeModal()"><i class="fas fa-exclamation-triangle"></i> Aplicar Mora</button>
+          <button onclick="closeDropdowns(); openApplyCreditModal()"><i class="fas fa-hand-holding-usd"></i> Aplicar Crédito</button>
+          <button onclick="closeDropdowns(); openFifoModal()"><i class="fas fa-layer-group"></i> Pago FIFO</button>
+          <button onclick="closeDropdowns(); abrirReporte()"><i class="fas fa-file-alt"></i> Reporte por Apartamento</button>
+          <button onclick="closeDropdowns(); exportarExcelMovimientos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjetas resumen (reactivas a la sub-pestaña activa) -->
+    <div class="stats-grid" id="mov-summary-cards"></div>
+
+    <!-- Sub-pestañas: mismo estilo de botón que la barra superior (Nuevo Pago / Estado de Cuenta / Reporte) -->
+    <div class="mov-subtabs">
+      <button class="btn btn-primary mov-subtab active" data-subtab="pendientes" onclick="switchMovSubtab('pendientes')">
+        <i class="fas fa-clock"></i> Pendientes <span class="badge" id="mst-count-pendientes">0</span>
+      </button>
+      <button class="btn btn-secondary mov-subtab" data-subtab="pagados" onclick="switchMovSubtab('pagados')">
+        <i class="fas fa-check-circle"></i> Pagados <span class="badge" id="mst-count-pagados">0</span>
+      </button>
+      <button class="btn btn-secondary mov-subtab" data-subtab="todos" onclick="switchMovSubtab('todos')">
+        <i class="fas fa-list"></i> Todos <span class="badge" id="mst-count-todos">0</span>
+      </button>
+    </div>
+
+    <!-- Filtros (solo en la pestaña "Todos") -->
+    <div class="card" id="mov-filters-card" style="display:none;">
+      <div class="card-header">
+        <h3><i class="fas fa-sliders-h"></i> Filtros</h3>
+        <button class="btn btn-ghost" onclick="clearMovFilters()" style="width:auto;margin-top:0;">
+          <i class="fas fa-times"></i> Limpiar
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="filter-row">
+          <div>
+            <label>Unidad</label>
+            <select id="mv-unit" onchange="applyMovFilters()"><option value="">Todas</option></select>
           </div>
-          <div class="card-body">
-            <div class="toggle-bar">
-              <button class="toggle-btn active" id="btn-owner" onclick="switchMode('owner')">
-                👤 Propietario
-              </button>
-              <button class="toggle-btn" id="btn-unit" onclick="switchMode('unit')">
-                🏠 Apartamento
-              </button>
-            </div>
+          <div>
+            <label>Concepto</label>
+            <select id="mv-concepto" onchange="applyMovFilters()"><option value="">Todos</option></select>
+          </div>
+          <div>
+            <label>Año</label>
+            <select id="mv-anio" onchange="applyMovFilters()"><option value="">Todos</option></select>
+          </div>
+          <div>
+            <label>Mes</label>
+            <select id="mv-mes" onchange="applyMovFilters()">
+              <option value="">Todos</option>
+              <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+              <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+              <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="mv-estado" onchange="applyMovFilters()">
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="PARCIAL">Parcial</option>
+              <option value="PAGADO">Pagado</option>
+            </select>
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select id="mv-tipo" onchange="applyMovFilters()">
+              <option value="">Todos</option>
+              <option value="CARGO">Cargo</option>
+              <option value="PAGO">Pago</option>
+            </select>
+          </div>
+          <div>
+            <label>Buscar</label>
+            <input type="text" id="mv-search" placeholder="Concepto, referencia..." oninput="applyMovFilters()" style="min-width:180px;">
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <!-- Por propietario -->
-            <div id="panel-owner">
-              <label class="field-label">Propietario</label>
-              <select id="owner-select">
-                <option value="">Seleccione propietario</option>
-              </select>
-            </div>
+    <!-- Tabla de movimientos -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-list"></i> <span id="mov-table-title">Pendientes</span></h3>
+        <span class="badge badge-primary" id="mov-count">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead id="mov-thead"></thead>
+          <tbody id="mov-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:10px 20px;font-size:.78rem;color:var(--text-muted);border-top:1px solid var(--border-light);" id="mov-page-info"></div>
+    </div>
+  </div><!-- /panel-main -->
 
-            <!-- Por unidad -->
-            <div id="panel-unit" style="display:none;">
-              <label class="field-label">Propiedad</label>
-              <select id="prop-pay-select" onchange="loadUnitsByProp()">
-                <option value="">Seleccione propiedad</option>
-              </select>
-              <label class="field-label">Apartamento</label>
-              <select id="unit-pay-select" onchange="loadUnitCharges()">
-                <option value="">Seleccione unidad</option>
-              </select>
-            </div>
+</div><!-- /app -->
 
-            <!-- Info propietario (visible cuando se busca por unidad) -->
-            <div class="info-box-blue" id="owner-info-box">
-              <i class="fas fa-user-circle"></i> <span id="owner-info-text"></span>
-            </div>
+<!-- ══════════════════ MODAL: ESTADO DE CUENTA ══════════════════ -->
+<div class="modal-overlay" id="statement-modal">
+  <div class="modal-box" style="width:420px;">
+    <h3><i class="fas fa-file-alt" style="color:var(--accent);"></i> Generar Estado de Cuenta</h3>
+    <label class="field-label">Propietario</label>
+    <select id="stmt-select">
+      <option value="">Seleccione propietario</option>
+    </select>
+    <p style="font-size:.8rem;color:var(--text-muted);margin:8px 0 14px;line-height:1.5;">
+      Se abrirá una ventana con el historial completo, lista para imprimir o guardar como PDF.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeStatementModal()">Cerrar</button>
+      <button class="btn btn-primary" onclick="openStatementSelected()">
+        <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ MODAL: REPORTE (Morosos / Al día / Proveedores) ══════════════════════════
+     Renderiza inline con el mismo look de documento que estado_cuenta.html/Factura.html
+     (reutiliza las reglas #pdf-doc ya definidas arriba), sin navegar a una sub-página. -->
+<div class="modal-overlay" id="reporte-flex-modal">
+  <div class="modal-box" style="width:820px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <h3><i class="fas fa-chart-bar" style="color:var(--accent);"></i> Reporte</h3>
+      <button class="btn btn-muted" onclick="closeReporteFlexModal()" style="width:auto;margin:0;">
+        <i class="fas fa-times"></i> Cerrar
+      </button>
+    </div>
+    <div id="reporte-flex-content" style="max-height:70vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: NUEVO CARGO ══════════════════ -->
+<div class="modal-overlay" id="charge-modal">
+  <div class="modal-box" style="width:640px;">
+    <h3><i class="fas fa-file-invoice" style="color:var(--accent);"></i> Nuevo Cargo</h3>
+    <div class="two-col" style="margin-top:10px;">
+      <div>
+        <label class="field-label">Propiedad</label>
+        <select id="charge-prop-select" onchange="loadChargeUnits()">
+          <option value="">Seleccione propiedad</option>
+        </select>
+
+        <label class="field-label">Unidad (opcional — si vacío aplica a todas)</label>
+        <select id="charge-unit-select">
+          <option value="">Todas las unidades</option>
+        </select>
+
+        <label class="field-label">Concepto *</label>
+        <select id="charge-desc-select" onchange="handleConceptChange()">
+          <option value="">Seleccione un concepto</option>
+          <option value="__custom__">Otro (especificar)...</option>
+        </select>
+        <input type="text" id="charge-desc-custom" placeholder="Ej: Mantenimiento Marzo 2026" style="display:none;">
+
+        <label class="field-label">Monto *</label>
+        <input type="number" id="charge-amount" placeholder="0.00" step="0.01" min="0"
+               oninput="document.getElementById('amount-preview').textContent = parseFloat(this.value||0).toFixed(2)">
+
+        <label class="field-label">Fecha de creación</label>
+        <input type="date" id="charge-date">
+
+        <label class="field-label">Fecha de vencimiento *</label>
+        <input type="date" id="charge-due">
+
+        <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;color:var(--text-secondary);">
+          <i class="fas fa-info-circle" style="color:var(--accent);"></i>
+          Monto del cargo: <strong>$<span id="amount-preview">0.00</span></strong>
+        </div>
+      </div>
+
+      <div>
+        <label class="field-label">Unidades Afectadas</label>
+        <div id="affected-units">
+          <div class="charges-empty">
+            <i class="fas fa-building"></i>
+            Selecciona una propiedad para ver las unidades
           </div>
         </div>
 
-        <!-- Cargos pendientes -->
-        <div class="card">
-          <div class="card-header">
-            <h3><i class="fas fa-list-check"></i> Cargos Pendientes</h3>
+        <!-- Panel post-creación -->
+        <div class="post-pay-panel" id="post-charge-panel">
+          <h4><i class="fas fa-check-circle"></i> Cargo creado exitosamente</h4>
+          <div class="action-row">
+            <button class="btn btn-muted" onclick="document.getElementById('post-charge-panel').style.display='none';">
+              <i class="fas fa-plus"></i> Crear Otro Cargo
+            </button>
           </div>
-          <div class="card-body">
-            <div id="charges-panel">
-              <div class="charges-empty">
-                <i class="fas fa-hand-point-up"></i>
-                Selecciona un propietario o apartamento
-              </div>
-            </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeChargeModal()">Cerrar</button>
+      <button class="btn btn-primary" onclick="createCharge()">
+        <i class="fas fa-plus"></i> Crear Cargo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: REGISTRAR PAGO ══════════════════ -->
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal-box" style="width:780px;">
+    <h3><i class="fas fa-money-bill-wave" style="color:var(--accent);"></i> Nuevo Pago</h3>
+    <div class="two-col" style="margin-top:10px;">
+
+      <!-- Columna izquierda: selector + cargos -->
+      <div>
+        <label class="field-label">Buscar por</label>
+        <div class="toggle-bar">
+          <button class="toggle-btn active" id="btn-owner" onclick="switchMode('owner')">
+            👤 Propietario
+          </button>
+          <button class="toggle-btn" id="btn-unit" onclick="switchMode('unit')">
+            🏠 Apartamento
+          </button>
+        </div>
+
+        <!-- Por propietario -->
+        <div id="panel-owner">
+          <label class="field-label">Propietario</label>
+          <select id="owner-select">
+            <option value="">Seleccione propietario</option>
+          </select>
+        </div>
+
+        <!-- Por unidad -->
+        <div id="panel-unit" style="display:none;">
+          <label class="field-label">Propiedad</label>
+          <select id="prop-pay-select" onchange="loadUnitsByProp()">
+            <option value="">Seleccione propiedad</option>
+          </select>
+          <label class="field-label">Apartamento</label>
+          <select id="unit-pay-select" onchange="loadUnitCharges()">
+            <option value="">Seleccione unidad</option>
+          </select>
+        </div>
+
+        <!-- Info propietario (visible cuando se busca por unidad) -->
+        <div class="info-box-blue" id="owner-info-box">
+          <i class="fas fa-user-circle"></i> <span id="owner-info-text"></span>
+        </div>
+
+        <label class="field-label">Cargos Pendientes</label>
+        <div id="charges-panel">
+          <div class="charges-empty">
+            <i class="fas fa-hand-point-up"></i>
+            Selecciona un propietario o apartamento
           </div>
         </div>
       </div>
 
       <!-- Columna derecha: formulario de pago -->
       <div>
-        <div class="card">
-          <div class="card-header">
-            <h3><i class="fas fa-pen-to-square"></i> Datos del Pago</h3>
-          </div>
-          <div class="card-body" id="payment-form-wrapper">
-            <div class="charges-empty" style="padding:2.5rem 1rem;">
-              <i class="fas fa-arrow-left"></i>
-              Selecciona los cargos a pagar primero
-            </div>
+        <label class="field-label">Datos del Pago</label>
+        <div id="payment-form-wrapper">
+          <div class="charges-empty" style="padding:2.5rem 1rem;">
+            <i class="fas fa-arrow-left"></i>
+            Selecciona los cargos a pagar primero
           </div>
         </div>
 
@@ -263,168 +701,162 @@
             <button class="btn btn-secondary" onclick="openStatementFromPay()">
               <i class="fas fa-file-alt"></i> Estado de Cuenta
             </button>
+            <button class="btn btn-muted" onclick="resetPayForm(); document.getElementById('owner-select').value=''; document.getElementById('prop-pay-select').value=''; document.getElementById('unit-pay-select').innerHTML='<option value=&quot;&quot;>Seleccione unidad</option>';">
+              <i class="fas fa-redo"></i> Nuevo Pago
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- ══════════════════ TAB: CREAR CARGO ══════════════════ -->
-  <div class="fin-panel" id="panel-cargos">
-    <div class="two-col">
-
-      <div class="card" style="margin-bottom:0;">
-        <div class="card-header">
-          <h3><i class="fas fa-plus-circle"></i> Nuevo Cargo</h3>
-        </div>
-        <div class="card-body">
-          <label class="field-label">Propiedad</label>
-          <select id="charge-prop-select" onchange="loadChargeUnits()">
-            <option value="">Seleccione propiedad</option>
-          </select>
-
-          <label class="field-label">Unidad (opcional — si vacío aplica a todas)</label>
-          <select id="charge-unit-select">
-            <option value="">Todas las unidades</option>
-          </select>
-
-          <label class="field-label">Descripción *</label>
-          <input type="text" id="charge-desc" placeholder="Ej: Mantenimiento Marzo 2026">
-
-          <label class="field-label">Monto *</label>
-          <input type="number" id="charge-amount" placeholder="0.00" step="0.01" min="0"
-                 oninput="document.getElementById('amount-preview').textContent = parseFloat(this.value||0).toFixed(2)">
-
-          <label class="field-label">Fecha de creación</label>
-          <input type="date" id="charge-date">
-
-          <label class="field-label">Fecha de vencimiento *</label>
-          <input type="date" id="charge-due">
-
-          <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;color:var(--text-secondary);">
-            <i class="fas fa-info-circle" style="color:var(--accent);"></i>
-            Saldo inicial: $0.00 pagado / <strong>$<span id="amount-preview">0.00</span></strong> pendiente
-          </div>
-
-          <button onclick="createCharge()">
-            <i class="fas fa-plus"></i> Crear Cargo
-          </button>
-        </div>
-      </div>
-
-      <!-- Preview: Unidades que recibirán el cargo -->
-      <div class="card" style="margin-bottom:0;">
-        <div class="card-header">
-          <h3><i class="fas fa-eye"></i> Unidades Afectadas</h3>
-        </div>
-        <div class="card-body">
-          <div id="affected-units">
-            <div class="charges-empty">
-              <i class="fas fa-building"></i>
-              Selecciona una propiedad para ver las unidades
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closePaymentModal()">Cerrar</button>
     </div>
   </div>
+</div>
 
-  <!-- ══════════════════ TAB: HISTORIAL ══════════════════ -->
-  <div class="fin-panel" id="panel-historial">
-    <div class="card">
-      <div class="card-header">
-        <h3><i class="fas fa-table"></i> Todos los Cargos</h3>
-        <span class="badge badge-primary" id="charges-count-badge">0</span>
-      </div>
-
-      <!-- Fila de filtros -->
-      <div class="card-body" style="padding-bottom:0;">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-
-          <div style="display:flex;flex-direction:column;">
-            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Estado</label>
-            <select id="filter-status" onchange="filterChargesTable()" style="min-width:140px;margin-bottom:0;">
-              <option value="">Todos</option>
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="PARCIAL">Parcial</option>
-              <option value="PAGADO">Pagado</option>
-            </select>
-          </div>
-
-          <div style="display:flex;flex-direction:column;">
-            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Propietario</label>
-            <select id="filter-owner" onchange="filterChargesTable()" style="min-width:160px;margin-bottom:0;">
-              <option value="">Todos</option>
-            </select>
-          </div>
-
-          <div style="display:flex;flex-direction:column;">
-            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Apartamento</label>
-            <select id="filter-unit" onchange="filterChargesTable()" style="min-width:130px;margin-bottom:0;">
-              <option value="">Todos</option>
-            </select>
-          </div>
-
-          <div style="display:flex;flex-direction:column;">
-            <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Descripción / Concepto</label>
-            <input type="text" id="filter-desc" placeholder="Buscar descripción..."
-              oninput="filterChargesTable()" style="min-width:200px;margin-bottom:0;">
-          </div>
-
-          <button class="btn btn-ghost" onclick="clearChargeFilters()"
-            style="width:auto;margin-top:0;padding:8px 14px;align-self:flex-end;">
-            <i class="fas fa-times"></i> Limpiar
-          </button>
-
-        </div>
-      </div>
-
-      <div class="table-wrapper" style="margin-top:12px;">
-        <table>
-          <thead>
-            <tr>
-              <th>Propietario</th>
-              <th>Unidad</th>
-              <th>Descripción</th>
-              <th>Vence</th>
-              <th class="td-right">Total</th>
-              <th class="td-right">Pagado</th>
-              <th class="td-right">Saldo</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="charges-table-body">
-            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
+<!-- ══════════════════ MODAL: GENERAR CUOTAS DEL MES ══════════════════ -->
+<div class="modal-overlay" id="monthly-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-calendar-check" style="color:var(--accent);"></i> Generar Cuotas del Mes</h3>
+    <p>Crea la cuota mensual fija para todas las unidades con cuota configurada (o solo las de una propiedad). Si ya existe para el mes/año, se omite (sin duplicar).</p>
+    <label class="field-label">Propiedad (opcional)</label>
+    <select id="monthly-prop-select">
+      <option value="">Todas las propiedades</option>
+    </select>
+    <label class="field-label">Mes (opcional — por defecto el actual)</label>
+    <input type="number" id="monthly-month" min="1" max="12" placeholder="Ej: 7">
+    <label class="field-label">Año (opcional — por defecto el actual)</label>
+    <input type="number" id="monthly-year" min="2020" max="2100" placeholder="Ej: 2026">
+    <div id="monthly-result"></div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeMonthlyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmMonthly()">
+        <i class="fas fa-check"></i> Generar
+      </button>
     </div>
   </div>
+</div>
 
-  <!-- ══════════════════ TAB: ESTADOS DE CUENTA ══════════════════ -->
-  <div class="fin-panel" id="panel-estados">
-    <div class="card" style="max-width:480px;">
-      <div class="card-header">
-        <h3><i class="fas fa-file-alt"></i> Estado de Cuenta</h3>
-      </div>
-      <div class="card-body">
-        <label class="field-label">Propietario</label>
-        <select id="stmt-select">
-          <option value="">Seleccione propietario</option>
-        </select>
-        <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
-          Se abrirá una ventana con el historial completo, lista para imprimir o guardar como PDF.
-        </p>
-        <button class="btn btn-secondary btn-block" onclick="openStatementSelected()" style="padding:11px;">
-          <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
-        </button>
-      </div>
+<!-- ══════════════════ MODAL: APLICAR MORA ══════════════════ -->
+<div class="modal-overlay" id="latefee-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Aplicar Mora</h3>
+    <p>Selecciona un cargo vencido y sin pagar por completo. Se creará un cargo adicional de mora vinculado a él.</p>
+    <label class="field-label">Cargo vencido *</label>
+    <select id="latefee-charge-select">
+      <option value="">Seleccione cargo</option>
+    </select>
+    <label class="field-label">Monto de la mora *</label>
+    <input type="number" id="latefee-amount" placeholder="0.00" step="0.01" min="0.01">
+    <div id="latefee-result"></div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeLateFeeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmLateFee()">
+        <i class="fas fa-check"></i> Aplicar Mora
+      </button>
     </div>
   </div>
+</div>
 
-</div><!-- /app -->
+<!-- ══════════════════ MODAL: APLICAR CRÉDITO ══════════════════ -->
+<div class="modal-overlay" id="credit-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-hand-holding-usd" style="color:var(--accent);"></i> Aplicar Crédito</h3>
+    <p>Aplica un saldo a favor del propietario contra uno de sus cargos pendientes.</p>
+    <label class="field-label">Propietario *</label>
+    <select id="credit-owner-select" onchange="loadOwnerCreditsAndCharges()">
+      <option value="">Seleccione propietario</option>
+    </select>
+    <label class="field-label">Crédito disponible *</label>
+    <select id="credit-select">
+      <option value="">Seleccione propietario primero</option>
+    </select>
+    <label class="field-label">Cargo destino *</label>
+    <select id="credit-charge-select">
+      <option value="">Seleccione propietario primero</option>
+    </select>
+    <label class="field-label">Monto a aplicar *</label>
+    <input type="number" id="credit-amount" placeholder="0.00" step="0.01" min="0.01">
+    <div id="credit-result"></div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeApplyCreditModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmApplyCredit()">
+        <i class="fas fa-check"></i> Aplicar Crédito
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: PAGO FIFO ══════════════════ -->
+<div class="modal-overlay" id="fifo-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-layer-group" style="color:var(--accent);"></i> Pago FIFO</h3>
+    <p>Registra un pago y lo reparte automáticamente entre los cargos pendientes de la unidad, del más antiguo al más reciente.</p>
+    <label class="field-label">Unidad *</label>
+    <select id="fifo-unit-select" onchange="loadFifoUnitOwner()">
+      <option value="">Seleccione unidad</option>
+    </select>
+    <div id="fifo-owner-info" style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;"></div>
+    <label class="field-label">Monto *</label>
+    <input type="number" id="fifo-amount" placeholder="0.00" step="0.01" min="0.01">
+    <div id="fifo-result"></div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeFifoModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmFifo()">
+        <i class="fas fa-check"></i> Aplicar Pago
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: EDITAR CARGO (desde Movimientos) ══════════════════ -->
+<div class="modal-overlay" id="edit-charge-row-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-pencil-alt" style="color:var(--accent);"></i> Editar Cargo</h3>
+    <input type="hidden" id="ecr-id">
+    <input type="hidden" id="ecr-unit-id">
+    <label class="field-label">Descripción *</label>
+    <input type="text" id="ecr-desc">
+    <label class="field-label">Monto *</label>
+    <input type="number" id="ecr-amount" step="0.01" min="0.01">
+    <label class="field-label">Fecha de creación *</label>
+    <input type="date" id="ecr-date-created">
+    <label class="field-label">Fecha de vencimiento *</label>
+    <input type="date" id="ecr-due-date">
+    <div id="ecr-result"></div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeEditChargeRow()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmEditChargeRow()">
+        <i class="fas fa-save"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: EDITAR PAGO (desde Movimientos) ══════════════════ -->
+<div class="modal-overlay" id="edit-payment-row-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-pencil-alt" style="color:var(--accent);"></i> Editar Pago</h3>
+    <input type="hidden" id="epr-id">
+    <label class="field-label">Fecha *</label>
+    <input type="date" id="epr-date">
+    <label class="field-label">Monto *</label>
+    <input type="number" id="epr-amount" step="0.01" min="0.01">
+    <label class="field-label">N° Factura (opcional)</label>
+    <input type="text" id="epr-invoice">
+    <label class="field-label">Referencia (opcional)</label>
+    <input type="text" id="epr-ref">
+    <label class="field-label">N° Recibo (opcional)</label>
+    <input type="text" id="epr-receipt">
+    <div id="epr-result"></div>
+    <div class="modal-actions">
+      <button class="btn btn-muted" onclick="closeEditPaymentRow()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmEditPaymentRow()">
+        <i class="fas fa-save"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════ MODAL FACTURA ══════════════════ -->
 <div class="modal-overlay" id="invoice-modal">
@@ -442,6 +874,58 @@
   </div>
 </div>
 
+<!-- ══ MODAL REPORTE POR APARTAMENTO ══ -->
+<div class="rep-modal-overlay" id="reporte-modal">
+  <div class="rep-modal-box">
+    <div class="rep-modal-header">
+      <h3><i class="fas fa-file-alt" style="color:var(--accent);margin-right:6px;"></i>Reporte por Apartamento</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary" onclick="imprimirPDF()" style="width:auto;margin-top:0;">
+          <i class="fas fa-file-pdf"></i> Exportar PDF
+        </button>
+        <button class="btn btn-secondary" onclick="exportarReporteExcel()" style="width:auto;margin-top:0;">
+          <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="rep-modal-close" onclick="cerrarReporte()"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div class="rep-modal-body">
+
+      <!-- Selectores -->
+      <div class="rep-modal-selectors">
+        <div>
+          <label class="field-label">Apartamento *</label>
+          <select id="rep-apto" onchange="generarReporte()">
+            <option value="">Seleccione</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Desde</label>
+          <input type="date" id="rep-desde" onchange="generarReporte()">
+        </div>
+        <div>
+          <label class="field-label">Hasta</label>
+          <input type="date" id="rep-hasta" onchange="generarReporte()">
+        </div>
+        <div>
+          <label class="field-label">Concepto</label>
+          <select id="rep-concepto" onchange="generarReporte()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Documento PDF renderizado aquí -->
+      <div id="reporte-content">
+        <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+          <i class="fas fa-home" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+          Selecciona un apartamento para generar el reporte
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="notification"></div>
 <script src="js/main.js"></script>
 <script>
@@ -451,24 +935,28 @@
 let mode          = 'owner';
 let activeOwnerId = null;
 let lastPaymentId = null;
-let allChargesCache = [];
-let allPropsCache   = [];
-let allUnitsCache   = [];
+let allChargesCache     = [];
+let allPropsCache       = [];
+let allUnitsCache       = [];
+let allOwnersCache      = [];
+let allUnitOwnersCache  = [];
 
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
 async function init() {
-  
 
-  const [props, owners, units] = await Promise.all([
+  const [props, owners, units, unitOwners] = await Promise.all([
     apiRequest('/properties'),
     apiRequest('/owners'),
     apiRequest('/units'),
+    apiRequest('/unit-owners/all').catch(() => []),
   ]);
 
-  allPropsCache = props  || [];
-  allUnitsCache = units  || [];
+  allPropsCache      = props      || [];
+  allUnitsCache      = units      || [];
+  allOwnersCache     = owners     || [];
+  allUnitOwnersCache = unitOwners || [];
 
   // Owner select (pago)
   const ownerSel = document.getElementById('owner-select');
@@ -492,6 +980,21 @@ async function init() {
   allPropsCache.forEach(p =>
     chargePropSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
 
+  // Prop select (generar cuotas del mes)
+  const monthlyPropSel = document.getElementById('monthly-prop-select');
+  allPropsCache.forEach(p =>
+    monthlyPropSel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+
+  // Owner select (aplicar crédito)
+  const creditOwnerSel = document.getElementById('credit-owner-select');
+  allOwnersCache.forEach(o =>
+    creditOwnerSel.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+
+  // Unit select (pago FIFO)
+  const fifoUnitSel = document.getElementById('fifo-unit-select');
+  allUnitsCache.forEach(u =>
+    fifoUnitSel.innerHTML += `<option value="${u.id}">Apt. ${u.unit_number}</option>`);
+
   // Estado de cuenta select
   const stmtSel = document.getElementById('stmt-select');
   (owners || []).forEach(o =>
@@ -500,22 +1003,520 @@ async function init() {
   // Fechas por defecto
   document.getElementById('charge-date').value = todayISO();
 
-  // Cargar historial
-  await loadChargesTable();
+  // Conceptos (lista configurable desde Administración)
+  await loadConceptsSelect();
+
+  // Cargar cargos + pagos y construir la tabla única de Movimientos
+  await refreshMovimientos();
+}
+
+// Recarga cargos y pagos, y reconstruye la tabla unificada de Movimientos.
+// Se llama tras cualquier acción que cree/modifique cargos o pagos.
+async function refreshMovimientos() {
+  await Promise.all([loadChargesTable(), loadPaymentsHistory()]);
+  buildMovimientos();
 }
 
 // ══════════════════════════════════════════════
-// TABS
+// ESTADO DE CUENTA — modal (ya no es una sub-pestaña separada)
 // ══════════════════════════════════════════════
-function switchTab(tab) {
-  document.querySelectorAll('.fin-tab').forEach((b, i) => {
-    const ids = ['pagos','cargos','historial','estados'];
-    b.classList.toggle('active', ids[i] === tab);
-  });
-  document.querySelectorAll('.fin-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById(`panel-${tab}`).classList.add('active');
+function openStatementModal() {
+  document.getElementById('statement-modal').classList.add('open');
+}
+function closeStatementModal() {
+  document.getElementById('statement-modal').classList.remove('open');
+}
 
-  if (tab === 'historial') loadChargesTable();
+// ══════════════════════════════════════════════
+// DROPDOWNS de la barra superior (Reporte ▾ / Más acciones ▾)
+// ══════════════════════════════════════════════
+function toggleDropdown(wrapId) {
+  const wrap = document.getElementById(wrapId);
+  const wasOpen = wrap.classList.contains('open');
+  closeDropdowns();
+  if (!wasOpen) wrap.classList.add('open');
+}
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown-wrap.open').forEach(w => w.classList.remove('open'));
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown-wrap')) closeDropdowns();
+});
+
+// ══════════════════════════════════════════════
+// REPORTE ▾ — sistema flexible (Morosos / Al día / Proveedores, y
+// preparado para agregar más tipos: un tipo = una función que arma
+// {title, columns, rows, rightCols, totals} + sus filtros propios).
+// "Generar" renderiza el resultado INLINE en un modal (reutiliza los
+// estilos #pdf-doc ya definidos), sin navegar a ninguna sub-página.
+// ══════════════════════════════════════════════
+function propOptionsHtml() {
+  return (allPropsCache || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+function ownerUnitNumberFlex(ownerId) {
+  const uo   = (allUnitOwnersCache || []).find(x => x.owner_id == ownerId && x.is_active);
+  const unit = uo ? allUnitsCache.find(u => u.id === uo.unit_id) : null;
+  return unit ? unit.unit_number : '—';
+}
+function ownerPropNameFlex(ownerId) {
+  const uo   = (allUnitOwnersCache || []).find(x => x.owner_id == ownerId && x.is_active);
+  const unit = uo ? allUnitsCache.find(u => u.id === uo.unit_id) : null;
+  const prop = unit ? allPropsCache.find(p => p.id === unit.property_id) : null;
+  return prop ? prop.name : '—';
+}
+function buildOwnerBalanceMapFlex() {
+  return (allOwnersCache || []).map(o => {
+    const unitNum  = ownerUnitNumberFlex(o.id);
+    const propName = ownerPropNameFlex(o.id);
+    const charges  = (allChargesCache || []).filter(c =>
+      String(c.owner_id) === String(o.id) || c.unit_number === unitNum
+    );
+    let fac = 0, pag = 0;
+    charges.forEach(c => {
+      fac += parseFloat(c.amount  || 0);
+      pag += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+    });
+    return { id: o.id, name: o.full_name, unitNum, propName, facturado: fac, pagado: pag, pendiente: fac - pag };
+  });
+}
+
+const REPORT_TYPES = {
+  morosos: {
+    filtersHtml: () => `
+      <label class="field-label">Propiedad</label>
+      <select id="rpt-f-prop"><option value="">Todas</option>${propOptionsHtml()}</select>
+      <label class="field-label">Monto mínimo pendiente</label>
+      <input type="number" id="rpt-f-min" placeholder="0.00" min="0" step="0.01">
+    `,
+    run: () => {
+      const propId = document.getElementById('rpt-f-prop')?.value || '';
+      const minAmt  = parseFloat(document.getElementById('rpt-f-min')?.value) || 0.01;
+      let result = buildOwnerBalanceMapFlex().filter(o => o.pendiente >= minAmt);
+      if (propId) result = result.filter(o => {
+        const unit = allUnitsCache.find(u => u.unit_number === o.unitNum);
+        return unit && String(unit.property_id) === propId;
+      });
+      result.sort((a, b) => b.pendiente - a.pendiente);
+      return {
+        title: 'Apartamentos con Saldo Pendiente',
+        columns: ['Propietario', 'Unidad', 'Propiedad', 'Facturado', 'Pagado', 'Pendiente'],
+        rightCols: [3, 4, 5],
+        rows: result.map(o => [o.name, o.unitNum ? `Apt. ${o.unitNum}` : '—', o.propName,
+          '$' + formatMoney(o.facturado), '$' + formatMoney(o.pagado), '$' + formatMoney(o.pendiente)]),
+        totals: [
+          { label: 'Apartamentos con deuda', value: result.length },
+          { label: 'Total pendiente', value: '$' + formatMoney(result.reduce((s,o)=>s+o.pendiente,0)) },
+        ],
+      };
+    },
+  },
+  aldia: {
+    filtersHtml: () => `
+      <label class="field-label">Propiedad</label>
+      <select id="rpt-f-prop"><option value="">Todas</option>${propOptionsHtml()}</select>
+    `,
+    run: () => {
+      const propId = document.getElementById('rpt-f-prop')?.value || '';
+      let result = buildOwnerBalanceMapFlex().filter(o => o.pendiente <= 0);
+      if (propId) result = result.filter(o => {
+        const unit = allUnitsCache.find(u => u.unit_number === o.unitNum);
+        return unit && String(unit.property_id) === propId;
+      });
+      return {
+        title: 'Unidades Paz y Salvo',
+        columns: ['Propietario', 'Unidad', 'Propiedad', 'Total Pagado'],
+        rightCols: [3],
+        rows: result.map(o => [o.name, o.unitNum ? `Apt. ${o.unitNum}` : '—', o.propName, '$' + formatMoney(o.pagado)]),
+        totals: [
+          { label: 'Unidades al día', value: result.length },
+          { label: 'Total pagado', value: '$' + formatMoney(result.reduce((s,o)=>s+o.pagado,0)) },
+        ],
+      };
+    },
+  },
+  proveedores: {
+    filtersHtml: () => `
+      <label class="field-label">Estado de pago</label>
+      <select id="rpt-f-status">
+        <option value="">Todos</option>
+        <option value="PAGADO">Pagado</option>
+        <option value="PENDIENTE">Pendiente</option>
+      </select>
+      <label class="field-label">Año</label>
+      <select id="rpt-f-year">
+        <option value="">Todos</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+      </select>
+    `,
+    run: async () => {
+      const status = document.getElementById('rpt-f-status')?.value || '';
+      const year    = document.getElementById('rpt-f-year')?.value || '';
+
+      const suppliers = await apiRequest('/suppliers').catch(() => []) || [];
+      const allPay = [];
+      for (const s of suppliers) {
+        const pays = await apiRequest(`/suppliers/${s.id}/payments`).catch(() => []) || [];
+        pays.forEach(p => allPay.push({ ...p, supplierName: s.name }));
+      }
+      let list = allPay;
+      if (status) list = list.filter(p => p.status === status);
+      if (year)   list = list.filter(p => (p.payment_date || '').startsWith(year));
+      const total = list.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+
+      return {
+        title: 'Pagos a Proveedores',
+        columns: ['Proveedor', 'Descripción', 'Fecha', 'Monto', 'Estado'],
+        rightCols: [3],
+        rows: list.map(p => [p.supplierName, p.description, formatDate(p.payment_date), '$' + formatMoney(p.amount), p.status]),
+        totals: [
+          { label: 'Pagos', value: list.length },
+          { label: 'Total gastado', value: '$' + formatMoney(total) },
+        ],
+      };
+    },
+  },
+};
+
+function renderReportTypeFilters() {
+  const type = document.getElementById('rpt-type').value;
+  const def  = REPORT_TYPES[type];
+  document.getElementById('rpt-type-filters').innerHTML = def ? def.filtersHtml() : '';
+}
+
+async function generarReporteFlexible() {
+  const type = document.getElementById('rpt-type').value;
+  const def  = REPORT_TYPES[type];
+  if (!def) return;
+
+  closeDropdowns();
+  document.getElementById('reporte-flex-content').innerHTML = `
+    <div style="text-align:center;padding:3rem;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Generando…</div>`;
+  document.getElementById('reporte-flex-modal').classList.add('open');
+
+  const result = await def.run();
+
+  const theadCols = result.columns.map((c, i) => `<th${result.rightCols.includes(i) ? ' class="right"' : ''}>${c}</th>`).join('');
+  const bodyRows = result.rows.length
+    ? result.rows.map(row => `<tr>${row.map((cell, i) => `<td${result.rightCols.includes(i) ? ' class="right"' : ''}>${cell}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${result.columns.length}" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin resultados</td></tr>`;
+  const summaryCards = result.totals.map(t => `<div class="sum-card"><div class="sv">${t.value}</div><div class="sl">${t.label}</div></div>`).join('');
+
+  document.getElementById('reporte-flex-content').innerHTML = `
+    <div id="pdf-doc" style="background:#fff;padding:20px;">
+      <div class="doc-header">
+        <div>
+          <h1>ALIANZA RESIDENCIAL</h1>
+          <div class="sub-info">Sistema de Administración de Propiedades</div>
+        </div>
+        <div class="doc-title">
+          <h2>${result.title}</h2>
+          <div class="date">${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
+        </div>
+      </div>
+      <div class="summary-cards">${summaryCards}</div>
+      <table class="doc-table">
+        <thead><tr>${theadCols}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function closeReporteFlexModal() {
+  document.getElementById('reporte-flex-modal').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════
+// MODALES: Nuevo Cargo / Nuevo Pago
+// ══════════════════════════════════════════════
+function openChargeModal() {
+  document.getElementById('post-charge-panel').style.display = 'none';
+  document.getElementById('charge-modal').classList.add('open');
+}
+function closeChargeModal() {
+  document.getElementById('charge-modal').classList.remove('open');
+}
+
+function openPaymentModal() {
+  document.getElementById('payment-modal').classList.add('open');
+}
+function closePaymentModal() {
+  document.getElementById('payment-modal').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════
+// MODAL: GENERAR CUOTAS DEL MES
+// ══════════════════════════════════════════════
+function openMonthlyModal() {
+  document.getElementById('monthly-month').value = '';
+  document.getElementById('monthly-year').value  = '';
+  document.getElementById('monthly-result').innerHTML = '';
+  document.getElementById('monthly-modal').classList.add('open');
+}
+function closeMonthlyModal() {
+  document.getElementById('monthly-modal').classList.remove('open');
+}
+
+async function confirmMonthly() {
+  const propId = parseInt(document.getElementById('monthly-prop-select').value) || null;
+  const month  = parseInt(document.getElementById('monthly-month').value) || null;
+  const year   = parseInt(document.getElementById('monthly-year').value) || null;
+
+  const result = await apiRequest('/finance/generate-monthly-charges', 'POST', {
+    property_id: propId, month, year,
+  });
+  if (result) {
+    document.getElementById('monthly-result').innerHTML =
+      `<div class="alert alert-success">✓ ${result.message}</div>`;
+    await refreshMovimientos();
+  }
+}
+
+// ══════════════════════════════════════════════
+// MODAL: APLICAR MORA
+// ══════════════════════════════════════════════
+function openLateFeeModal() {
+  const today = todayISO();
+  const sel = document.getElementById('latefee-charge-select');
+  const vencidos = (allChargesCache || []).filter(c => c.status !== 'PAGADO' && c.due_date < today);
+
+  sel.innerHTML = vencidos.length
+    ? '<option value="">Seleccione cargo</option>' + vencidos.map(c =>
+        `<option value="${c.charge_id}">Apt. ${c.unit_number} — ${c.description} (vencido ${formatDate(c.due_date)}, saldo $${formatMoney(c.balance)})</option>`
+      ).join('')
+    : '<option value="">No hay cargos vencidos y sin pagar</option>';
+
+  document.getElementById('latefee-amount').value = '';
+  document.getElementById('latefee-result').innerHTML = '';
+  document.getElementById('latefee-modal').classList.add('open');
+}
+function closeLateFeeModal() {
+  document.getElementById('latefee-modal').classList.remove('open');
+}
+
+async function confirmLateFee() {
+  const chargeId = parseInt(document.getElementById('latefee-charge-select').value);
+  const amount   = parseFloat(document.getElementById('latefee-amount').value);
+
+  if (!chargeId) { showToast('Selecciona un cargo vencido', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+
+  const result = await apiRequest(`/finance/charges/${chargeId}/apply-late-fee`, 'POST', { amount });
+  if (result) {
+    document.getElementById('latefee-result').innerHTML =
+      `<div class="alert alert-success">✓ ${result.message}</div>`;
+    document.getElementById('latefee-amount').value = '';
+    await refreshMovimientos();
+  }
+}
+
+// ══════════════════════════════════════════════
+// MODAL: APLICAR CRÉDITO
+// ══════════════════════════════════════════════
+function openApplyCreditModal() {
+  document.getElementById('credit-owner-select').value = '';
+  document.getElementById('credit-select').innerHTML = '<option value="">Seleccione propietario primero</option>';
+  document.getElementById('credit-charge-select').innerHTML = '<option value="">Seleccione propietario primero</option>';
+  document.getElementById('credit-amount').value = '';
+  document.getElementById('credit-result').innerHTML = '';
+  document.getElementById('credit-modal').classList.add('open');
+}
+function closeApplyCreditModal() {
+  document.getElementById('credit-modal').classList.remove('open');
+}
+
+async function loadOwnerCreditsAndCharges() {
+  const ownerId    = parseInt(document.getElementById('credit-owner-select').value);
+  const creditSel  = document.getElementById('credit-select');
+  const chargeSel  = document.getElementById('credit-charge-select');
+
+  if (!ownerId) {
+    creditSel.innerHTML = '<option value="">Seleccione propietario primero</option>';
+    chargeSel.innerHTML = '<option value="">Seleccione propietario primero</option>';
+    return;
+  }
+
+  const credits = await apiRequest(`/finance/owner-credits/${ownerId}`) || [];
+  creditSel.innerHTML = credits.length
+    ? credits.map(c => `<option value="${c.id}">$${formatMoney(c.remaining_amount)} disponible (de $${formatMoney(c.amount)} original)</option>`).join('')
+    : '<option value="">Sin créditos disponibles</option>';
+
+  const pendientes = (allChargesCache || []).filter(c => c.owner_id === ownerId && c.status !== 'PAGADO');
+  chargeSel.innerHTML = pendientes.length
+    ? pendientes.map(c => `<option value="${c.charge_id}">Apt. ${c.unit_number} — ${c.description} (saldo $${formatMoney(c.balance)})</option>`).join('')
+    : '<option value="">Sin cargos pendientes</option>';
+}
+
+async function confirmApplyCredit() {
+  const creditId = parseInt(document.getElementById('credit-select').value);
+  const chargeId = parseInt(document.getElementById('credit-charge-select').value);
+  const amount   = parseFloat(document.getElementById('credit-amount').value);
+
+  if (!creditId)  { showToast('Selecciona un crédito disponible', 'error'); return; }
+  if (!chargeId)  { showToast('Selecciona el cargo destino', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+
+  const result = await apiRequest('/finance/apply-credit', 'POST', {
+    credit_id: creditId, charge_id: chargeId, amount,
+  });
+  if (result) {
+    document.getElementById('credit-result').innerHTML =
+      `<div class="alert alert-success">✓ ${result.message}</div>`;
+    document.getElementById('credit-amount').value = '';
+    await loadOwnerCreditsAndCharges();
+    await refreshMovimientos();
+  }
+}
+
+// ══════════════════════════════════════════════
+// MODAL: PAGO FIFO
+// ══════════════════════════════════════════════
+let fifoOwnerId = null;
+
+function openFifoModal() {
+  fifoOwnerId = null;
+  document.getElementById('fifo-unit-select').value = '';
+  document.getElementById('fifo-owner-info').innerHTML = '';
+  document.getElementById('fifo-amount').value = '';
+  document.getElementById('fifo-result').innerHTML = '';
+  document.getElementById('fifo-modal').classList.add('open');
+}
+function closeFifoModal() {
+  document.getElementById('fifo-modal').classList.remove('open');
+}
+
+async function loadFifoUnitOwner() {
+  const unitId = parseInt(document.getElementById('fifo-unit-select').value);
+  const infoEl = document.getElementById('fifo-owner-info');
+  if (!unitId) { fifoOwnerId = null; infoEl.innerHTML = ''; return; }
+
+  const data = await apiRequest(`/finance/unit-statement/${unitId}`);
+  if (data && data.owner_id) {
+    fifoOwnerId = data.owner_id;
+    infoEl.innerHTML = `Propietario activo: <strong>${data.owner_name}</strong>`;
+  } else {
+    fifoOwnerId = null;
+    infoEl.innerHTML = `<span style="color:var(--danger);">⚠ Esta unidad no tiene propietario activo asignado.</span>`;
+  }
+}
+
+async function confirmFifo() {
+  const unitId = parseInt(document.getElementById('fifo-unit-select').value);
+  const amount = parseFloat(document.getElementById('fifo-amount').value);
+
+  if (!unitId) { showToast('Selecciona una unidad', 'error'); return; }
+  if (!fifoOwnerId) { showToast('Esta unidad no tiene propietario activo asignado', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+
+  const result = await apiRequest('/finance/payments/fifo', 'POST', {
+    unit_id: unitId, owner_id: fifoOwnerId, amount,
+  });
+  if (result) {
+    document.getElementById('fifo-result').innerHTML =
+      `<div class="alert alert-success">✓ ${result.message} — ${result.applications_count} cargo(s) cubiertos${result.credit_generated > 0 ? `, $${formatMoney(result.credit_generated)} quedó como saldo a favor` : ''}</div>`;
+    document.getElementById('fifo-amount').value = '';
+    await refreshMovimientos();
+  }
+}
+
+// ══════════════════════════════════════════════
+// EDITAR / ANULAR CARGO (desde Movimientos — solo ADMIN)
+// ══════════════════════════════════════════════
+function openEditChargeRow(chargeId) {
+  const c = (allChargesCache || []).find(x => x.charge_id === chargeId);
+  if (!c) { showToast('Cargo no encontrado', 'error'); return; }
+
+  document.getElementById('ecr-id').value          = c.charge_id;
+  document.getElementById('ecr-unit-id').value      = c.unit_id;
+  document.getElementById('ecr-desc').value         = c.description;
+  document.getElementById('ecr-amount').value       = c.amount;
+  document.getElementById('ecr-date-created').value = c.date_created;
+  document.getElementById('ecr-due-date').value      = c.due_date;
+  document.getElementById('ecr-result').innerHTML   = '';
+  document.getElementById('edit-charge-row-modal').classList.add('open');
+}
+function closeEditChargeRow() {
+  document.getElementById('edit-charge-row-modal').classList.remove('open');
+}
+
+async function confirmEditChargeRow() {
+  const id      = document.getElementById('ecr-id').value;
+  const unitId  = parseInt(document.getElementById('ecr-unit-id').value);
+  const desc    = document.getElementById('ecr-desc').value.trim();
+  const amount  = parseFloat(document.getElementById('ecr-amount').value);
+  const created = document.getElementById('ecr-date-created').value;
+  const due     = document.getElementById('ecr-due-date').value;
+
+  if (!desc || !amount || !created || !due) { showToast('Completa todos los campos', 'error'); return; }
+
+  const r = await apiRequest(`/charges/${id}`, 'PUT', {
+    unit_id: unitId, description: desc, amount, date_created: created, due_date: due,
+  });
+  if (r) {
+    showToast('Cargo actualizado correctamente');
+    closeEditChargeRow();
+    await refreshMovimientos();
+  }
+}
+
+async function anularCharge(chargeId, desc) {
+  if (!confirm(`¿Anular el cargo "${desc}"?\n\nEsto eliminará también los pagos aplicados a este cargo.`)) return;
+  const r = await apiRequest(`/charges/${chargeId}`, 'DELETE');
+  if (r) {
+    showToast('Cargo anulado correctamente');
+    await refreshMovimientos();
+  }
+}
+
+// ══════════════════════════════════════════════
+// EDITAR / ANULAR PAGO (desde Movimientos — solo ADMIN)
+// ══════════════════════════════════════════════
+function openEditPaymentRow(paymentId) {
+  const p = (allPagos || []).find(x => x.payment_id === paymentId);
+  if (!p) { showToast('Pago no encontrado', 'error'); return; }
+
+  document.getElementById('epr-id').value      = p.payment_id;
+  document.getElementById('epr-date').value    = p.fecha;
+  document.getElementById('epr-amount').value  = p.monto;
+  document.getElementById('epr-invoice').value = p.factura !== '—' ? p.factura : '';
+  document.getElementById('epr-ref').value     = p.referencia_raw || '';
+  document.getElementById('epr-receipt').value = p.receipt_number || '';
+  document.getElementById('epr-result').innerHTML = '';
+  document.getElementById('edit-payment-row-modal').classList.add('open');
+}
+function closeEditPaymentRow() {
+  document.getElementById('edit-payment-row-modal').classList.remove('open');
+}
+
+async function confirmEditPaymentRow() {
+  const id      = document.getElementById('epr-id').value;
+  const fecha   = document.getElementById('epr-date').value;
+  const amount  = parseFloat(document.getElementById('epr-amount').value);
+  const invoice = document.getElementById('epr-invoice').value.trim() || null;
+  const ref     = document.getElementById('epr-ref').value.trim() || null;
+  const receipt = document.getElementById('epr-receipt').value.trim() || null;
+
+  if (!fecha || !amount) { showToast('Fecha y monto son obligatorios', 'error'); return; }
+
+  const r = await apiRequest(`/finance/payment/${id}`, 'PUT', {
+    payment_date: fecha, amount, invoice_number: invoice, reference: ref, receipt_number: receipt,
+  });
+  if (r) {
+    showToast('Pago actualizado correctamente');
+    closeEditPaymentRow();
+    await refreshMovimientos();
+  }
+}
+
+async function anularPayment(paymentId) {
+  if (!confirm(`¿Anular el pago #${paymentId}?\n\nEsto revertirá los saldos de los cargos vinculados y eliminará la factura asociada si existe.`)) return;
+  const r = await apiRequest(`/finance/payment/${paymentId}`, 'DELETE');
+  if (r) {
+    showToast('Pago anulado y saldos revertidos');
+    await refreshMovimientos();
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -652,6 +1653,15 @@ function renderCharges(charges) {
     <label class="field-label">Fecha de pago</label>
     <input type="date" id="pay-date" value="${todayISO()}">
 
+    <label class="field-label">Concepto *</label>
+    <select id="pay-concepto">
+      <option value="">Seleccione un concepto</option>
+      <option value="Mantenimiento">Mantenimiento</option>
+      <option value="Cuota de Ascensor">Cuota de Ascensor</option>
+      <option value="Gas">Gas</option>
+      <option value="Abono">Abono</option>
+    </select>
+
     <label class="field-label">N° Factura física (opcional)</label>
     <input type="text" id="pay-invoice" placeholder="Ej: 00542">
 
@@ -661,7 +1671,7 @@ function renderCharges(charges) {
     <div id="pay-feedback"></div>
 
     <button onclick="registerPayment()" style="width:100%;justify-content:center;margin-top:6px;">
-      <i class="fas fa-save"></i> Registrar Pago
+      <i class="fas fa-save"></i> Nuevo Pago
     </button>`;
 
   recalcTotal();
@@ -715,6 +1725,11 @@ async function registerPayment() {
     if (fb) fb.innerHTML = `<div class="alert alert-error">Ingresa la fecha del pago</div>`; return;
   }
 
+  const concepto = document.getElementById('pay-concepto')?.value;
+  if (!concepto) {
+    if (fb) fb.innerHTML = `<div class="alert alert-error">Selecciona el concepto del pago</div>`; return;
+  }
+
   const total = applications.reduce((s, a) => s + a.amount, 0);
 
   const result = await apiRequest('/finance/payment-complete', 'POST', {
@@ -723,6 +1738,7 @@ async function registerPayment() {
     amount:         parseFloat(total.toFixed(2)),
     invoice_number: document.getElementById('pay-invoice')?.value || null,
     reference:      document.getElementById('pay-ref')?.value     || null,
+    concept:        concepto,
     applications,
   });
 
@@ -732,7 +1748,7 @@ async function registerPayment() {
     document.getElementById('pay-feedback').innerHTML =
       `<div class="alert alert-success">✓ Pago #${lastPaymentId} registrado correctamente</div>`;
 
-    await loadChargesTable();
+    await refreshMovimientos();
 
     // Refrescar cargos
     if (mode === 'owner') {
@@ -809,10 +1825,33 @@ function loadChargeUnits() {
     </div>`;
 }
 
+function handleConceptChange() {
+  const sel    = document.getElementById('charge-desc-select');
+  const custom = document.getElementById('charge-desc-custom');
+  custom.style.display = sel.value === '__custom__' ? '' : 'none';
+  if (sel.value !== '__custom__') custom.value = '';
+}
+
+function getSelectedConceptDesc() {
+  const sel = document.getElementById('charge-desc-select');
+  if (sel.value === '__custom__') {
+    return document.getElementById('charge-desc-custom').value.trim();
+  }
+  return sel.value.trim();
+}
+
+async function loadConceptsSelect() {
+  const concepts = await apiRequest('/concepts/') || [];
+  const sel = document.getElementById('charge-desc-select');
+  sel.innerHTML = '<option value="">Seleccione un concepto</option>' +
+    concepts.map(c => `<option value="${c.name}">${c.name}</option>`).join('') +
+    '<option value="__custom__">Otro (especificar)...</option>';
+}
+
 async function createCharge() {
   const propId  = parseInt(document.getElementById('charge-prop-select').value);
   const unitId  = parseInt(document.getElementById('charge-unit-select').value) || null;
-  const desc    = document.getElementById('charge-desc').value.trim();
+  const desc    = getSelectedConceptDesc();
   const amount  = parseFloat(document.getElementById('charge-amount').value);
   const created = document.getElementById('charge-date').value;
   const due     = document.getElementById('charge-due').value;
@@ -841,16 +1880,19 @@ async function createCharge() {
     showToast(unitId
       ? 'Cargo creado correctamente'
       : `Cargos creados para todas las unidades`);
-    document.getElementById('charge-desc').value   = '';
+    document.getElementById('charge-desc-select').value = '';
+    document.getElementById('charge-desc-custom').value = '';
+    document.getElementById('charge-desc-custom').style.display = 'none';
     document.getElementById('charge-amount').value = '';
     document.getElementById('charge-due').value    = '';
     document.getElementById('amount-preview').textContent = '0.00';
-    await loadChargesTable();
+    document.getElementById('post-charge-panel').style.display = 'block';
+    await refreshMovimientos();
   }
 }
 
 // ══════════════════════════════════════════════
-// TABLA HISTORIAL
+// CARGA DE DATOS: CARGOS
 // ══════════════════════════════════════════════
 async function loadChargesTable() {
   allChargesCache = await apiRequest('/finance/charges');
@@ -859,110 +1901,719 @@ async function loadChargesTable() {
     console.error("ERROR API /finance/charges:", allChargesCache);
     allChargesCache = [];
   }
-
-  const owners = [...new Set(allChargesCache.map(c => c.owner_name).filter(Boolean))].sort();
-  const units  = [...new Set(allChargesCache.map(c => c.unit_number).filter(Boolean))].sort();
-
-  const ownerSel = document.getElementById('filter-owner');
-  const unitSel  = document.getElementById('filter-unit');
-
-  if (ownerSel) {
-    const prev = ownerSel.value;
-    ownerSel.innerHTML = '<option value="">Todos</option>';
-    owners.forEach(o => ownerSel.innerHTML += `<option value="${o}">${o}</option>`);
-    ownerSel.value = prev;
-  }
-  if (unitSel) {
-    const prev = unitSel.value;
-    unitSel.innerHTML = '<option value="">Todos</option>';
-    units.forEach(u => unitSel.innerHTML += `<option value="${u}">Apt. ${u}</option>`);
-    unitSel.value = prev;
-  }
-
-  filterChargesTable();
 }
 
-function clearChargeFilters() {
-  ['filter-status','filter-owner','filter-unit'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  const descEl = document.getElementById('filter-desc');
-  if (descEl) descEl.value = '';
-  filterChargesTable();
-}
-
-function filterChargesTable() {
-  const status = document.getElementById('filter-status')?.value  || '';
-  const owner  = document.getElementById('filter-owner')?.value   || '';
-  const unit   = document.getElementById('filter-unit')?.value    || '';
-  const desc   = (document.getElementById('filter-desc')?.value   || '').toLowerCase().trim();
-
-  const list = allChargesCache.filter(c => {
-    if (status && c.status      !== status)                      return false;
-    if (owner  && c.owner_name  !== owner)                       return false;
-    if (unit   && c.unit_number !== unit)                        return false;
-    if (desc   && !c.description?.toLowerCase().includes(desc))  return false;
-    return true;
-  });
-
-  const badge = document.getElementById('charges-count-badge');
-  if (badge) badge.textContent = list.length;
-
-  const tbody = document.getElementById('charges-table-body');
-
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">
-      Sin cargos con los filtros aplicados</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = list.map(c => {
-    const paid = parseFloat(c.amount || 0) - parseFloat(c.balance || 0);
-
-    // Botón de factura para cargos PAGADOS
-    // c.payment_id viene del endpoint /finance/charges
-    let accionBtn = '—';
-    if (c.status === 'PAGADO' && c.payment_id) {
-      accionBtn = `
-        <button onclick="verFacturaDesdeHistorial(${c.payment_id})"
-          style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--border);
-                 padding:4px 10px;font-size:.75rem;border-radius:5px;cursor:pointer;
-                 font-family:inherit;font-weight:600;display:inline-flex;align-items:center;gap:4px;
-                 margin:0;width:auto;">
-          <i class="fas fa-receipt"></i> Ver Factura
-        </button>`;
-    } else if (c.status === 'PARCIAL' && c.payment_id) {
-      accionBtn = `
-        <button onclick="verFacturaDesdeHistorial(${c.payment_id})"
-          style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;
-                 padding:4px 10px;font-size:.75rem;border-radius:5px;cursor:pointer;
-                 font-family:inherit;font-weight:600;display:inline-flex;align-items:center;gap:4px;
-                 margin:0;width:auto;">
-          <i class="fas fa-receipt"></i> Ver Recibo
-        </button>`;
-    }
-
-    return `<tr>
-      <td>${c.owner_name || '<em style="color:var(--text-muted)">Sin asignar</em>'}</td>
-      <td>${c.unit_number ? `Apt. ${c.unit_number}` : '—'}</td>
-      <td><strong>${c.description}</strong></td>
-      <td style="font-size:.82rem;color:var(--text-secondary);">${formatDate(c.due_date)}</td>
-      <td class="td-right">$${formatMoney(c.amount)}</td>
-      <td class="td-right" style="color:var(--success);">$${formatMoney(paid)}</td>
-      <td class="td-right td-bold">$${formatMoney(c.balance)}</td>
-      <td><span class="badge badge-${c.status}">${c.status}</span></td>
-      <td>${accionBtn}</td>
-    </tr>`;
-  }).join('');
-}
-// Nueva función para ver factura desde el historial
 function verFacturaDesdeHistorial(paymentId) {
   window.open(`/static/factura.html?payment_id=${paymentId}`, '_blank');
 }
 
+// ══════════════════════════════════════════════
+// MOVIMIENTOS: combina /finance/charges + /finance/payments-history
+// en 3 sub-pestañas -- Pendientes | Pagados | Todos
+// ══════════════════════════════════════════════
+let allMovimientos = [];
+let movFiltrados   = [];
+let movActiveTab   = 'pendientes';
+let movSort        = { field: 'fecha', dir: 'desc' };
+
+const MOV_TAB_TITLES = { pendientes: 'Pendientes', pagados: 'Pagados', todos: 'Todos' };
+
+function buildMovimientos() {
+  const unitIdByNumber = {};
+  (allUnitsCache || []).forEach(u => { unitIdByNumber[u.unit_number] = u.id; });
+
+  const cargos = (allChargesCache || []).map(c => ({
+    fecha:       c.date_created,
+    tipo:        'CARGO',
+    unit_number: c.unit_number,
+    unit_id:     c.unit_id || unitIdByNumber[c.unit_number] || null,
+    owner_name:  c.owner_name,
+    concepto:    c.description,
+    monto:       parseFloat(c.amount || 0),
+    balance:     parseFloat(c.balance || 0),
+    estado:      c.status,
+    referencia:  '—',
+    payment_id:  c.payment_id,
+    charge_id:   c.charge_id,
+  }));
+
+  const pagos = (allPagos || []).map(p => ({
+    fecha:       p.fecha,
+    tipo:        'PAGO',
+    unit_number: p.apto,
+    unit_id:     unitIdByNumber[p.apto] || null,
+    owner_name:  p.owner_name,
+    concepto:    p.concepto,
+    monto:       p.monto,
+    balance:     p.monto,
+    estado:      null,
+    referencia:  (p.factura && p.factura !== '—') ? p.factura : (p.observacion || '—'),
+    payment_id:  p.payment_id,
+    charge_id:   null,
+  }));
+
+  allMovimientos = [...cargos, ...pagos].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+  // Poblar selects de filtro (preservando el valor actual si sigue vigente)
+  const units     = [...new Set(allMovimientos.map(m => m.unit_number).filter(Boolean))].sort();
+  const conceptos = [...new Set(allMovimientos.map(m => m.concepto).filter(Boolean))].sort();
+  const anios     = [...new Set(allMovimientos.map(m => (m.fecha || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+
+  const unitSel = document.getElementById('mv-unit');
+  const concSel = document.getElementById('mv-concepto');
+  const anioSel = document.getElementById('mv-anio');
+  const prevUnit = unitSel.value, prevConc = concSel.value, prevAnio = anioSel.value;
+
+  unitSel.innerHTML = '<option value="">Todas</option>' + units.map(u => `<option value="${u}">Apt. ${u}</option>`).join('');
+  concSel.innerHTML = '<option value="">Todos</option>' + conceptos.map(c => `<option value="${c}">${c}</option>`).join('');
+  anioSel.innerHTML = '<option value="">Todos</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+
+  unitSel.value = prevUnit; concSel.value = prevConc; anioSel.value = prevAnio;
+
+  applyMovFilters();
+}
+
+function applyMovFilters() {
+  const unit     = document.getElementById('mv-unit').value;
+  const concepto = document.getElementById('mv-concepto').value;
+  const anio     = document.getElementById('mv-anio').value;
+  const mes      = document.getElementById('mv-mes').value;
+  const estado   = document.getElementById('mv-estado').value;
+  const tipo     = document.getElementById('mv-tipo').value;
+  const search   = document.getElementById('mv-search').value.toLowerCase().trim();
+
+  movFiltrados = allMovimientos.filter(m => {
+    if (unit     && m.unit_number !== unit)              return false;
+    if (concepto && m.concepto    !== concepto)          return false;
+    if (anio     && (m.fecha || '').slice(0, 4) !== anio) return false;
+    if (mes      && (m.fecha || '').slice(5, 7) !== mes)  return false;
+    if (estado   && m.estado      !== estado)            return false;
+    if (tipo     && m.tipo        !== tipo)              return false;
+    if (search) {
+      const txt = [m.concepto, m.referencia, m.unit_number].join(' ').toLowerCase();
+      if (!txt.includes(search)) return false;
+    }
+    return true;
+  });
+
+  renderMovTable();
+}
+
+function clearMovFilters() {
+  ['mv-unit', 'mv-concepto', 'mv-anio', 'mv-mes', 'mv-estado', 'mv-tipo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mv-search').value = '';
+  applyMovFilters();
+}
+
+// ── Sub-pestañas Pendientes / Pagados / Todos ──────────────────────
+function switchMovSubtab(tab) {
+  movActiveTab = tab;
+  movSort = { field: 'fecha', dir: 'desc' };
+
+  document.querySelectorAll('#panel-main .mov-subtabs .mov-subtab').forEach(b => {
+    const isActive = b.dataset.subtab === tab;
+    b.classList.toggle('active', isActive);
+    b.classList.toggle('btn-primary', isActive);
+    b.classList.toggle('btn-secondary', !isActive);
+  });
+  document.getElementById('mov-filters-card').style.display = tab === 'todos' ? '' : 'none';
+  document.getElementById('mov-table-title').textContent = MOV_TAB_TITLES[tab];
+
+  renderMovTable();
+}
+
+function updateMovSubtabCounts() {
+  const pend = (allChargesCache || []).filter(c => parseFloat(c.balance || 0) > 0).length;
+  const pag  = (allPagos || []).length;
+  const tod  = (allMovimientos || []).length;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('mst-count-pendientes', pend);
+  set('mst-count-pagados', pag);
+  set('mst-count-todos', tod);
+}
+
+function movSortRows(rows, fields) {
+  const { field, dir } = movSort;
+  if (!fields.includes(field)) return rows;
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    let va = a[field], vb = b[field];
+    if (field === 'monto' || field === 'balance') { va = parseFloat(va) || 0; vb = parseFloat(vb) || 0; return (va - vb) * mult; }
+    va = (va || '').toString(); vb = (vb || '').toString();
+    return va.localeCompare(vb) * mult;
+  });
+}
+
+function applyMovSort(field) {
+  if (movSort.field === field) {
+    movSort.dir = movSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    movSort = { field, dir: 'asc' };
+  }
+  renderMovTable();
+}
+
+function sortTh(label, field, extraStyle) {
+  const active = movSort.field === field;
+  const icon = active ? (movSort.dir === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down') : 'fa-sort';
+  return `<th class="sortable${active ? ' sort-active' : ''}"${extraStyle ? ` style="${extraStyle}"` : ''} onclick="applyMovSort('${field}')">${label} <i class="fas ${icon} sort-icon"></i></th>`;
+}
+
+function kebabMenu(uid, items) {
+  return `
+    <div class="kebab-wrap">
+      <button class="kebab-btn" onclick="event.stopPropagation(); toggleKebab('${uid}')"><i class="fas fa-ellipsis-v"></i></button>
+      <div class="kebab-menu" id="kb-${uid}">${items}</div>
+    </div>`;
+}
+function toggleKebab(uid) {
+  const el = document.getElementById(`kb-${uid}`);
+  const wasOpen = el.classList.contains('open');
+  document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) el.classList.add('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.kebab-wrap')) document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+function renderMovTable() {
+  renderMovSummaryCards();
+  updateMovSubtabCounts();
+  if (movActiveTab === 'pendientes') return renderMovPendientes();
+  if (movActiveTab === 'pagados')    return renderMovPagados();
+  return renderMovTodos();
+}
+
+// ── Pestaña: PENDIENTES (Charges con balance > 0) ──────────────────
+function renderMovPendientes() {
+  let rows = (allChargesCache || []).filter(c => parseFloat(c.balance || 0) > 0).map(c => ({
+    fecha: c.date_created, factura: '—', unit_number: c.unit_number, owner_name: c.owner_name,
+    concepto: c.description, monto: parseFloat(c.balance || 0), charge_id: c.charge_id,
+  }));
+  rows = movSortRows(rows, ['fecha', 'monto']);
+
+  document.getElementById('mov-count').textContent = rows.length;
+  document.getElementById('mov-thead').innerHTML = `<tr>
+    ${sortTh('Fecha', 'fecha')}
+    <th>Factura</th>
+    <th>Unidad / Propietario</th>
+    <th>Concepto</th>
+    ${sortTh('Monto', 'monto', 'text-align:right;')}
+    ${Auth.isAdmin() ? '<th></th>' : ''}
+  </tr>`;
+
+  const tbody = document.getElementById('mov-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin cargos pendientes</td></tr>`;
+    document.getElementById('mov-page-info').textContent = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const acciones = Auth.isAdmin() ? `<td>${kebabMenu('c' + r.charge_id, `
+      <button onclick="toggleKebab('c${r.charge_id}');openEditChargeRow(${r.charge_id})"><i class="fas fa-pencil-alt"></i> Editar</button>
+      <button class="danger" onclick="toggleKebab('c${r.charge_id}');anularCharge(${r.charge_id}, '${(r.concepto||'').replace(/'/g, "\\'")}')"><i class="fas fa-ban"></i> Anular</button>
+    `)}</td>` : '';
+    return `<tr>
+      <td style="white-space:nowrap;">${formatDate(r.fecha)}</td>
+      <td style="color:var(--text-muted);">—</td>
+      <td><strong>Apt. ${r.unit_number || '—'}</strong><br><span style="font-size:.76rem;color:var(--text-muted);">${r.owner_name || '—'}</span></td>
+      <td>${razonTag(r.concepto)}</td>
+      <td class="td-right"><strong>$${formatMoney(r.monto)}</strong></td>
+      ${acciones}
+    </tr>`;
+  }).join('');
+  document.getElementById('mov-page-info').textContent = `${rows.length} cargo${rows.length !== 1 ? 's' : ''} pendiente${rows.length !== 1 ? 's' : ''}`;
+}
+
+// ── Pestaña: PAGADOS (todos los Payments) ──────────────────────────
+function renderMovPagados() {
+  let rows = (allPagos || []).map(p => ({
+    fecha: p.fecha, factura: (p.factura && p.factura !== '—') ? p.factura : (p.observacion || '—'),
+    unit_number: p.apto, owner_name: p.owner_name, concepto: p.concepto, monto: p.monto, payment_id: p.payment_id,
+  }));
+  rows = movSortRows(rows, ['fecha', 'monto', 'factura']);
+
+  document.getElementById('mov-count').textContent = rows.length;
+  document.getElementById('mov-thead').innerHTML = `<tr>
+    ${sortTh('Fecha', 'fecha')}
+    ${sortTh('Factura', 'factura')}
+    <th>Unidad / Propietario</th>
+    <th>Concepto</th>
+    ${sortTh('Monto', 'monto', 'text-align:right;')}
+    ${Auth.isAdmin() ? '<th></th>' : ''}
+  </tr>`;
+
+  const tbody = document.getElementById('mov-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos registrados</td></tr>`;
+    document.getElementById('mov-page-info').textContent = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const acciones = Auth.isAdmin() ? `<td>${kebabMenu('p' + r.payment_id, `
+      <button onclick="toggleKebab('p${r.payment_id}');openEditPaymentRow(${r.payment_id})"><i class="fas fa-pencil-alt"></i> Editar</button>
+      <button onclick="toggleKebab('p${r.payment_id}');verFacturaDesdeHistorial(${r.payment_id})"><i class="fas fa-receipt"></i> Ver factura</button>
+      <button class="danger" onclick="toggleKebab('p${r.payment_id}');anularPayment(${r.payment_id})"><i class="fas fa-ban"></i> Anular</button>
+    `)}</td>` : '';
+    return `<tr>
+      <td style="white-space:nowrap;">${formatDate(r.fecha)}</td>
+      <td style="font-family:monospace;font-size:.78rem;">${r.factura}</td>
+      <td><strong>Apt. ${r.unit_number || '—'}</strong><br><span style="font-size:.76rem;color:var(--text-muted);">${r.owner_name || '—'}</span></td>
+      <td>${razonTag(r.concepto)}</td>
+      <td class="td-right"><strong>$${formatMoney(r.monto)}</strong></td>
+      ${acciones}
+    </tr>`;
+  }).join('');
+  document.getElementById('mov-page-info').textContent = `${rows.length} pago${rows.length !== 1 ? 's' : ''}`;
+}
+
+// ── Pestaña: TODOS (cargos + pagos combinados, con filtros) ────────
+function renderMovTodos() {
+  let rows = movSortRows(movFiltrados, ['fecha', 'monto']);
+
+  document.getElementById('mov-count').textContent = rows.length;
+  document.getElementById('mov-thead').innerHTML = `<tr>
+    ${sortTh('Fecha', 'fecha')}
+    <th>Tipo</th>
+    <th>Unidad</th>
+    <th>Concepto</th>
+    ${sortTh('Monto', 'monto', 'text-align:right;')}
+    <th>Estado</th>
+    <th>Referencia/Factura</th>
+    ${Auth.isAdmin() ? '<th></th>' : ''}
+    <th></th>
+  </tr>`;
+
+  const tbody = document.getElementById('mov-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin movimientos con los filtros aplicados</td></tr>`;
+    document.getElementById('mov-page-info').textContent = '';
+    return;
+  }
+
+  const visible = rows.slice(0, 500);
+  tbody.innerHTML = visible.map(m => {
+    let accion = (m.referencia && m.referencia !== '—')
+      ? `<span style="font-family:monospace;font-size:.78rem;">${m.referencia}</span>` : '—';
+    if (m.payment_id) {
+      accion = `
+        <button onclick="verFacturaDesdeHistorial(${m.payment_id})"
+          style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--border);
+                 padding:4px 10px;font-size:.72rem;border-radius:5px;cursor:pointer;
+                 font-family:inherit;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin:0;width:auto;">
+          <i class="fas fa-receipt"></i> ${m.referencia && m.referencia !== '—' ? m.referencia : 'Ver'}
+        </button>`;
+    }
+
+    let acciones = '';
+    if (Auth.isAdmin()) {
+      const uid = m.tipo === 'CARGO' ? 'c' + m.charge_id : 'p' + m.payment_id;
+      const items = m.tipo === 'CARGO'
+        ? `<button onclick="toggleKebab('${uid}');openEditChargeRow(${m.charge_id})"><i class="fas fa-pencil-alt"></i> Editar</button>
+           <button class="danger" onclick="toggleKebab('${uid}');anularCharge(${m.charge_id}, '${(m.concepto||'').replace(/'/g, "\\'")}')"><i class="fas fa-ban"></i> Anular</button>`
+        : `<button onclick="toggleKebab('${uid}');openEditPaymentRow(${m.payment_id})"><i class="fas fa-pencil-alt"></i> Editar</button>
+           <button onclick="toggleKebab('${uid}');verFacturaDesdeHistorial(${m.payment_id})"><i class="fas fa-receipt"></i> Ver factura</button>
+           <button class="danger" onclick="toggleKebab('${uid}');anularPayment(${m.payment_id})"><i class="fas fa-ban"></i> Anular</button>`;
+      acciones = `<td>${kebabMenu(uid, items)}</td>`;
+    }
+
+    const estadoCuentaBtn = m.unit_id
+      ? `<button class="btn-edit" onclick="window.open('/static/estado_cuenta.html?unit_id=${m.unit_id}', '_blank')" title="Ver Estado de Cuenta"><i class="fas fa-file-alt"></i></button>`
+      : '';
+
+    return `<tr>
+      <td style="white-space:nowrap;">${formatDate(m.fecha)}</td>
+      <td><span style="font-weight:700;color:${m.tipo === 'CARGO' ? 'var(--accent)' : 'var(--success)'};">${m.tipo === 'CARGO' ? 'Cargo' : 'Pago'}</span></td>
+      <td><strong>Apt. ${m.unit_number || '—'}</strong></td>
+      <td>${razonTag(m.concepto)}</td>
+      <td class="td-right"><strong>$${formatMoney(m.monto)}</strong></td>
+      <td>${m.tipo === 'CARGO' ? `<span class="badge badge-${m.estado}">${m.estado}</span>` : '<span style="color:var(--text-muted);font-size:.8rem;">Aplicado</span>'}</td>
+      <td>${accion}</td>
+      ${acciones}
+      <td>${estadoCuentaBtn}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('mov-page-info').textContent =
+    rows.length > 500
+      ? `Mostrando 500 de ${rows.length} — exporta Excel para ver todos`
+      : `${rows.length} movimiento${rows.length !== 1 ? 's' : ''}`;
+}
+
+function renderMovSummaryCards() {
+  const wrap = document.getElementById('mov-summary-cards');
+
+  if (movActiveTab === 'pendientes') {
+    const pend = (allChargesCache || []).filter(c => parseFloat(c.balance || 0) > 0);
+    const total = pend.reduce((s, c) => s + parseFloat(c.balance || 0), 0);
+    wrap.innerHTML = `
+      <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+        <div class="stat-info"><h4>Movimientos</h4><div class="stat-value">${pend.length}</div><div class="stat-label">cargos pendientes</div></div></div>
+      <div class="stat-card"><div class="stat-icon red"><i class="fas fa-file-invoice-dollar"></i></div>
+        <div class="stat-info"><h4>Total Cargos</h4><div class="stat-value">$${formatMoney(total)}</div><div class="stat-label">saldo pendiente</div></div></div>`;
+    return;
+  }
+
+  if (movActiveTab === 'pagados') {
+    const pagos = allPagos || [];
+    const total = pagos.reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+    wrap.innerHTML = `
+      <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-list"></i></div>
+        <div class="stat-info"><h4>Movimientos</h4><div class="stat-value">${pagos.length}</div><div class="stat-label">pagos registrados</div></div></div>
+      <div class="stat-card"><div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+        <div class="stat-info"><h4>Total Pagos</h4><div class="stat-value">$${formatMoney(total)}</div><div class="stat-label">recaudado</div></div></div>`;
+    return;
+  }
+
+  // Todos
+  const totalCargos = movFiltrados.filter(m => m.tipo === 'CARGO').reduce((s, m) => s + m.monto, 0);
+  const totalPagos  = movFiltrados.filter(m => m.tipo === 'PAGO').reduce((s, m) => s + m.monto, 0);
+  wrap.innerHTML = `
+    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-list"></i></div>
+      <div class="stat-info"><h4>Movimientos</h4><div class="stat-value">${movFiltrados.length}</div><div class="stat-label">con los filtros aplicados</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-file-invoice-dollar"></i></div>
+      <div class="stat-info"><h4>Total Cargos</h4><div class="stat-value">$${formatMoney(totalCargos)}</div><div class="stat-label">del período filtrado</div></div></div>
+    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+      <div class="stat-info"><h4>Total Pagos</h4><div class="stat-value">$${formatMoney(totalPagos)}</div><div class="stat-label">del período filtrado</div></div></div>`;
+}
+
+function exportarExcelMovimientos() {
+  if (!movFiltrados.length) { showToast('Sin datos para exportar', 'warning'); return; }
+  const headers = ['Fecha', 'Tipo', 'Unidad', 'Concepto', 'Monto', 'Estado', 'Referencia'];
+  const rows = movFiltrados.map(m => [m.fecha, m.tipo === 'CARGO' ? 'Cargo' : 'Pago', m.unit_number, m.concepto, m.monto, m.estado || 'Aplicado', m.referencia]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:28},{wch:12},{wch:12},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Movimientos');
+  XLSX.writeFile(wb, `movimientos_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Archivo descargado', 'success');
+}
+
+// ══════════════════════════════════════════════
+// HISTORIAL DE PAGOS (migrado de historial.html)
+// ══════════════════════════════════════════════
+let allPagos = [];
+
+/* ── Tag de concepto ─────────────────────────────────── */
+function razonTag(t) {
+  if (!t || t === '—') return `<span class="razon-tag tag-otros">—</span>`;
+  const l = t.toLowerCase();
+  let c = 'tag-otros';
+  if (l.includes('mantenimiento'))                         c = 'tag-mant';
+  else if (l.includes('gas'))                              c = 'tag-gas';
+  else if (l.includes('ascensor') || l.includes('cuota')) c = 'tag-asc';
+  else if (l.includes('admin'))                            c = 'tag-admin';
+  return `<span class="razon-tag ${c}">${t}</span>`;
+}
+
+/* ── Carga de datos: pagos (también alimenta el modal de Reporte por Apartamento) ── */
+function extractFacturaNumber(ref) {
+  if (!ref) return null;
+  const m = String(ref).match(/Factura\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
+async function loadPaymentsHistory() {
+  const pagos = await apiRequest('/finance/payments-history');
+
+  if (!Array.isArray(pagos)) {
+    console.error("ERROR API /finance/payments-history:", pagos);
+    allPagos = [];
+    return;
+  }
+
+  allPagos = pagos.map(p => ({
+    payment_id:      p.payment_id,
+    // El N° de factura real (migración desde Excel) quedó guardado en el
+    // texto de "reference" (ej. "Factura 17530" / "Abono - Factura 17530"),
+    // no en invoice_number (que solo se usa para pagos registrados manualmente
+    // en el sistema). Se extrae de ahí cuando invoice_number viene vacío.
+    factura:         p.factura || extractFacturaNumber(p.referencia) || '—',
+    fecha:           p.fecha           || '',
+    apto:            p.unit_number     || '—',
+    owner_name:      p.owner_name      || '—',
+    concepto:        p.concepto        || '—',
+    observacion:     p.observacion     || '',
+    monto:           parseFloat(p.monto || 0),
+    referencia_raw:  p.referencia      || '',
+    receipt_number:  p.receipt_number  || '',
+  })).sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  llenarSelectoresReporte();
+}
+
+function llenarSelectoresReporte() {
+  const aptos     = [...new Set(allPagos.map(p => p.apto))].sort();
+  const conceptos = [...new Set(allPagos.map(p => p.concepto))].sort();
+  document.getElementById('rep-apto').innerHTML     = '<option value="">Seleccione</option>' + aptos.map(a     => `<option>${a}</option>`).join('');
+  document.getElementById('rep-concepto').innerHTML = '<option value="">Todos</option>'     + conceptos.map(c => `<option>${c}</option>`).join('');
+}
+
+/* ══ REPORTE PDF ═══════════════════════════════════════ */
+function abrirReporte() {
+  document.getElementById('reporte-modal').classList.add('open');
+}
+function cerrarReporte() {
+  document.getElementById('reporte-modal').classList.remove('open');
+}
+document.getElementById('reporte-modal').addEventListener('click', function(e) {
+  if (e.target === this) cerrarReporte();
+});
+
+function getPagosFiltradosReporte() {
+  const apto     = document.getElementById('rep-apto').value;
+  const desde    = document.getElementById('rep-desde').value;
+  const hasta    = document.getElementById('rep-hasta').value;
+  const concepto = document.getElementById('rep-concepto').value;
+  if (!apto) return null;
+  let p = allPagos.filter(x => x.apto === apto);
+  if (desde)    p = p.filter(x => x.fecha >= desde);
+  if (hasta)    p = p.filter(x => x.fecha <= hasta);
+  if (concepto) p = p.filter(x => x.concepto === concepto);
+  return { apto, desde, hasta, concepto, pagos: p };
+}
+
+function fdate(s) {
+  if (!s) return '—';
+  try {
+    const [y,m,d] = s.split('T')[0].split('-');
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+  } catch { return s; }
+}
+
+function generarReporte()
+{
+  const content = document.getElementById('reporte-content');
+  const res = getPagosFiltradosReporte();
+
+  if (!res) {
+    content.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">
+      <i class="fas fa-home" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+      Selecciona un apartamento para generar el reporte</div>`;
+    return;
+  }
+
+  const { apto, desde, hasta, concepto, pagos } = res;
+
+  if (!pagos.length) {
+    content.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros seleccionados</div>`;
+    return;
+  }
+
+  const owner  = pagos[0]?.owner_name || '—';
+  const total  = pagos.reduce((s, p) => s + p.monto, 0);
+  const hoy    = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
+  const periodo= desde && hasta ? `${fdate(desde)} al ${fdate(hasta)}`
+               : desde ? `Desde ${fdate(desde)}`
+               : hasta ? `Hasta ${fdate(hasta)}` : 'Histórico completo';
+
+  let tableRows = '';
+  pagos.forEach(p => {
+    tableRows += `
+      <tr>
+        <td style="font-family:monospace;font-size:.78rem;">${p.factura || '—'}</td>
+        <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
+        <td>${p.concepto || p.factura || '—'}</td>
+        <td class="right"><strong>$${formatMoney(p.monto)}</strong></td>
+      </tr>
+    `;
+  });
+
+  content.innerHTML = `
+    <div id="pdf-doc" style="background:white;padding:20px;">
+      <div class="doc-header">
+        <div>
+          <h1>MERCEDES BIENES RAÍCES</h1>
+          <div class="sub-info">AR | Sistema de Administración de Propiedades</div>
+        </div>
+        <div class="doc-title">
+          <h2>REPORTE DE PAGOS</h2>
+          <div class="date">${hoy}</div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-cell">
+          <div class="ic-lbl">APARTAMENTO</div>
+          <div class="ic-val">Apt. ${apto}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">PROPIETARIO</div>
+          <div class="ic-val">${owner}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">PERÍODO</div>
+          <div class="ic-val">${periodo}</div>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="sum-card"><div class="sv">${pagos.length}</div><div class="sl">Registros</div></div>
+        <div class="sum-card"><div class="sv">$${formatMoney(total)}</div><div class="sl">Total Pagado</div></div>
+      </div>
+
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th># Factura</th>
+            <th>Fecha</th>
+            <th>Concepto</th>
+            <th class="right">Monto</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+
+      <div style="border-top: 2px solid var(--doc-accent); padding-top: 10px; display: flex; justify-content: flex-end; gap: 20px; margin-top: 20px;">
+        <span style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--doc-muted);">TOTAL PAGADO</span>
+        <span style="font-size:1.1rem; font-weight:900; color:var(--doc-accent);">$${formatMoney(total)}</span>
+      </div>
+
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="sig-name">Mercedes Bienes Raíces</div>
+          <div class="sig-title">Administración</div>
+        </div>
+      </div>
+
+      <div class="doc-footer-note">
+        <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+        Documento generado electrónicamente por el Sistema de Administración de Propiedades Alianza Residencial. Para aclaraciones, contactar administración.
+      </div>
+    </div>
+  `;
+}
+
+/* ── Imprimir / Exportar PDF ─────────────────────────── */
+function imprimirPDF() {
+  const apto = document.getElementById('rep-apto').value;
+  if (!apto) { showToast('Selecciona un apartamento primero','warning'); return; }
+
+  const doc = document.getElementById('pdf-doc');
+  if (!doc)  { showToast('Genera el reporte primero','warning'); return; }
+
+  const contenido = doc.cloneNode(true);
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Reporte Apt. ${apto}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: 'Segoe UI', system-ui, sans-serif;
+          background: white;
+          padding: 30px 35px;
+          color: #1a2639;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        .doc-header {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          border-bottom: 2px solid #0a2c5e; padding-bottom: 18px; margin-bottom: 20px;
+        }
+        .doc-header h1 { font-size: 1.3rem; font-weight: 800; color: #0a2c5e; text-transform: uppercase; }
+        .doc-header .sub-info { font-size: .78rem; color: #5a6a7e; }
+        .doc-header .doc-title { text-align: right; }
+        .doc-header .doc-title h2 { font-size: 1rem; font-weight: 700; color: #0a2c5e; }
+        .doc-header .date { font-size: .78rem; color: #5a6a7e; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid #e6e9f0;
+                     border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
+        .info-cell { padding: 10px 14px; border-right: 1px solid #e6e9f0; }
+        .info-cell:last-child { border-right: none; }
+        .ic-lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: .06em; color: #94a3b8; margin-bottom: 3px; }
+        .ic-val { font-size: .88rem; font-weight: 700; color: #1a2639; }
+
+        .summary-cards { display: flex; gap: 10px; margin-bottom: 18px; }
+        .sum-card { text-align: center; padding: 14px 16px; border-radius: 6px;
+                    border: 1px solid #e6e9f0; }
+        .sum-card .sv { font-size: 1.2rem; font-weight: 800; color: #0a2c5e; }
+        .sum-card .sl { font-size: .68rem; font-weight: 600; text-transform: uppercase;
+                         letter-spacing: .04em; color: #5a6a7e; }
+
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        thead tr { background: #f8fafc; }
+        th { padding: 9px 10px; text-align: left; font-size: .68rem; font-weight: 700;
+             text-transform: uppercase; letter-spacing: .05em; color: #5a6a7e;
+             border-bottom: 2px solid #e6e9f0; }
+        td { padding: 8px 10px; font-size: .83rem; border-bottom: 1px solid #e6e9f0; }
+        td.right, th.right { text-align: right; }
+
+        .total-line { border-top: 2px solid #0a2c5e; padding-top: 10px;
+                      display: flex; justify-content: flex-end; gap: 20px; margin-top: 16px; }
+        .total-line span:first-child { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+                                        letter-spacing: .05em; color: #5a6a7e; }
+        .total-line span:last-child { font-size: 1.05rem; font-weight: 900; color: #0a2c5e; }
+
+        .signature-section { display: flex; justify-content: flex-end; margin-top: 30px; }
+        .signature-block { text-align: center; min-width: 180px; }
+        .signature-line { border-top: 1.5px solid #1a2639; margin-bottom: 5px; }
+        .sig-name { font-size: .82rem; font-weight: 700; }
+        .sig-title { font-size: .7rem; color: #5a6a7e; }
+
+        .doc-footer-note { margin-top: 20px; padding: 14px 16px; background: #fdf4e7;
+                          border: 1px solid #fce4c8; border-left: 4px solid #f59e0b;
+                          border-radius: 0 6px 6px 0; font-size: .75rem; color: #5a6a7e; }
+        .doc-footer-note strong { color: #1a2639; display: block; margin-bottom: 3px; }
+
+        @media print {
+          body { padding: 25px 30px; }
+          @page { size: A4; margin: 0; }
+        }
+      </style>
+    </head>
+    <body>
+      ${contenido.innerHTML}
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+
+  setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+    printWindow.onafterprint = function() {
+      printWindow.close();
+    };
+  }, 600);
+}
+
+/* ── Excel del reporte ───────────────────────────────── */
+function exportarReporteExcel() {
+  const res = getPagosFiltradosReporte();
+  if (!res) { showToast('Selecciona un apartamento primero','warning'); return; }
+  const { apto, pagos } = res;
+  if (!pagos.length) { showToast('Sin datos para exportar','warning'); return; }
+
+  const total   = pagos.reduce((s,p) => s+p.monto, 0);
+  const headers = ['# Factura','Fecha','Apartamento','Propietario','Concepto','Monto'];
+  const rows    = pagos.map(p => [p.factura, p.fecha, p.apto, p.owner_name, p.concepto, p.monto]);
+  rows.push([], ['','','','','TOTAL', total]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:28},{wch:22},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Apt ${apto}`);
+  XLSX.writeFile(wb, `reporte_apt${apto}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Reporte descargado','success');
+}
+
+// Cerrar modales al hacer clic fuera de la caja
+['charge-modal', 'payment-modal', 'monthly-modal', 'latefee-modal', 'credit-modal', 'fifo-modal', 'invoice-modal', 'edit-charge-row-modal', 'edit-payment-row-modal', 'statement-modal', 'reporte-flex-modal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('open'); });
+});
+
 renderSidebar('finances');
 init();
+renderReportTypeFilters();
 </script>
 </body>
 </html>

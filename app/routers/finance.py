@@ -10,10 +10,14 @@ from app.models.invoice import Invoice
 from app.models.owner import Owner
 from app.models.payment import Payment
 from app.services.finance_service import (
+    apply_credit_to_charge,
+    apply_late_fee,
+    apply_payment_fifo,
     apply_payment_to_charge,
     create_general_charge_for_property,
     create_invoice_for_payment,
     create_payment_with_applications,
+    generate_monthly_charges,
     generate_owner_statement,
     get_owner_account_statement,
     get_payment_detail,
@@ -22,6 +26,7 @@ from app.services.finance_service import (
     get_unit_account_statement,
     list_charges_with_status,
 )
+from app.models.owner_credit import OwnerCredit
 from app.models.payment_application import PaymentApplication
 from app.models.unit import Unit
 from app.models.unit_owner import UnitOwner
@@ -45,6 +50,7 @@ class PaymentCreate(BaseModel):
     # receipt_number: número de recibo físico opcional — solo se muestra
     # en facturas y estados de cuenta cuando está presente
     receipt_number: Optional[str] = None
+    concept: Optional[str] = None
 
 
 class PaymentApplicationItem(BaseModel):
@@ -60,7 +66,30 @@ class PaymentCompleteCreate(BaseModel):
     reference: Optional[str] = None
     # receipt_number: número de recibo físico — aparece en factura y estado de cuenta
     receipt_number: Optional[str] = None
+    concept: Optional[str] = None
     applications: List[PaymentApplicationItem]
+
+
+class MonthlyChargesRequest(BaseModel):
+    property_id: Optional[int] = None
+    month: Optional[int] = None
+    year: Optional[int] = None
+
+
+class ApplyCreditRequest(BaseModel):
+    credit_id: int
+    charge_id: int
+    amount: float
+
+
+class LateFeeRequest(BaseModel):
+    amount: float
+
+
+class FifoPaymentRequest(BaseModel):
+    unit_id: int
+    owner_id: int
+    amount: float
 
 
 @router.post("/general-charge/{property_id}")
@@ -71,14 +100,76 @@ def create_general_charge(property_id: int, charge_data: GeneralChargeCreate, db
     return {"message": f"{len(charges)} cargos creados correctamente"}
 
 
+@router.post("/generate-monthly-charges")
+def generate_monthly_charges_endpoint(data: MonthlyChargesRequest, db: Session = Depends(get_db)):
+    result = generate_monthly_charges(db, property_id=data.property_id, month=data.month, year=data.year)
+    return {
+        "message": f"{result['created']} cargo(s) creado(s), {result['skipped']} omitido(s) por duplicado.",
+        "created": result["created"],
+        "skipped": result["skipped"],
+        "month": result["month"],
+        "year": result["year"],
+    }
+
+
+@router.post("/apply-credit")
+def apply_credit_endpoint(data: ApplyCreditRequest, db: Session = Depends(get_db)):
+    credit_application = apply_credit_to_charge(db, data.credit_id, data.charge_id, data.amount)
+    return {
+        "message": "Crédito aplicado correctamente",
+        "credit_application_id": credit_application.id,
+    }
+
+
+@router.post("/charges/{charge_id}/apply-late-fee")
+def apply_late_fee_endpoint(charge_id: int, data: LateFeeRequest, db: Session = Depends(get_db)):
+    late_fee_charge = apply_late_fee(db, charge_id, data.amount)
+    return {
+        "message": "Mora aplicada correctamente",
+        "charge_id": late_fee_charge.id,
+        "related_charge_id": late_fee_charge.related_charge_id,
+    }
+
+
+@router.post("/payments/fifo")
+def create_payment_fifo(data: FifoPaymentRequest, db: Session = Depends(get_db)):
+    result = apply_payment_fifo(db, data.unit_id, data.owner_id, data.amount)
+    return {
+        "message": "Pago aplicado (FIFO) correctamente",
+        "payment_id": result["payment"].id,
+        "applications_count": result["applications_count"],
+        "credit_generated": result["credit_generated"],
+    }
+
+
+@router.get("/owner-credits/{owner_id}")
+def owner_credits(owner_id: int, db: Session = Depends(get_db)):
+    credits = db.query(OwnerCredit).filter(
+        OwnerCredit.owner_id == owner_id,
+        OwnerCredit.remaining_amount > 0,
+    ).order_by(OwnerCredit.created_at.asc()).all()
+
+    return [
+        {
+            "id":                 c.id,
+            "owner_id":           c.owner_id,
+            "amount":             float(c.amount),
+            "remaining_amount":   float(c.remaining_amount),
+            "source_payment_id":  c.source_payment_id,
+            "created_at":         str(c.created_at),
+        }
+        for c in credits
+    ]
+
+
 @router.get("/owner-statement/{owner_id}")
 def owner_statement(owner_id: int, db: Session = Depends(get_db)):
     return get_owner_account_statement(db, owner_id)
 
 
 @router.get("/unit-statement/{unit_id}")
-def unit_statement(unit_id: int, db: Session = Depends(get_db)):
-    return get_unit_account_statement(db, unit_id)
+def unit_statement(unit_id: int, include_history: bool = False, from_date: Optional[date] = None, db: Session = Depends(get_db)):
+    return get_unit_account_statement(db, unit_id, include_history=include_history, from_date=from_date)
 
 
 @router.post("/payments")
@@ -89,6 +180,7 @@ def create_payment(payment_data: PaymentCreate, db: Session = Depends(get_db)):
         amount=payment_data.amount,
         invoice_number=payment_data.invoice_number,
         reference=payment_data.reference,
+        concept=payment_data.concept,
     )
     # Guardar receipt_number si el modelo lo soporta
     if hasattr(payment, 'receipt_number'):
@@ -236,10 +328,12 @@ def payments_history(db: Session = Depends(get_db)):
             PaymentApplication.payment_id == p.id
         ).all()
 
-        concepto    = None
+        # Prioridad del concepto: Payment.concept -> descripciones de charges
+        # aplicados -> "Sin concepto". NUNCA se usa reference/factura como concepto.
+        concepto    = getattr(p, "concept", None)
         observacion = None
 
-        if apps:
+        if not concepto and apps:
             descs = []
             for app in apps:
                 c = db.query(Charge).filter(Charge.id == app.charge_id).first()
@@ -249,14 +343,7 @@ def payments_history(db: Session = Depends(get_db)):
                 concepto = " / ".join(set(descs))
 
         if not concepto:
-            ref = p.reference or ""
-            if " — " in ref:
-                partes      = ref.split(" — ", 1)
-                concepto    = partes[0].strip()
-                observacion = partes[1].strip()
-            else:
-                concepto    = ref.strip() or "—"
-                observacion = None
+            concepto = "Sin concepto"
 
         # Factura vinculada al pago (si existe)
         invoice = db.query(Invoice).filter(Invoice.payment_id == p.id).first()
@@ -336,32 +423,54 @@ def delete_payment(
     También elimina la factura vinculada si existe.
     Solo ADMIN.
     """
-    from decimal import Decimal
     from app.models.payment_application import PaymentApplication
     from app.models.charge import Charge
+    from app.models.owner_credit import OwnerCredit
+    from app.models.credit_application import CreditApplication
+    from app.services.finance_service import get_charge_status
 
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
 
+    # 0. Si este pago generó un saldo a favor (OwnerCredit), verificar que no
+    # haya sido aplicado ya a otro cargo antes de permitir el borrado.
+    credit = db.query(OwnerCredit).filter(
+        OwnerCredit.source_payment_id == payment_id
+    ).first()
+
+    if credit:
+        credit_used = db.query(CreditApplication).filter(
+            CreditApplication.credit_id == credit.id
+        ).first()
+
+        if credit_used:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"No se puede eliminar el pago: generó un saldo a favor de "
+                    f"${credit.amount} que ya fue aplicado a otro(s) cargo(s)."
+                ),
+            )
+
     try:
+        if credit:
+            db.delete(credit)
+
         # 1. Revertir saldos de los cargos afectados
         apps = db.query(PaymentApplication).filter(
             PaymentApplication.payment_id == payment_id
         ).all()
 
         for app in apps:
-            charge = db.query(Payment.__class__).filter(
-                PaymentApplication.charge_id == app.charge_id
-            ).first() if False else db.query(Charge).filter(Charge.id == app.charge_id).first()
+            charge = db.query(Charge).filter(Charge.id == app.charge_id).first()
+            db.delete(app)
 
             if charge:
-                charge.balance = Decimal(str(charge.balance)) + Decimal(str(app.applied_amount))
-                if charge.balance >= Decimal(str(charge.amount)):
-                    charge.status = "PENDIENTE"
-                else:
-                    charge.status = "PARCIAL"
-            db.delete(app)
+                # El saldo se recalcula solo (deriva de PaymentApplication), aquí solo
+                # actualizamos el estado tras el flush de la eliminación.
+                db.flush()
+                charge.status = get_charge_status(db, charge.id)
 
         # 2. Eliminar la factura vinculada (si existe) — esto era la causa del Error 500
         invoice = db.query(Invoice).filter(Invoice.payment_id == payment_id).first()

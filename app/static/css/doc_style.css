@@ -5,12 +5,19 @@
    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
 
    :root {
-     --doc-accent:   #0a2c5e;
+     /* Paleta unificada Alianza Residencial — NO colores de marca de un
+        edificio específico, usar siempre estos 4 tonos base. */
+     --navy:    #2b3a55;
+     --accent:  #3a80e6;
+     --teal:    #00b3c6;
+     --surface: #e6eef8;
+
+     --doc-accent:   var(--accent);
      --doc-text:     #1a2639;
      --doc-muted:    #5a6a7e;
      --doc-light:    #94a3b8;
      --doc-border:   #e6e9f0;
-     --doc-bg:       #f8fafc;
+     --doc-bg:       var(--surface);
      --doc-white:    #ffffff;
      --doc-danger:   #ef4444;
      --doc-danger-bg: #fee2e2;
@@ -41,7 +48,7 @@
    }
 
    .action-bar {
-     background: var(--doc-accent);
+     background: var(--navy);
      padding: 12px 24px;
      display: flex;
      align-items: center;
@@ -129,6 +136,52 @@
    .sum-card .sl { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--doc-muted); margin-top: 4px; }
    .sum-card.danger .sv { color: var(--doc-danger); }
    .sum-card.success .sv { color: var(--doc-success); }
+
+   /* Tarjeta de Balance destacada (navy/blanco) — Parte 4b/4c */
+   .sum-card.balance-highlight {
+     background: var(--navy);
+     border-color: var(--navy);
+   }
+   .sum-card.balance-highlight .sv { color: #fff; }
+   .sum-card.balance-highlight .sl { color: rgba(255,255,255,0.75); }
+
+   /* ── Footer: Balance Actual + Nota + Contacto (Parte 4b/4c) ── */
+   .doc-footer-grid {
+     display: grid;
+     grid-template-columns: 1fr 1.4fr;
+     gap: 14px;
+     margin-top: 24px;
+   }
+   .footer-balance-box {
+     background: var(--navy);
+     color: #fff;
+     border-radius: 8px;
+     padding: 16px 18px;
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+   }
+   .footer-balance-box .fb-label {
+     font-size: .68rem; font-weight: 700; text-transform: uppercase;
+     letter-spacing: .06em; color: rgba(255,255,255,0.7); margin-bottom: 4px;
+   }
+   .footer-balance-box .fb-value { font-size: 1.5rem; font-weight: 800; }
+   .footer-balance-box .fb-date  { font-size: .72rem; color: rgba(255,255,255,0.65); margin-top: 6px; }
+
+   .contact-bar {
+     margin-top: 14px;
+     padding: 12px 18px;
+     background: var(--surface);
+     border: 1px solid var(--doc-border);
+     border-radius: 8px;
+     display: flex;
+     flex-wrap: wrap;
+     gap: 18px;
+     font-size: .78rem;
+     color: var(--doc-muted);
+   }
+   .contact-bar span { display: inline-flex; align-items: center; gap: 6px; }
+   .contact-bar i { color: var(--accent); }
 
    table.doc-table {
      width: 100%;

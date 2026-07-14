@@ -51,93 +51,128 @@ function fmoney(v) {
   return parseFloat(v || 0).toLocaleString('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const fdate = s => {
+  if (!s) return '—';
+  try {
+    const [y, m, dd] = String(s).split('T')[0].split('-');
+    return `${dd}/${m}/${y}`;
+  } catch { return s; }
+};
+
 function render(d) {
   if (!d || !d.payment_id) {
     document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-muted);">Factura no encontrada.</div>`;
     return;
   }
-  const totalPendiente = parseFloat(d.total_amount || 0); // Simplificado para factura
-  const estado = totalPendiente <= 0 ? 'PAGADO' : 'PENDIENTE';
-  
-  const cargosRows = (d.applications || []).map(c => `
-    <tr>
-      <td>${c.description || 'Cargo'}</td>
-      <td class="right">$${fmoney(c.applied_amount || 0)}</td>
+
+  // N° de recibo: preferimos el fiscal (facturero físico), si no el del
+  // sistema, si no la referencia del pago.
+  const numeroRecibo = d.fiscal_invoice_number || d.invoice_number || d.reference || `Pago #${d.payment_id}`;
+
+  const apps = d.applications || [];
+
+  // Ledger estilo banco: una fila por cargo pagado en este recibo, ya
+  // ordenadas por date_created del cargo (nunca due_date, que no se muestra).
+  const ledgerRows = apps.map(a => `
+    <tr${a.is_recargo ? ' style="background:var(--doc-danger-bg);"' : ''}>
+      <td>${fdate(d.payment_date)}</td>
+      <td style="font-family:monospace;font-size:.82rem;color:var(--doc-muted);">${numeroRecibo}</td>
+      <td>${a.description || `Cargo #${a.charge_id}`}${a.is_recargo ? ' <span class="text-danger" style="font-size:.7rem;">(recargo)</span>' : ''}</td>
+      <td class="right">${a.charge_amount != null ? '$' + fmoney(a.charge_amount) : '—'}</td>
+      <td class="right">$${fmoney(a.applied_amount || 0)}</td>
+      <td class="right">${a.charge_balance != null ? '$' + fmoney(a.charge_balance) : '—'}</td>
     </tr>
   `).join('');
+
+  const recargoCard = d.recargo > 0 ? `
+      <div class="sum-card danger">
+        <div class="sv">$${fmoney(d.recargo)}</div>
+        <div class="sl">Recargo</div>
+      </div>` : '';
+
+  const contactItems = [
+    d.property_phone   ? `<span><i class="fas fa-phone"></i> ${d.property_phone}</span>`     : '',
+    d.property_email   ? `<span><i class="fas fa-envelope"></i> ${d.property_email}</span>`   : '',
+    d.property_website ? `<span><i class="fas fa-globe"></i> ${d.property_website}</span>`    : '',
+  ].filter(Boolean).join('');
 
   document.getElementById('doc').innerHTML = `
     <div class="doc-header">
       <div>
-        <h1>ALIANZA RESIDENCIAL</h1>
+        <h1>${(d.property_name || 'Alianza Residencial').toUpperCase()}</h1>
         <div class="sub-info">Sistema de Administración de Propiedades</div>
       </div>
       <div class="doc-title">
-        <h2>Factura de Pago</h2>
+        <h2>Recibo de Pago</h2>
         <div class="date" id="doc-date"></div>
       </div>
     </div>
 
     <div class="info-grid">
       <div class="info-cell">
-        <div class="ic-lbl">Propietario</div>
-        <div class="ic-val">${d.owner_name || '—'}</div>
+        <div class="ic-lbl">Edificio / Propiedad</div>
+        <div class="ic-val">${d.property_name || 'Alianza Residencial'}</div>
       </div>
       <div class="info-cell">
-        <div class="ic-lbl">Unidad</div>
+        <div class="ic-lbl">Apartamento</div>
         <div class="ic-val">Apt. ${d.unit_number || '—'}</div>
       </div>
       <div class="info-cell">
-        <div class="ic-lbl">Propiedad / Edificio</div>
-        <div class="ic-val">${d.property_name || 'Alianza Residencial'}</div>
+        <div class="ic-lbl">Propietario</div>
+        <div class="ic-val">${d.owner_name || '—'}</div>
       </div>
     </div>
 
-    <table style="width:100%; margin-bottom: 24px;">
+    <table style="width:100%; margin-bottom: 20px;">
       <tr>
-        <td style="font-weight: 700;">N° Factura Fiscal:</td>
-        <td><span class="numero-fiscal">${d.fiscal_invoice_number || '—'}</span></td>
-        <td style="font-weight: 700;">Referencia / Recibo:</td>
-        <td>${d.receipt_number || '—'}</td>
+        <td style="font-weight: 700;">N° de Recibo:</td>
+        <td><span class="numero-fiscal">${numeroRecibo}</span></td>
+        <td style="font-weight: 700;">Fecha de pago:</td>
+        <td>${fdate(d.payment_date)}</td>
       </tr>
+    </table>
+
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>N° Recibo</th>
+          <th>Concepto</th>
+          <th class="right">Cargo</th>
+          <th class="right">Pago</th>
+          <th class="right">Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ledgerRows || `<tr><td colspan="6" style="text-align:center;">Sin detalle de cargos</td></tr>`}
+      </tbody>
     </table>
 
     <div class="summary-cards">
       <div class="sum-card">
-        <div class="sv">$${fmoney(d.amount)}</div>
-        <div class="sl">Monto Total</div>
+        <div class="sv">$${fmoney(d.subtotal)}</div>
+        <div class="sl">Subtotal</div>
       </div>
-      <div class="sum-card danger">
-        <div class="sv">$${fmoney(totalPendiente)}</div>
-        <div class="sl">Pendiente</div>
-        <span class="badge-pendiente">${estado}</span>
+      ${recargoCard}
+      <div class="sum-card balance-highlight">
+        <div class="sv">$${fmoney(d.total)}</div>
+        <div class="sl">Total</div>
       </div>
     </div>
 
-    <table class="doc-table">
-      <thead>
-        <tr><th>Concepto / Cargo Aplicado</th><th class="right">Monto</th></tr>
-      </thead>
-      <tbody>
-        ${cargosRows || `<tr><td colspan="2" style="text-align:center;">Sin detalle de cargos</td></tr>`}
-        <tr style="background:var(--doc-bg);">
-          <td style="text-align:right;"><strong>TOTAL PAGADO</strong></td>
-          <td class="right"><strong>$${fmoney(d.amount)}</strong></td>
-        </tr>
-      </tbody>
-    </table>
+    ${contactItems ? `<div class="contact-bar">${contactItems}</div>` : ''}
 
     <div class="signature-section">
       <div class="signature-block">
         <div class="signature-line"></div>
-        <div class="sig-name">Mercedes Bienes Raíces</div>
+        <div class="sig-name">${d.property_name || 'Alianza Residencial'}</div>
         <div class="sig-title">Administración</div>
       </div>
     </div>
 
     <div class="doc-footer-note">
       <strong><i class="fas fa-info-circle"></i> Nota</strong>
-      Documento generado electrónicamente por el Sistema de Administración de Propiedades Alianza Residencial. Consérvelo como comprobante de pago.
+      Documento generado electrónicamente por el Sistema de Administración de Propiedades. Consérvelo como comprobante de pago.
     </div>
   `;
   document.getElementById('doc-date').textContent = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });

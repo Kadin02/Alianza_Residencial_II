@@ -25,6 +25,9 @@ class Payment(Base):
 
     invoice_number = Column(String, nullable=True)
 
+    # Concepto del pago: "Mantenimiento", "Cuota de Ascensor", "Gas", "Abono"
+    concept = Column(String, nullable=True)
+
     property = relationship("Property")
 
     applications = relationship(

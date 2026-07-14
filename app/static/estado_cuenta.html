@@ -21,6 +21,12 @@
         <i class="fas fa-times"></i> Cerrar
       </button>
     </div>
+    <div class="action-bar" id="controls-bar" style="display:none;">
+      <div id="unit-selector-wrap" style="display:none;align-items:center;gap:8px;">
+        <span>Unidad:</span>
+        <select id="unit-selector" style="padding:5px 10px;border-radius:6px;border:none;font-family:inherit;font-size:.8rem;"></select>
+      </div>
+    </div>
     <div class="document" id="doc">
       <div style="text-align:center;padding:3rem;color:var(--doc-muted);">
         <i class="fas fa-spinner fa-spin"></i> Cargando estado de cuenta...
@@ -35,73 +41,49 @@ const fdate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA', {
 }) : '—';
 const fdateshort = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : '—';
 
-(async()=>{
-  const params = new URLSearchParams(location.search);
-  const ownerId = params.get('owner_id');
+let currentUnitId = null;
 
-  if (!ownerId) {
-    document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-muted);">Propietario no especificado.</div>`;
-    return;
-  }
-
+async function loadStatement(unitId) {
   try {
-    // Obtener datos del estado de cuenta detallado
-    const data = await fetch(`/api/finance/owner-statement-detailed/${ownerId}`).then(r=>r.json());
+    const d = await fetch(`/api/finance/unit-statement/${unitId}?include_history=true`).then(r=>r.json());
 
-    let totalFacturado = 0, totalPagado = 0, saldoActual = 0;
+    const ledger = d.ledger || [];
+
     let tbody = '';
-
-    if (data.statement && data.statement.length > 0) {
-      data.statement.forEach(item => {
-        totalFacturado += item.amount || 0;
-        totalPagado += item.paid || 0;
-        saldoActual += item.balance || 0;
-        const isPending = item.balance > 0;
-        
-        // Construir los números de factura desde los pagos vinculados
-       // Construir los números de factura desde los pagos vinculados
-        let facturasHTML = '—';
-        if (item.payments && item.payments.length > 0) {
-          facturasHTML = item.payments.map(p => {
-            // Intentar todas las posibles fuentes del número de factura
-            const num = p.fiscal_invoice_number || p.invoice_number || p.reference || '';
-            if (num) {
-              return `<span style="font-family:monospace;font-weight:600;">${num}</span>`;
-            }
-            return '';
-          }).filter(f => f !== '').join(', ') || '—';
-        }
-        // Si aún no hay factura, mostrar referencia o ID del pago
-        if (facturasHTML === '—') {
-          const primerPago = item.payments?.[0];
-          if (primerPago?.reference) {
-            facturasHTML = `<span style="font-family:monospace;font-weight:600;">${primerPago.reference}</span>`;
-          } else if (primerPago?.payment_id) {
-            facturasHTML = `<span style="font-family:monospace;font-weight:600;">Pago #${primerPago.payment_id}</span>`;
-          }
-        }
-        
+    if (ledger.length > 0) {
+      ledger.forEach(row => {
+        const esInicial = row.tipo === 'INICIAL';
         tbody += `
-          <tr class="${isPending ? 'bg-danger-light' : ''}">
-            <td>${item.description || '—'}</td>
-            <td style="font-size:.82rem;">${facturasHTML}</td>
-            <td class="right">$${fmoney(item.amount)}</td>
-            <td class="right" style="color:#10b981;">$${fmoney(item.paid)}</td>
-            <td class="right ${isPending ? 'text-danger' : ''}">
-              $${fmoney(item.balance)}
-              ${isPending ? '<br><span class="badge-pendiente">PENDIENTE</span>' : '<span class="badge-pagado">PAGADO</span>'}
-            </td>
+          <tr${esInicial ? ' style="background:var(--surface);font-style:italic;"' : ''}>
+            <td style="white-space:nowrap;">${fdateshort(row.fecha)}</td>
+            <td style="font-size:.8rem;font-family:monospace;color:var(--doc-muted);">${row.documento}</td>
+            <td>${row.concepto}</td>
+            <td class="right">${row.cargo > 0 ? '$' + fmoney(row.cargo) : '—'}</td>
+            <td class="right" style="color:#10b981;">${row.pago > 0 ? '$' + fmoney(row.pago) : '—'}</td>
+            <td class="right"><strong>$${fmoney(row.saldo)}</strong></td>
           </tr>`;
       });
     } else {
-      tbody = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin movimientos registrados</td></tr>`;
+      tbody = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin movimientos registrados</td></tr>`;
     }
+
+    const recargosCard = d.total_recargos > 0 ? `
+        <div class="sum-card danger">
+          <div class="sv">$${fmoney(d.total_recargos)}</div>
+          <div class="sl">Recargos</div>
+        </div>` : '';
+
+    const contactItems = [
+      d.property_phone   ? `<span><i class="fas fa-phone"></i> ${d.property_phone}</span>`     : '',
+      d.property_email   ? `<span><i class="fas fa-envelope"></i> ${d.property_email}</span>`   : '',
+      d.property_website ? `<span><i class="fas fa-globe"></i> ${d.property_website}</span>`    : '',
+    ].filter(Boolean).join('');
 
     document.getElementById('doc').innerHTML = `
       <div class="doc-header">
         <div>
-          <h1>MERCEDES BIENES RAÍCES</h1>
-          <div class="sub-info">AR | Sistema de Administración de Propiedades</div>
+          <h1>${(d.property_name || 'Alianza Residencial').toUpperCase()}</h1>
+          <div class="sub-info">Sistema de Administración de Propiedades</div>
         </div>
         <div class="doc-title">
           <h2>Estado de Cuenta</h2>
@@ -111,65 +93,125 @@ const fdateshort = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA'
 
       <div class="info-grid">
         <div class="info-cell">
+          <div class="ic-lbl">Edificio / Propiedad</div>
+          <div class="ic-val">${d.property_name || 'Alianza Residencial'}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">Apartamento</div>
+          <div class="ic-val">Apt. ${d.unit_number || '—'}</div>
+        </div>
+        <div class="info-cell">
           <div class="ic-lbl">Propietario</div>
-          <div class="ic-val">${data.owner_name || '—'}</div>
-        </div>
-        <div class="info-cell">
-          <div class="ic-lbl">Unidad</div>
-          <div class="ic-val">Apt. ${data.unit_number || '—'}</div>
-        </div>
-        <div class="info-cell">
-          <div class="ic-lbl">Propiedad / Edificio</div>
-          <div class="ic-val">${data.property_name || 'Alianza Residencial'}</div>
+          <div class="ic-val">${d.owner_name || '—'}</div>
         </div>
       </div>
 
       <div class="summary-cards">
         <div class="sum-card">
-          <div class="sv">$${fmoney(totalFacturado)}</div>
-          <div class="sl">Facturado</div>
+          <div class="sv">$${fmoney(d.total_cargos)}</div>
+          <div class="sl">Total de Cargos</div>
         </div>
         <div class="sum-card success">
-          <div class="sv">$${fmoney(totalPagado)}</div>
-          <div class="sl">Pagado</div>
+          <div class="sv">$${fmoney(d.total_pagos)}</div>
+          <div class="sl">Total de Pagos</div>
         </div>
-        <div class="sum-card danger">
-          <div class="sv">$${fmoney(saldoActual)}</div>
-          <div class="sl">Pendiente</div>
-          ${saldoActual > 0 ? '<span class="badge-pendiente">CON DEUDA</span>' : '<span class="badge-pagado">AL DÍA</span>'}
+        <div class="sum-card balance-highlight">
+          <div class="sv">$${fmoney(d.saldo_actual)}</div>
+          <div class="sl">Balance</div>
         </div>
+        ${recargosCard}
       </div>
 
       <table class="doc-table">
         <thead>
           <tr>
+            <th>Fecha</th>
+            <th>N° Documento</th>
             <th>Concepto</th>
-            <th># Factura</th>
-            <th class="right">Cargo</th>
-            <th class="right">Abono</th>
+            <th class="right">Cargos</th>
+            <th class="right">Pagos</th>
             <th class="right">Saldo</th>
           </tr>
         </thead>
         <tbody>${tbody}</tbody>
       </table>
 
-      <div class="signature-section">
-        <div class="signature-block">
-          <div class="signature-line"></div>
-          <div class="sig-name">Mercedes Bienes Raíces</div>
-          <div class="sig-title">Administración</div>
+      <div class="doc-footer-grid">
+        <div class="footer-balance-box">
+          <div class="fb-label">Balance Actual</div>
+          <div class="fb-value">$${fmoney(d.saldo_actual)}</div>
+          <div class="fb-date">Fecha de corte: ${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
+        </div>
+        <div class="doc-footer-note" style="margin-top:0;">
+          <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+          Este estado de cuenta refleja los movimientos registrados en el sistema de administración. Para cualquier aclaración o detalle adicional, favor contactar a la administración.
         </div>
       </div>
 
-      <div class="doc-footer-note">
-        <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
-        Este estado de cuenta refleja los movimientos registrados en el sistema de administración Alianza Residencial. Para cualquier aclaración o detalle adicional, favor contactar a la administración.
+      ${contactItems ? `<div class="contact-bar">${contactItems}</div>` : ''}
+
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="sig-name">${d.property_name || 'Alianza Residencial'}</div>
+          <div class="sig-title">Administración</div>
+        </div>
       </div>
     `;
     document.getElementById('doc-date').textContent = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
   } catch (error) {
     document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-danger);">Error al cargar el estado de cuenta.</div>`;
   }
+}
+
+(async()=>{
+  const params  = new URLSearchParams(location.search);
+  const ownerId = params.get('owner_id');
+  let   unitId  = params.get('unit_id') ? parseInt(params.get('unit_id')) : null;
+
+  if (!ownerId && !unitId) {
+    document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-muted);">Propietario o unidad no especificados.</div>`;
+    return;
+  }
+
+  // Compatibilidad con links viejos por owner_id: resolver sus unidades
+  // (activas e históricas) vía /unit-owners/all, ya que no existe un
+  // endpoint dedicado "por propietario" para esto.
+  if (!unitId && ownerId) {
+    const allRelations = await fetch('/api/unit-owners/all').then(r=>r.json()).catch(()=>[]);
+    const unitIds = [...new Set(
+      (allRelations || [])
+        .filter(r => String(r.owner_id) === String(ownerId))
+        .map(r => r.unit_id)
+    )];
+
+    if (!unitIds.length) {
+      document.getElementById('doc').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--doc-muted);">Este propietario no tiene unidades registradas.</div>`;
+      return;
+    }
+
+    if (unitIds.length === 1) {
+      unitId = unitIds[0];
+    } else {
+      const allUnits = await fetch('/api/units').then(r=>r.json()).catch(()=>[]);
+      document.getElementById('controls-bar').style.display = 'flex';
+      const wrap   = document.getElementById('unit-selector-wrap');
+      const select = document.getElementById('unit-selector');
+      wrap.style.display = 'flex';
+      select.innerHTML = unitIds.map(uid => {
+        const u = (allUnits || []).find(x => x.id === uid);
+        return `<option value="${uid}">Apt. ${u ? u.unit_number : uid}</option>`;
+      }).join('');
+      unitId = unitIds[0];
+      select.addEventListener('change', () => {
+        currentUnitId = parseInt(select.value);
+        loadStatement(currentUnitId);
+      });
+    }
+  }
+
+  currentUnitId = unitId;
+  await loadStatement(currentUnitId);
 })();
 </script>
 </body>

@@ -47,7 +47,6 @@ def create_charge(
         unit_id=charge_data.unit_id,
         description=charge_data.description,
         amount=charge_data.amount,
-        balance=charge_data.amount,
         status="PENDIENTE",
         date_created=charge_data.date_created,
         due_date=charge_data.due_date,
@@ -85,17 +84,32 @@ def update_charge(
     from sqlalchemy import func
     from app.models.payment_application import PaymentApplication
 
+    new_amount = Decimal(str(charge_data.amount))
+
+    if charge.balance == Decimal("0.00"):
+        # Cargo ya pagado en su totalidad: no se permite tocar lo financiero.
+        if new_amount != charge.amount or charge_data.due_date != charge.due_date:
+            raise HTTPException(
+                status_code=400,
+                detail="No se puede editar un cargo ya pagado en su totalidad.",
+            )
+
+        charge.description  = charge_data.description
+        charge.date_created = charge_data.date_created
+
+        db.commit()
+        db.refresh(charge)
+        return charge
+
     # Calcular ya aplicado
     applied = db.query(
         func.coalesce(func.sum(PaymentApplication.applied_amount), 0)
     ).filter(PaymentApplication.charge_id == charge_id).scalar()
 
-    new_amount  = Decimal(str(charge_data.amount))
     new_balance = new_amount - Decimal(str(applied))
 
     charge.description  = charge_data.description
     charge.amount       = new_amount
-    charge.balance      = max(new_balance, Decimal("0.00"))
     charge.date_created = charge_data.date_created
     charge.due_date     = charge_data.due_date
 

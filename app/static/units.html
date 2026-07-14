@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Unidades | Alianza Residencial</title>
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -12,87 +12,180 @@
 <header class="main-header" id="main-header"></header>
 
 <div class="app">
-  <div class="page-header">
-    <h1><i class="fas fa-door-open" style="color:var(--accent);margin-right:8px;"></i>Unidades</h1>
-    <p>Gestiona los apartamentos, locales y oficinas de cada propiedad</p>
+  <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <h1><i class="fas fa-door-open" style="color:var(--accent);margin-right:8px;"></i>Unidades</h1>
+      <p>Gestiona los apartamentos, locales y oficinas de cada propiedad</p>
+    </div>
+    <button class="btn-primary" style="width:auto;" onclick="openCreateModal()">
+      <i class="fas fa-plus"></i> Nueva Unidad
+    </button>
   </div>
 
-  <div class="two-col">
+  <div class="filter-bar" style="margin-bottom:14px;">
+    <select id="property-select" onchange="filterUnits()" style="width:auto;min-width:220px;">
+      <option value="">Todas las propiedades</option>
+    </select>
+  </div>
 
-    <!-- Formulario -->
+  <div class="card" style="margin-bottom:0;">
+    <div class="card-header">
+      <h3><i class="fas fa-list"></i> Unidades Registradas</h3>
+      <span class="badge badge-primary" id="unit-count">0</span>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Unidad</th>
+            <th>Propiedad</th>
+            <th>Propietario Activo</th>
+            <th>Cuota Mensual</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="units-table">
+          <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Drawer: detalle de unidad ═══ -->
+<div class="drawer-overlay" id="unit-drawer-overlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="unit-drawer">
+  <div class="drawer-header">
     <div>
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-plus-circle"></i> Nueva Unidad</h3>
-        </div>
-        <div class="card-body">
-          <label class="field-label">Propiedad</label>
-          <select id="property-select" onchange="filterUnits()">
-            <option value="">Todas las propiedades</option>
-          </select>
+      <h3 id="drawer-title">Unidad</h3>
+      <span id="drawer-subtitle"></span>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
+  </div>
 
-          <label class="field-label">Número de unidad</label>
-          <input type="text" id="unit_number" placeholder="Ej: 4B, 12, Local-3">
+  <div class="drawer-body" id="drawer-body">
+    <!-- contenido inyectado por JS -->
+  </div>
 
-          <label class="field-label">Piso (opcional)</label>
-          <input type="text" id="floor" placeholder="Ej: 4, PB, Mezzanine">
+  <div class="drawer-actions">
+    <button class="btn-secondary btn-block" onclick="openStatementForCurrentUnit()">
+      <i class="fas fa-file-invoice-dollar"></i> Ver estado de cuenta
+    </button>
+    <button class="btn-ghost btn-block" onclick="openEditUnitModal()">
+      <i class="fas fa-pencil-alt"></i> Editar unidad
+    </button>
+    <button class="btn-ghost btn-block" onclick="openReassignForCurrentUnit()">
+      <i class="fas fa-link"></i> Reasignar propietario
+    </button>
+    <button class="btn-danger btn-block" onclick="deleteCurrentUnit()">
+      <i class="fas fa-trash-alt"></i> Eliminar unidad
+    </button>
+  </div>
+</aside>
 
-          <button onclick="createUnit()">
-            <i class="fas fa-plus"></i> Crear Unidad
-          </button>
-        </div>
-      </div>
+<!-- ═══ Drawer: nueva unidad ═══ -->
+<div class="drawer-overlay" id="create-unit-drawer-overlay" onclick="closeCreateModal()"></div>
+<aside class="drawer" id="create-unit-drawer">
+  <div class="drawer-header">
+    <div>
+      <h3><i class="fas fa-plus-circle" style="color:var(--accent);margin-right:6px;"></i>Nueva Unidad</h3>
+      <span>Toda unidad se crea con un propietario en la misma operación.</span>
+    </div>
+    <button class="drawer-close" onclick="closeCreateModal()"><i class="fas fa-times"></i></button>
+  </div>
 
-      <!-- Asignar propietario -->
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-user-plus"></i> Asignar Propietario</h3>
-        </div>
-        <div class="card-body">
-          <label class="field-label">Unidad</label>
-          <select id="assign-unit-select">
-            <option value="">Seleccione unidad</option>
-          </select>
+  <div class="drawer-body">
+    <label class="field-label">Propiedad</label>
+    <select id="new_unit_property_id"><option value="">Seleccione propiedad</option></select>
 
-          <label class="field-label">Propietario</label>
-          <select id="assign-owner-select">
-            <option value="">Seleccione propietario</option>
-          </select>
+    <label class="field-label">Número de unidad</label>
+    <input type="text" id="unit_number" placeholder="Ej: 4B, 12, Local-3">
 
-          <label class="field-label">Fecha de inicio</label>
-          <input type="date" id="start_date">
+    <label class="field-label">Piso (opcional)</label>
+    <input type="text" id="floor" placeholder="Ej: 4, PB, Mezzanine">
 
-          <button onclick="assignOwner()">
-            <i class="fas fa-link"></i> Asignar
-          </button>
-        </div>
-      </div>
+    <label class="field-label">Cuota mensual fija (opcional)</label>
+    <input type="number" id="monthly_fee" placeholder="0.00" step="0.01" min="0">
+
+    <label class="field-label">Fecha de inicio de ocupación</label>
+    <input type="date" id="new_unit_start_date">
+
+    <div class="section-divider" style="margin-top:16px;">Propietario de la unidad</div>
+
+    <div class="toggle-bar">
+      <button type="button" class="toggle-btn active" id="tab-existing" onclick="setOwnerMode('existing')">Propietario existente</button>
+      <button type="button" class="toggle-btn" id="tab-new" onclick="setOwnerMode('new')">Propietario nuevo</button>
     </div>
 
-    <!-- Tabla -->
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-header">
-        <h3><i class="fas fa-list"></i> Unidades Registradas</h3>
-        <span class="badge badge-primary" id="unit-count">0</span>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Unidad</th>
-              <th>Piso</th>
-              <th>Propiedad</th>
-              <th>Propietario Activo</th>
-              <th>Desde</th>
-            </tr>
-          </thead>
-          <tbody id="units-table">
-            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div id="owner-existing-fields">
+      <label class="field-label">Propietario</label>
+      <select id="new_unit_owner_id"><option value="">Seleccione propietario</option></select>
     </div>
 
+    <div id="owner-new-fields" style="display:none;">
+      <label class="field-label">Nombre completo</label>
+      <input type="text" id="new_owner_full_name" placeholder="Ej: Juan Pérez">
+      <label class="field-label">Identificación</label>
+      <input type="text" id="new_owner_identification" placeholder="Cédula o pasaporte">
+      <label class="field-label">Correo electrónico</label>
+      <input type="email" id="new_owner_email" placeholder="correo@email.com">
+      <label class="field-label">Teléfono</label>
+      <input type="tel" id="new_owner_phone" placeholder="+507 6000-0000">
+    </div>
+  </div>
+
+  <div class="drawer-actions">
+    <button class="btn-primary" onclick="createUnit()"><i class="fas fa-plus"></i> Crear Unidad</button>
+    <button class="btn-ghost" onclick="closeCreateModal()">Cancelar</button>
+  </div>
+</aside>
+
+<!-- ═══ Modal: editar unidad ═══ -->
+<div class="modal-overlay" id="edit-modal-overlay">
+  <div class="modal-box" style="width:380px;">
+    <h3><i class="fas fa-pencil-alt"></i> Editar Unidad</h3>
+    <p id="edit-modal-subtitle"></p>
+
+    <label class="field-label">Número de unidad</label>
+    <input type="text" id="edit_unit_number">
+
+    <label class="field-label">Piso</label>
+    <input type="text" id="edit_floor">
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeEditUnitModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveEditUnit()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: reasignar propietario ═══ -->
+<div class="modal-overlay" id="reassign-modal-overlay">
+  <div class="modal-box" style="width:380px;">
+    <h3><i class="fas fa-link"></i> Reasignar Propietario</h3>
+    <p id="reassign-modal-subtitle">Cierra el ownership activo actual (si lo hay) y asigna uno nuevo.</p>
+
+    <label class="field-label">Propietario</label>
+    <select id="reassign-owner-select"><option value="">Seleccione propietario</option></select>
+
+    <label class="field-label">Fecha de inicio</label>
+    <input type="date" id="reassign-start-date">
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeReassignModal()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmReassign()"><i class="fas fa-link"></i> Reasignar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-delete-overlay">
+  <div class="modal-box" style="width:380px;">
+    <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Eliminar unidad</h3>
+    <p id="confirm-delete-text">¿Seguro que deseas eliminar esta unidad? Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeConfirmDelete()">Cancelar</button>
+      <button class="btn-danger" onclick="executeDeleteUnit()"><i class="fas fa-trash-alt"></i> Eliminar</button>
+    </div>
   </div>
 </div>
 
@@ -104,37 +197,48 @@ renderHeader('units');
 let allUnits = [];
 let allProps = [];
 let allOwners = [];
+let ownerMode = 'existing';
+let unitHasDebt = {};       // unit_id -> bool
+let currentUnitId = null;   // unidad actualmente abierta en el drawer
 
+/* ─── Carga inicial ──────────────────────────────────────── */
 async function loadAll() {
-  const [units, props, owners] = await Promise.all([
+  const [units, props, owners, charges] = await Promise.all([
     apiRequest('/units'),
     apiRequest('/properties'),
     apiRequest('/owners'),
+    apiRequest('/finance/charges'),
   ]);
 
   allUnits  = units  || [];
   allProps  = props  || [];
   allOwners = owners || [];
 
-  // Fill property select (form + filter)
+  // Derivar estado "Al día" / "Con deuda" a partir de los cargos existentes,
+  // sin hacer una petición por unidad (usa el endpoint que ya lista todo).
+  unitHasDebt = {};
+  (charges || []).forEach(c => {
+    if (c.status !== 'PAGADO') unitHasDebt[c.unit_id] = true;
+  });
+
   const sel = document.getElementById('property-select');
   sel.innerHTML = '<option value="">Todas las propiedades</option>';
   allProps.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
 
-  // Fill assign selects
-  const selU = document.getElementById('assign-unit-select');
-  selU.innerHTML = '<option value="">Seleccione unidad</option>';
-  allUnits.forEach(u => {
-    const p = allProps.find(x => x.id === u.property_id);
-    selU.innerHTML += `<option value="${u.id}">Apt. ${u.unit_number}${p ? ` — ${p.name}` : ''}</option>`;
-  });
+  const selCreateProp = document.getElementById('new_unit_property_id');
+  selCreateProp.innerHTML = '<option value="">Seleccione propiedad</option>';
+  allProps.forEach(p => selCreateProp.innerHTML += `<option value="${p.id}">${p.name}</option>`);
 
-  const selO = document.getElementById('assign-owner-select');
-  selO.innerHTML = '<option value="">Seleccione propietario</option>';
-  allOwners.forEach(o => selO.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+  const selNewOwner = document.getElementById('new_unit_owner_id');
+  selNewOwner.innerHTML = '<option value="">Seleccione propietario</option>';
+  allOwners.forEach(o => selNewOwner.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
 
-  // Default start date
-  document.getElementById('start_date').value = todayISO();
+  const selReassignOwner = document.getElementById('reassign-owner-select');
+  selReassignOwner.innerHTML = '<option value="">Seleccione propietario</option>';
+  allOwners.forEach(o => selReassignOwner.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
+
+  document.getElementById('new_unit_start_date').value = todayISO();
+  document.getElementById('reassign-start-date').value = todayISO();
 
   await renderTable(allUnits);
 }
@@ -148,24 +252,27 @@ async function renderTable(units) {
     return;
   }
 
-  // Load ownerships in parallel
   const ownerships = await Promise.all(
     units.map(u => apiRequest(`/unit-owners/by-unit/${u.id}`).then(r => ({ uid: u.id, data: r || [] })))
   );
   const ownerMap = {};
   ownerships.forEach(o => ownerMap[o.uid] = o.data);
+  window._ownerMapCache = ownerMap;
 
   tbody.innerHTML = units.map(u => {
-    const prop    = allProps.find(p => p.id === u.property_id);
-    const active  = (ownerMap[u.id] || []).find(o => o.role === 'Propietario Actual');
-    return `<tr>
+    const prop   = allProps.find(p => p.id === u.property_id);
+    const active = (ownerMap[u.id] || []).find(o => o.role === 'Propietario Actual');
+    const hasDebt = !!unitHasDebt[u.id];
+    return `<tr class="clickable-row" onclick="openDrawer(${u.id})">
       <td><strong>Apt. ${u.unit_number}</strong></td>
-      <td>${u.floor || '—'}</td>
       <td style="color:var(--text-secondary);font-size:.83rem;">${prop?.name || '—'}</td>
       <td>${active
-        ? `<span style="font-weight:600;">${active.owner_name}</span>`
+        ? `<span class="badge badge-teal">${active.owner_name}</span>`
         : `<em style="color:var(--text-muted);">Sin asignar</em>`}</td>
-      <td style="font-size:.82rem;color:var(--text-secondary);">${active ? formatDate(active.start_date) : '—'}</td>
+      <td style="font-size:.83rem;">${u.monthly_fee != null ? '$' + formatMoney(u.monthly_fee) : '<span style="color:var(--text-muted);">—</span>'}</td>
+      <td>${hasDebt
+        ? `<span class="badge badge-warning">Con deuda</span>`
+        : `<span class="badge badge-success">Al día</span>`}</td>
     </tr>`;
   }).join('');
 }
@@ -176,43 +283,230 @@ function filterUnits() {
   renderTable(filtered);
 }
 
+/* ─── Drawer de detalle ──────────────────────────────────── */
+async function openDrawer(unitId) {
+  currentUnitId = unitId;
+  const u = allUnits.find(x => x.id === unitId);
+  if (!u) return;
+
+  const prop = allProps.find(p => p.id === u.property_id);
+  const ownerships = (window._ownerMapCache && window._ownerMapCache[unitId]) || (await apiRequest(`/unit-owners/by-unit/${unitId}`)) || [];
+  const active = ownerships.find(o => o.role === 'Propietario Actual');
+
+  document.getElementById('drawer-title').textContent = `Apt. ${u.unit_number}`;
+  document.getElementById('drawer-subtitle').textContent = prop?.name || '';
+
+  const historyHTML = ownerships.length
+    ? ownerships.map(o => `
+        <div class="drawer-history-item">
+          <span>${o.owner_name} ${o.role === 'Propietario Actual' ? '<span class=\"badge badge-teal\" style=\"margin-left:6px;\">Activo</span>' : ''}</span>
+          <span style="color:var(--text-muted);">${formatDate(o.start_date)}${o.end_date ? ' – ' + formatDate(o.end_date) : ''}</span>
+        </div>`).join('')
+    : `<p style="font-size:.82rem;color:var(--text-muted);">Sin historial de ocupación</p>`;
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="drawer-section">
+      <h4>Datos de la unidad</h4>
+      <div class="drawer-field-row"><span>Número</span><span>Apt. ${u.unit_number}</span></div>
+      <div class="drawer-field-row"><span>Piso</span><span>${u.floor || '—'}</span></div>
+      <div class="drawer-field-row"><span>Propiedad</span><span>${prop?.name || '—'}</span></div>
+    </div>
+
+    <div class="drawer-section">
+      <h4>Propietario activo</h4>
+      ${active
+        ? `<div class="drawer-field-row"><span>Nombre</span><span>${active.owner_name}</span></div>
+           <div class="drawer-field-row"><span>Desde</span><span>${formatDate(active.start_date)}</span></div>`
+        : `<p style="font-size:.82rem;color:var(--text-muted);">Sin propietario asignado</p>`}
+    </div>
+
+    <div class="drawer-section">
+      <h4>Cuota mensual fija</h4>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" id="drawer_monthly_fee" step="0.01" min="0"
+               value="${u.monthly_fee != null ? u.monthly_fee : ''}" placeholder="0.00"
+               style="margin-bottom:0;">
+        <button class="btn-secondary" style="width:auto;margin-top:0;" onclick="saveMonthlyFee(${u.id})">
+          <i class="fas fa-save"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h4>Historial de ownership</h4>
+      ${historyHTML}
+    </div>
+  `;
+
+  document.getElementById('unit-drawer').classList.add('open');
+  document.getElementById('unit-drawer-overlay').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('unit-drawer').classList.remove('open');
+  document.getElementById('unit-drawer-overlay').classList.remove('open');
+  currentUnitId = null;
+}
+
+async function saveMonthlyFee(unitId) {
+  const raw = document.getElementById('drawer_monthly_fee').value.trim();
+  const result = await apiRequest(`/units/${unitId}`, 'PUT', {
+    monthly_fee: raw ? parseFloat(raw) : null,
+  });
+  if (result) {
+    showToast('Cuota mensual actualizada');
+    await loadAll();
+    openDrawer(unitId);
+  }
+}
+
+/* ─── Acceso directo: estado de cuenta ───────────────────── */
+function openStatementForCurrentUnit() {
+  if (!currentUnitId) return;
+  window.open(`/static/estado_cuenta.html?unit_id=${currentUnitId}`, '_blank');
+}
+
+/* ─── Modal: crear unidad ────────────────────────────────── */
+function setOwnerMode(mode) {
+  ownerMode = mode;
+  document.getElementById('tab-existing').classList.toggle('active', mode === 'existing');
+  document.getElementById('tab-new').classList.toggle('active', mode === 'new');
+  document.getElementById('owner-existing-fields').style.display = mode === 'existing' ? '' : 'none';
+  document.getElementById('owner-new-fields').style.display = mode === 'new' ? '' : 'none';
+}
+
+function openCreateModal() {
+  document.getElementById('create-unit-drawer').classList.add('open');
+  document.getElementById('create-unit-drawer-overlay').classList.add('open');
+}
+function closeCreateModal() {
+  document.getElementById('create-unit-drawer').classList.remove('open');
+  document.getElementById('create-unit-drawer-overlay').classList.remove('open');
+}
+
 async function createUnit() {
-  const propId = parseInt(document.getElementById('property-select').value);
+  const propId = parseInt(document.getElementById('new_unit_property_id').value);
   const number = document.getElementById('unit_number').value.trim();
   const floor  = document.getElementById('floor').value.trim();
+  const feeRaw = document.getElementById('monthly_fee').value.trim();
+  const startDate = document.getElementById('new_unit_start_date').value;
 
   if (!propId) { showToast('Selecciona una propiedad', 'error'); return; }
   if (!number) { showToast('Ingresa el número de unidad', 'error'); return; }
+  if (!startDate) { showToast('Selecciona la fecha de inicio de ocupación', 'error'); return; }
 
-  const result = await apiRequest('/units/', 'POST', {
+  const payload = {
     property_id: propId,
     unit_number: number,
     floor: floor || null,
-  });
+    monthly_fee: feeRaw ? parseFloat(feeRaw) : null,
+    start_date: startDate,
+  };
+
+  if (ownerMode === 'existing') {
+    const ownerId = parseInt(document.getElementById('new_unit_owner_id').value);
+    if (!ownerId) { showToast('Selecciona un propietario existente', 'error'); return; }
+    payload.owner_id = ownerId;
+  } else {
+    const fullName = document.getElementById('new_owner_full_name').value.trim();
+    if (!fullName) { showToast('Ingresa el nombre del propietario nuevo', 'error'); return; }
+    payload.owner = {
+      full_name: fullName,
+      identification: document.getElementById('new_owner_identification').value.trim() || null,
+      email: document.getElementById('new_owner_email').value.trim() || null,
+      phone: document.getElementById('new_owner_phone').value.trim() || null,
+    };
+  }
+
+  const result = await apiRequest('/units/', 'POST', payload);
 
   if (result) {
     showToast('Unidad creada correctamente');
-    document.getElementById('unit_number').value = '';
-    document.getElementById('floor').value = '';
+    ['unit_number','floor','monthly_fee','new_owner_full_name','new_owner_identification','new_owner_email','new_owner_phone']
+      .forEach(id => document.getElementById(id).value = '');
+    closeCreateModal();
     await loadAll();
   }
 }
 
-async function assignOwner() {
-  const unitId  = parseInt(document.getElementById('assign-unit-select').value);
-  const ownerId = parseInt(document.getElementById('assign-owner-select').value);
-  const date    = document.getElementById('start_date').value;
+/* ─── Modal: editar unidad (número/piso) ─────────────────── */
+function openEditUnitModal() {
+  if (!currentUnitId) return;
+  const u = allUnits.find(x => x.id === currentUnitId);
+  if (!u) return;
+  document.getElementById('edit-modal-subtitle').textContent = `Apt. ${u.unit_number}`;
+  document.getElementById('edit_unit_number').value = u.unit_number;
+  document.getElementById('edit_floor').value = u.floor || '';
+  document.getElementById('edit-modal-overlay').classList.add('open');
+}
+function closeEditUnitModal() {
+  document.getElementById('edit-modal-overlay').classList.remove('open');
+}
+async function saveEditUnit() {
+  const number = document.getElementById('edit_unit_number').value.trim();
+  const floor  = document.getElementById('edit_floor').value.trim();
+  if (!number) { showToast('El número de unidad es obligatorio', 'error'); return; }
 
-  if (!unitId || !ownerId || !date) {
-    showToast('Completa todos los campos', 'error'); return;
+  const result = await apiRequest(`/units/${currentUnitId}`, 'PUT', {
+    unit_number: number,
+    floor: floor || null,
+  });
+  if (result) {
+    showToast('Unidad actualizada correctamente');
+    closeEditUnitModal();
+    const uid = currentUnitId;
+    await loadAll();
+    openDrawer(uid);
   }
+}
+
+/* ─── Modal: reasignar propietario ───────────────────────── */
+function openReassignForCurrentUnit() {
+  if (!currentUnitId) return;
+  const u = allUnits.find(x => x.id === currentUnitId);
+  document.getElementById('reassign-modal-subtitle').textContent =
+    `Cierra el ownership activo actual de Apt. ${u?.unit_number || ''} (si lo hay) y asigna uno nuevo.`;
+  document.getElementById('reassign-start-date').value = todayISO();
+  document.getElementById('reassign-modal-overlay').classList.add('open');
+}
+function closeReassignModal() {
+  document.getElementById('reassign-modal-overlay').classList.remove('open');
+}
+async function confirmReassign() {
+  const ownerId = parseInt(document.getElementById('reassign-owner-select').value);
+  const date    = document.getElementById('reassign-start-date').value;
+  if (!ownerId || !date) { showToast('Completa todos los campos', 'error'); return; }
 
   const result = await apiRequest('/unit-owners/', 'POST', {
-    unit_id: unitId, owner_id: ownerId, start_date: date,
+    unit_id: currentUnitId, owner_id: ownerId, start_date: date,
   });
-
   if (result) {
-    showToast('Propietario asignado correctamente');
+    showToast('Propietario reasignado correctamente');
+    closeReassignModal();
+    const uid = currentUnitId;
+    await loadAll();
+    openDrawer(uid);
+  }
+}
+
+/* ─── Eliminar unidad ─────────────────────────────────────── */
+function deleteCurrentUnit() {
+  if (!currentUnitId) return;
+  const u = allUnits.find(x => x.id === currentUnitId);
+  document.getElementById('confirm-delete-text').textContent =
+    `¿Seguro que deseas eliminar Apt. ${u?.unit_number || ''}? Esta acción no se puede deshacer. Si tiene cargos registrados, no se podrá eliminar.`;
+  document.getElementById('confirm-delete-overlay').classList.add('open');
+}
+function closeConfirmDelete() {
+  document.getElementById('confirm-delete-overlay').classList.remove('open');
+}
+async function executeDeleteUnit() {
+  const uid = currentUnitId;
+  const result = await apiRequest(`/units/${uid}`, 'DELETE');
+  if (result) {
+    showToast('Unidad eliminada correctamente');
+    closeConfirmDelete();
+    closeDrawer();
     await loadAll();
   }
 }

@@ -137,13 +137,11 @@ const NAV_PAGES = [
   { href: '/static/properties.html', label: 'Propiedades',      icon: 'fa-building',     id: 'properties', roles: ['ADMIN', 'USER'] },
   { href: '/static/units.html',      label: 'Unidades',         icon: 'fa-door-open',    id: 'units',      roles: ['ADMIN', 'USER'] },
   { href: '/static/owners.html',     label: 'Propietarios',     icon: 'fa-users',        id: 'owners',     roles: ['ADMIN', 'USER'] },
-  { href: '/static/finances.html',   label: 'Finanzas',         icon: 'fa-chart-line',   id: 'finances',   roles: ['ADMIN', 'USER'] },
+  { href: '/static/finances.html',   label: 'Financiero',       icon: 'fa-chart-line',   id: 'finances',   roles: ['ADMIN', 'USER'] },
   { href: '/static/suppliers.html',  label: 'Proveedores',      icon: 'fa-truck',        id: 'suppliers',  roles: ['ADMIN', 'USER'] },
   // FIX: conflicto git resuelto — Agenda solo para ADMIN y USER (no GARITA)
   { href: '/static/agenda.html',     label: 'Agenda',           icon: 'fa-calendar-alt', id: 'agenda',     roles: ['ADMIN', 'USER'] },
-  //{ href: '/static/reports.html',    label: 'Reportes',         icon: 'fa-chart-bar',    id: 'reports',    roles: ['ADMIN', 'USER'] },
   { href: '/static/imports.html',    label: 'Importar/Exp.',    icon: 'fa-file-import',  id: 'imports',    roles: ['ADMIN', 'USER'] },
-  { href: '/static/historial.html',  label: 'Historial',        icon: 'fa-history',      id: 'historial',  roles: ['ADMIN', 'USER'] },
   // Administración: solo ADMIN
   { href: '/static/admin.html',      label: 'Administración',   icon: 'fa-shield-alt',   id: 'admin',      roles: ['ADMIN'] },
   // Garita: visible para ADMIN, USER y GARITA
@@ -166,7 +164,9 @@ function renderSidebar(activePage) {
 
   // ── Protección de ruta ────────────────────────────────────────
   // Si la página actual no está permitida para este rol → redirigir
-  const currentPage = NAV_PAGES.find(p => p.id === activePage);
+  // (activePage puede ser un id de subpágina, ej: 'finances-historial')
+  const currentPage = NAV_PAGES.find(p => p.id === activePage)
+    || NAV_PAGES.find(p => (p.children || []).some(c => c.id === activePage));
   if (currentPage && !currentPage.roles.includes(role)) {
     // GARITA intentando acceder a cualquier página que no sea garita → redirigir
     if (Auth.isGarita()) {
@@ -217,7 +217,7 @@ function renderSidebar(activePage) {
         </div>
       </aside>
       <button class="sidebar-toggle" id="_sb_toggle" onclick="toggleSidebar()" title="Colapsar menú">
-        <i class="fas fa-chevron-left" id="_sb_toggle_icon"></i>
+        <i class="fas fa-angles-left" id="_sb_toggle_icon"></i>
       </button>
       <div class="main-wrapper">
         <div class="topbar">
@@ -238,11 +238,32 @@ function renderSidebar(activePage) {
   const nav = document.getElementById('_sidebar_nav');
   nav.innerHTML = NAV_PAGES
     .filter(p => p.roles.includes(role))
-    .map(p => `
-      <a href="${p.href}" class="${activePage === p.id ? 'active' : ''}">
-        <i class="fas ${p.icon}"></i>
-        <span>${p.label}</span>
-      </a>`).join('');
+    .map(p => {
+      if (!p.children) {
+        return `
+          <a href="${p.href}" class="${activePage === p.id ? 'active' : ''}">
+            <i class="fas ${p.icon}"></i>
+            <span>${p.label}</span>
+          </a>`;
+      }
+      const childActive = p.children.some(c => c.id === activePage);
+      const groupOpen = childActive || activePage === p.id;
+      return `
+        <div class="nav-group ${groupOpen ? 'open' : ''}">
+          <a href="#" class="nav-group-toggle ${childActive ? 'active' : ''}" onclick="_toggleNavGroup(event, this)">
+            <i class="fas ${p.icon}"></i>
+            <span>${p.label}</span>
+            <i class="fas fa-chevron-down nav-group-arrow"></i>
+          </a>
+          <div class="nav-group-children">
+            ${p.children.map(c => `
+              <a href="${c.href}" class="nav-child ${activePage === c.id ? 'active' : ''}">
+                <i class="fas ${c.icon}"></i>
+                <span>${c.label}</span>
+              </a>`).join('')}
+          </div>
+        </div>`;
+    }).join('');
 
   // Usuario, rol y avatar
   const u        = Auth.user();
@@ -260,8 +281,9 @@ function renderSidebar(activePage) {
     if (role === 'GARITA') av.style.background = '#34d399'; // verde garita
   }
 
-  // Título y fecha en topbar
-  const page = NAV_PAGES.find(p => p.id === activePage);
+  // Título y fecha en topbar (busca en páginas de primer nivel y en subpáginas)
+  const page = NAV_PAGES.find(p => p.id === activePage)
+    || NAV_PAGES.flatMap(p => p.children || []).find(c => c.id === activePage);
   const tt   = document.getElementById('_topbar_title');
   const td   = document.getElementById('_topbar_date');
   if (tt && page) tt.textContent = page.label;
@@ -283,6 +305,12 @@ function renderSidebar(activePage) {
 /* Alias para páginas que usan renderHeader */
 function renderHeader(activePage) { renderSidebar(activePage); }
 
+/* Expandir/colapsar un grupo de subpáginas en el sidebar */
+function _toggleNavGroup(e, el) {
+  e.preventDefault();
+  el.parentElement.classList.toggle('open');
+}
+
 function toggleSidebar() {
   const collapsed = document.getElementById('_sidebar').classList.contains('collapsed');
   _applySidebarCollapse(!collapsed, true);
@@ -295,11 +323,11 @@ function _applySidebarCollapse(collapse, save) {
   if (collapse) {
     sb.classList.add('collapsed');
     document.body.classList.add('sidebar-collapsed');
-    if (icon) { icon.classList.remove('fa-chevron-left'); icon.classList.add('fa-chevron-right'); }
+    if (icon) { icon.classList.remove('fa-angles-left'); icon.classList.add('fa-angles-right'); }
   } else {
     sb.classList.remove('collapsed');
     document.body.classList.remove('sidebar-collapsed');
-    if (icon) { icon.classList.remove('fa-chevron-right'); icon.classList.add('fa-chevron-left'); }
+    if (icon) { icon.classList.remove('fa-angles-right'); icon.classList.add('fa-angles-left'); }
   }
   if (save) localStorage.setItem('sidebar_collapsed', collapse ? '1' : '0');
 }

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy import DateTime
@@ -13,6 +13,9 @@ class Unit(Base):
 
     unit_number = Column(String, nullable=False)
     floor = Column(String, nullable=True)
+
+    # Cuota mensual fija de la unidad. Nullable: las unidades existentes no la tienen asignada todavía.
+    monthly_fee = Column(Numeric(10, 2), nullable=True)
 
     property = relationship("Property", backref="units")
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models.unit_owner import UnitOwner
 from app.models.unit import Unit
 from app.models.owner import Owner
+from app.services.ownership_service import assign_owner_to_unit as assign_owner_to_unit_service
 
 router = APIRouter(prefix="/unit-owners", tags=["UnitOwner"])
 
@@ -22,37 +23,7 @@ def assign_owner_to_unit(
     data: UnitOwnerCreate,
     db: Session = Depends(get_db)
 ):
-    unit = db.query(Unit).filter(Unit.id == data.unit_id).first()
-    owner = db.query(Owner).filter(Owner.id == data.owner_id).first()
-
-    if not unit:
-        raise HTTPException(status_code=404, detail="Unidad no encontrada")
-
-    if not owner:
-        raise HTTPException(status_code=404, detail="Propietario no encontrado")
-
-    # Desactivar propietario anterior
-    active_ownership = db.query(UnitOwner).filter(
-        UnitOwner.unit_id == data.unit_id,
-        UnitOwner.is_active == True
-    ).first()
-
-    if active_ownership:
-        active_ownership.is_active = False
-        active_ownership.end_date = data.start_date
-
-    new_ownership = UnitOwner(
-        unit_id=data.unit_id,
-        owner_id=data.owner_id,
-        start_date=data.start_date,
-        is_active=True
-    )
-
-    db.add(new_ownership)
-    db.commit()
-    db.refresh(new_ownership)
-
-    return new_ownership
+    return assign_owner_to_unit_service(db, data.unit_id, data.owner_id, data.start_date)
 
 @router.get("/by-unit/{unit_id}")
 def get_owners_by_unit(unit_id: int, db: Session = Depends(get_db)):

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Propiedades | Alianza Residencial</title>
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -12,75 +12,97 @@
 <header class="main-header" id="main-header"></header>
 
 <div class="app">
-  <div class="page-header">
-    <h1><i class="fas fa-building" style="color:var(--accent);margin-right:8px;"></i>Propiedades</h1>
-    <p>Registra y administra los edificios y conjuntos residenciales</p>
+  <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <h1><i class="fas fa-building" style="color:var(--accent);margin-right:8px;"></i>Propiedades</h1>
+      <p>Registra y administra los edificios y conjuntos residenciales</p>
+    </div>
+    <button class="btn-primary" style="width:auto;" onclick="openCreateModal()">
+      <i class="fas fa-plus"></i> Nueva Propiedad
+    </button>
   </div>
 
-  <div class="two-col">
+  <div class="card" style="margin-bottom:0;">
+    <div class="card-header">
+      <h3><i class="fas fa-list"></i> Propiedades Registradas</h3>
+      <span class="badge badge-primary" id="prop-count">0</span>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Dirección</th>
+            <th>Unidades</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="props-table">
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    <!-- Formulario -->
+<!-- ═══ Drawer: nueva/editar propiedad ═══ -->
+<div class="drawer-overlay" id="property-drawer-overlay" onclick="closePropertyModal()"></div>
+<aside class="drawer" id="property-drawer">
+  <div class="drawer-header">
     <div>
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-plus-circle"></i> <span id="form-title">Nueva Propiedad</span></h3>
-          <button class="btn btn-muted btn-sm" id="btn-cancel" onclick="cancelEdit()" style="display:none;">
-            <i class="fas fa-times"></i> Cancelar
-          </button>
-        </div>
-        <div class="card-body">
-          <input type="hidden" id="prop-id">
-
-          <label class="field-label">Nombre</label>
-          <input type="text" id="name" placeholder="Ej: Torre Alianza I">
-
-          <label class="field-label">Tipo</label>
-          <select id="type">
-            <option value="">Seleccione tipo</option>
-            <option value="PH">Penthouse (PH)</option>
-            <option value="EDIFICIO">Edificio</option>
-            <option value="CASA">Casa</option>
-            <option value="LOCAL">Local Comercial</option>
-          </select>
-
-          <label class="field-label">Dirección</label>
-          <input type="text" id="address" placeholder="Ej: Av. Balboa, Ciudad de Panamá">
-
-          <label class="field-label">Máximo de unidades</label>
-          <input type="number" id="max_units" value="50" min="1">
-
-          <button onclick="saveProperty()">
-            <i class="fas fa-save"></i> <span id="btn-label">Guardar Propiedad</span>
-          </button>
-        </div>
-      </div>
+      <h3><i class="fas fa-plus-circle" style="color:var(--accent);margin-right:6px;"></i><span id="form-title">Nueva Propiedad</span></h3>
     </div>
+    <button class="drawer-close" onclick="closePropertyModal()"><i class="fas fa-times"></i></button>
+  </div>
 
-    <!-- Tabla -->
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-header">
-        <h3><i class="fas fa-list"></i> Propiedades Registradas</h3>
-        <span class="badge badge-primary" id="prop-count">0</span>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Dirección</th>
-              <th>Unidades</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="props-table">
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
+  <div class="drawer-body">
+    <input type="hidden" id="prop-id">
+
+    <label class="field-label">Nombre</label>
+    <input type="text" id="name" placeholder="Ej: Torre Alianza I">
+
+    <label class="field-label">Tipo</label>
+    <select id="type">
+      <option value="">Seleccione tipo</option>
+      <option value="PH">Penthouse (PH)</option>
+      <option value="EDIFICIO">Edificio</option>
+      <option value="CASA">Casa</option>
+      <option value="LOCAL">Local Comercial</option>
+    </select>
+
+    <label class="field-label">Dirección</label>
+    <input type="text" id="address" placeholder="Ej: Av. Balboa, Ciudad de Panamá">
+
+    <label class="field-label">Máximo de unidades</label>
+    <input type="number" id="max_units" value="50" min="1">
+
+    <label class="field-label">Teléfono (opcional)</label>
+    <input type="text" id="phone" placeholder="Ej: 6000-0000">
+
+    <label class="field-label">Correo (opcional)</label>
+    <input type="text" id="email" placeholder="Ej: administracion@alianza.com">
+
+    <label class="field-label">Sitio web (opcional)</label>
+    <input type="text" id="website" placeholder="Ej: www.alianzaresidencial.com">
+  </div>
+
+  <div class="drawer-actions">
+    <button class="btn-primary" onclick="saveProperty()"><i class="fas fa-save"></i> <span id="btn-label">Guardar Propiedad</span></button>
+    <button class="btn-ghost" onclick="closePropertyModal()">Cancelar</button>
+  </div>
+</aside>
+
+<!-- ═══ Modal: confirmar eliminación ═══ -->
+<div class="modal-overlay" id="confirm-delete-overlay">
+  <div class="modal-box" style="width:380px;">
+    <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Eliminar propiedad</h3>
+    <p id="confirm-delete-text">¿Seguro que deseas eliminar esta propiedad? Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeConfirmDelete()">Cancelar</button>
+      <button class="btn-danger" onclick="executeDeleteProperty()"><i class="fas fa-trash-alt"></i> Eliminar</button>
     </div>
-
   </div>
 </div>
 
@@ -121,9 +143,23 @@ async function loadTable() {
         <button class="btn btn-ghost btn-sm" onclick="editProperty(${p.id})">
           <i class="fas fa-pencil-alt"></i>
         </button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteProperty(${p.id}, '${p.name.replace(/'/g, "\\'")}')" style="color:var(--danger);">
+          <i class="fas fa-trash-alt"></i>
+        </button>
       </td>
     </tr>`;
   }).join('');
+}
+
+/* ─── Drawer: crear/editar ────────────────────────────────── */
+function openCreateModal() {
+  cancelEdit();
+  document.getElementById('property-drawer').classList.add('open');
+  document.getElementById('property-drawer-overlay').classList.add('open');
+}
+function closePropertyModal() {
+  document.getElementById('property-drawer').classList.remove('open');
+  document.getElementById('property-drawer-overlay').classList.remove('open');
 }
 
 async function saveProperty() {
@@ -131,12 +167,15 @@ async function saveProperty() {
   const type     = document.getElementById('type').value;
   const address  = document.getElementById('address').value.trim();
   const maxUnits = parseInt(document.getElementById('max_units').value);
+  const phone    = document.getElementById('phone').value.trim()   || null;
+  const email    = document.getElementById('email').value.trim()   || null;
+  const website  = document.getElementById('website').value.trim() || null;
 
   if (!name || !type || !address) {
     showToast('Completa todos los campos obligatorios', 'error'); return;
   }
 
-  const data = { name, type, address, max_units: maxUnits };
+  const data = { name, type, address, max_units: maxUnits, phone, email, website };
 
   let result;
   if (editingId) {
@@ -147,7 +186,7 @@ async function saveProperty() {
     if (result) showToast('Propiedad creada correctamente');
   }
 
-  if (result) { cancelEdit(); loadTable(); }
+  if (result) { cancelEdit(); closePropertyModal(); loadTable(); }
 }
 
 async function editProperty(id) {
@@ -161,10 +200,38 @@ async function editProperty(id) {
   document.getElementById('type').value        = p.type;
   document.getElementById('address').value     = p.address;
   document.getElementById('max_units').value   = p.max_units;
+  document.getElementById('phone').value       = p.phone   || '';
+  document.getElementById('email').value       = p.email   || '';
+  document.getElementById('website').value     = p.website || '';
   document.getElementById('form-title').textContent = 'Editar Propiedad';
   document.getElementById('btn-label').textContent  = 'Actualizar';
-  document.getElementById('btn-cancel').style.display = '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('property-drawer').classList.add('open');
+  document.getElementById('property-drawer-overlay').classList.add('open');
+}
+
+let propertyIdToDelete = null;
+
+function deleteProperty(id, name) {
+  propertyIdToDelete = id;
+  document.getElementById('confirm-delete-text').textContent =
+    `¿Seguro que deseas eliminar "${name}"? Esta acción no se puede deshacer.`;
+  document.getElementById('confirm-delete-overlay').classList.add('open');
+}
+
+function closeConfirmDelete() {
+  document.getElementById('confirm-delete-overlay').classList.remove('open');
+  propertyIdToDelete = null;
+}
+
+async function executeDeleteProperty() {
+  if (!propertyIdToDelete) return;
+  const result = await apiRequest(`/properties/${propertyIdToDelete}`, 'DELETE');
+  if (result) {
+    showToast('Propiedad eliminada correctamente');
+    closeConfirmDelete();
+    loadTable();
+  }
+  // Si el backend responde 400/500, apiRequest ya muestra el detail exacto vía showToast.
 }
 
 function cancelEdit() {
@@ -174,9 +241,11 @@ function cancelEdit() {
   document.getElementById('type').value           = '';
   document.getElementById('address').value        = '';
   document.getElementById('max_units').value      = 50;
+  document.getElementById('phone').value          = '';
+  document.getElementById('email').value          = '';
+  document.getElementById('website').value        = '';
   document.getElementById('form-title').textContent = 'Nueva Propiedad';
   document.getElementById('btn-label').textContent  = 'Guardar Propiedad';
-  document.getElementById('btn-cancel').style.display = 'none';
 }
 
 loadTable();

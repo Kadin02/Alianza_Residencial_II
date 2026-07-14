@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Propietarios | Alianza Residencial</title>
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -12,85 +12,82 @@
 <header class="main-header" id="main-header"></header>
 
 <div class="app">
-  <div class="page-header">
-    <h1><i class="fas fa-users" style="color:var(--accent);margin-right:8px;"></i>Propietarios</h1>
-    <p>Registro e historial de propietarios del sistema</p>
+  <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <h1><i class="fas fa-users" style="color:var(--accent);margin-right:8px;"></i>Propietarios</h1>
+      <p>Registro e historial de propietarios del sistema</p>
+    </div>
+    <button class="btn-primary" style="width:auto;" onclick="openCreateDrawer()">
+      <i class="fas fa-plus"></i> Nuevo Propietario
+    </button>
   </div>
 
-  <div class="two-col">
+  <div class="card" style="margin-bottom:0;">
+    <div class="card-header">
+      <h3><i class="fas fa-list"></i> Propietarios Registrados</h3>
+      <span class="badge badge-primary" id="owner-count">0</span>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Identificación</th>
+            <th>Contacto</th>
+            <th>Unidad Activa</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="owners-table">
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    <!-- Formulario -->
+<!-- ═══ Drawer: nuevo/editar propietario ═══ -->
+<div class="drawer-overlay" id="owner-drawer-overlay" onclick="closeOwnerDrawer()"></div>
+<aside class="drawer" id="owner-drawer">
+  <div class="drawer-header">
     <div>
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-user-plus"></i> <span id="form-title">Nuevo Propietario</span></h3>
-          <button class="btn btn-muted btn-sm" id="btn-cancel" onclick="cancelEdit()" style="display:none;">
-            <i class="fas fa-times"></i> Cancelar
-          </button>
-        </div>
-        <div class="card-body">
-          <input type="hidden" id="owner-id">
-
-          <label class="field-label">Nombre completo *</label>
-          <input type="text" id="full_name" placeholder="Ej: Juan Pérez">
-
-          <label class="field-label">Identificación</label>
-          <input type="text" id="identification" placeholder="Cédula o pasaporte">
-
-          <label class="field-label">Correo electrónico</label>
-          <input type="email" id="email" placeholder="correo@email.com">
-
-          <label class="field-label">Teléfono</label>
-          <input type="tel" id="phone" placeholder="+507 6000-0000">
-
-          <button onclick="saveOwner()">
-            <i class="fas fa-save"></i> <span id="btn-label">Guardar Propietario</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Estado de cuenta rápido -->
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-file-invoice-dollar"></i> Estado de Cuenta</h3>
-        </div>
-        <div class="card-body">
-          <label class="field-label">Seleccionar propietario</label>
-          <select id="stmt-owner">
-            <option value="">Seleccione propietario</option>
-          </select>
-          <button onclick="openStatement()" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:4px;">
-            <i class="fas fa-external-link-alt"></i> Ver Estado de Cuenta
-          </button>
-        </div>
-      </div>
+      <h3><i class="fas fa-user-plus" style="color:var(--accent);margin-right:6px;"></i><span id="form-title">Nuevo Propietario</span></h3>
     </div>
+    <button class="drawer-close" onclick="closeOwnerDrawer()"><i class="fas fa-times"></i></button>
+  </div>
 
-    <!-- Tabla -->
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-header">
-        <h3><i class="fas fa-list"></i> Propietarios Registrados</h3>
-        <span class="badge badge-primary" id="owner-count">0</span>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Identificación</th>
-              <th>Contacto</th>
-              <th>Unidad Activa</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="owners-table">
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
+  <div class="drawer-body">
+    <input type="hidden" id="owner-id">
+
+    <label class="field-label">Nombre completo *</label>
+    <input type="text" id="full_name" placeholder="Ej: Juan Pérez">
+
+    <label class="field-label">Identificación</label>
+    <input type="text" id="identification" placeholder="Cédula o pasaporte">
+
+    <label class="field-label">Correo electrónico</label>
+    <input type="email" id="email" placeholder="correo@email.com">
+
+    <label class="field-label">Teléfono</label>
+    <input type="tel" id="phone" placeholder="+507 6000-0000">
+  </div>
+
+  <div class="drawer-actions">
+    <button class="btn-primary" onclick="saveOwner()"><i class="fas fa-save"></i> <span id="btn-label">Guardar Propietario</span></button>
+    <button class="btn-ghost" onclick="closeOwnerDrawer()">Cancelar</button>
+  </div>
+</aside>
+
+<!-- ═══ Modal: confirmar eliminación ═══ -->
+<div class="modal-overlay" id="confirm-delete-overlay">
+  <div class="modal-box" style="width:380px;">
+    <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Eliminar propietario</h3>
+    <p id="confirm-delete-text">¿Seguro que deseas eliminar este propietario? Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeConfirmDelete()">Cancelar</button>
+      <button class="btn-danger" onclick="executeDeleteOwner()"><i class="fas fa-trash-alt"></i> Eliminar</button>
     </div>
-
   </div>
 </div>
 
@@ -111,11 +108,6 @@ async function loadTable() {
 
   allOwnersCache = owners || [];
   document.getElementById('owner-count').textContent = allOwnersCache.length;
-
-  // Fill stmt select
-  const stmtSel = document.getElementById('stmt-owner');
-  stmtSel.innerHTML = '<option value="">Seleccione propietario</option>';
-  allOwnersCache.forEach(o => stmtSel.innerHTML += `<option value="${o.id}">${o.full_name}</option>`);
 
   const tbody = document.getElementById('owners-table');
 
@@ -145,15 +137,29 @@ async function loadTable() {
       </td>
       <td>
         ${unitMap[o.id]
-          ? `<span class="badge badge-success">${unitMap[o.id]}</span>`
+          ? `<span class="badge badge-teal">${unitMap[o.id]}</span>`
           : `<em style="color:var(--text-muted);font-size:.82rem;">Sin unidad</em>`}
       </td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="editOwner(${o.id})">
           <i class="fas fa-pencil-alt"></i>
         </button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteOwner(${o.id}, '${o.full_name.replace(/'/g, "\\'")}')" style="color:var(--danger);">
+          <i class="fas fa-trash-alt"></i>
+        </button>
       </td>
     </tr>`).join('');
+}
+
+/* ─── Drawer: crear/editar ────────────────────────────────── */
+function openCreateDrawer() {
+  cancelEdit();
+  document.getElementById('owner-drawer').classList.add('open');
+  document.getElementById('owner-drawer-overlay').classList.add('open');
+}
+function closeOwnerDrawer() {
+  document.getElementById('owner-drawer').classList.remove('open');
+  document.getElementById('owner-drawer-overlay').classList.remove('open');
 }
 
 async function saveOwner() {
@@ -176,7 +182,7 @@ async function saveOwner() {
     if (result) showToast('Propietario creado correctamente');
   }
 
-  if (result) { cancelEdit(); loadTable(); }
+  if (result) { cancelEdit(); closeOwnerDrawer(); loadTable(); }
 }
 
 function editOwner(id) {
@@ -191,8 +197,8 @@ function editOwner(id) {
   document.getElementById('phone').value            = o.phone || '';
   document.getElementById('form-title').textContent = 'Editar Propietario';
   document.getElementById('btn-label').textContent  = 'Actualizar';
-  document.getElementById('btn-cancel').style.display = '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('owner-drawer').classList.add('open');
+  document.getElementById('owner-drawer-overlay').classList.add('open');
 }
 
 function cancelEdit() {
@@ -202,13 +208,31 @@ function cancelEdit() {
   });
   document.getElementById('form-title').textContent = 'Nuevo Propietario';
   document.getElementById('btn-label').textContent  = 'Guardar Propietario';
-  document.getElementById('btn-cancel').style.display = 'none';
 }
 
-function openStatement() {
-  const ownerId = document.getElementById('stmt-owner').value;
-  if (!ownerId) { showToast('Selecciona un propietario', 'warning'); return; }
-  window.open(`/static/estado_cuenta.html?owner_id=${ownerId}`, '_blank');
+let ownerIdToDelete = null;
+
+function deleteOwner(id, name) {
+  ownerIdToDelete = id;
+  document.getElementById('confirm-delete-text').textContent =
+    `¿Seguro que deseas eliminar a "${name}"? Esta acción no se puede deshacer.`;
+  document.getElementById('confirm-delete-overlay').classList.add('open');
+}
+
+function closeConfirmDelete() {
+  document.getElementById('confirm-delete-overlay').classList.remove('open');
+  ownerIdToDelete = null;
+}
+
+async function executeDeleteOwner() {
+  if (!ownerIdToDelete) return;
+  const result = await apiRequest(`/owners/${ownerIdToDelete}`, 'DELETE');
+  if (result) {
+    showToast('Propietario eliminado correctamente');
+    closeConfirmDelete();
+    loadTable();
+  }
+  // Si el backend responde 400/500 (ej. tiene pagos registrados), apiRequest ya muestra el detail exacto vía showToast.
 }
 
 loadTable();

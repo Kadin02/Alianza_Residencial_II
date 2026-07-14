@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db
 from app.models.owner import Owner
 from app.models.unit_owner import UnitOwner
+from app.models.payment import Payment
+from app.models.invoice import Invoice
 
 router = APIRouter(prefix="/owners", tags=["Owners"])
 
@@ -55,16 +58,32 @@ def delete_owner(owner_id: int, db: Session = Depends(get_db)):
     if not owner:
         raise HTTPException(status_code=404, detail="Propietario no encontrado")
 
-    # Desactivar cualquier relación activa
-    ownerships = db.query(UnitOwner).filter(
-        UnitOwner.owner_id == owner_id,
-        UnitOwner.is_active == True
-    ).all()
+    try:
+        payment_count = db.query(Payment).filter(Payment.owner_id == owner_id).count()
 
-    for o in ownerships:
-        o.is_active = False
+        invoice_count = (
+            db.query(Invoice)
+            .join(Payment, Invoice.payment_id == Payment.id)
+            .filter(Payment.owner_id == owner_id)
+            .count()
+        )
 
-    db.delete(owner)
-    db.commit()
+        if payment_count > 0 or invoice_count > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No se puede eliminar el propietario: tiene {payment_count} pago(s) registrado(s).",
+            )
+
+        # Sin pagos/facturas: se permite eliminar al Owner y su historial de UnitOwner.
+        db.query(UnitOwner).filter(UnitOwner.owner_id == owner_id).delete(synchronize_session=False)
+
+        db.delete(owner)
+        db.commit()
+
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error interno")
 
     return {"message": "Propietario eliminado correctamente"}
