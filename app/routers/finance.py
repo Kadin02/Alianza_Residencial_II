@@ -386,6 +386,14 @@ def _admin_only(current_user = Depends(get_current_user_dep)):
 
 
 # ── Editar pago — solo ADMIN ─────────────────────────────────
+# FIX: editar el monto solo tocaba Payment.amount, pero el estado de
+# cuenta/balance de cargos se calcula siempre a partir de
+# PaymentApplication.applied_amount (y OwnerCredit si el pago generó
+# saldo a favor) -- por eso el cambio nunca se reflejaba. Ahora se
+# cascada el nuevo monto a la aplicación/crédito vinculado cuando el
+# caso es inambiguo (un solo cargo, o un único crédito sin usar); si el
+# pago está repartido entre varios cargos y/o crédito, se rechaza la
+# edición directa para no adivinar cómo redistribuir el monto.
 @router.put("/payment/{payment_id}")
 def update_payment(
     payment_id: int,
@@ -393,13 +401,63 @@ def update_payment(
     db: Session = Depends(get_db),
     current_user = Depends(_admin_only),
 ):
+    from decimal import Decimal
+    from app.models.payment_application import PaymentApplication
+    from app.models.charge import Charge
+    from app.models.owner_credit import OwnerCredit
+    from app.services.finance_service import get_charge_status
+
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
 
-    from decimal import Decimal
+    new_amount = Decimal(str(data.amount))
+
+    apps = db.query(PaymentApplication).filter(PaymentApplication.payment_id == payment_id).all()
+    credit = db.query(OwnerCredit).filter(OwnerCredit.source_payment_id == payment_id).first()
+
+    if len(apps) > 1 or (apps and credit):
+        raise HTTPException(
+            status_code=400,
+            detail="Este pago está repartido entre varios cargos, o se aplicó a un cargo y además generó "
+                   "saldo a favor. No se puede editar el monto directamente sin saber cómo redistribuirlo -- "
+                   "elimina el pago y regístralo de nuevo con el monto correcto."
+        )
+
+    if apps:
+        app = apps[0]
+        charge = db.query(Charge).filter(Charge.id == app.charge_id).first()
+        other_applied = Decimal("0.00")
+        if charge:
+            other_applied += sum((a.applied_amount for a in charge.applications if a.id != app.id), Decimal("0.00"))
+            other_applied += sum((c.applied_amount for c in charge.credit_applications), Decimal("0.00"))
+        max_allowed = (charge.amount - other_applied) if charge else new_amount
+        if max_allowed < Decimal("0.00"):
+            max_allowed = Decimal("0.00")
+        if new_amount > max_allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El nuevo monto (${float(new_amount):.2f}) supera lo que el cargo aún puede recibir "
+                       f"(máximo ${float(max_allowed):.2f})."
+            )
+        app.applied_amount = new_amount
+        db.flush()
+        if charge:
+            charge.status = get_charge_status(db, charge.id)
+
+    elif credit:
+        if credit.remaining_amount != credit.amount:
+            raise HTTPException(
+                status_code=400,
+                detail="El saldo a favor generado por este pago ya fue usado parcial o totalmente. "
+                       "No se puede editar el monto de este pago."
+            )
+        credit.amount = new_amount
+        credit.remaining_amount = new_amount
+
     payment.payment_date   = data.payment_date
-    payment.amount         = Decimal(str(data.amount))
+    payment.amount         = new_amount
+    payment.total_amount   = new_amount
     payment.invoice_number = data.invoice_number
     payment.reference      = data.reference
     if hasattr(payment, 'receipt_number'):

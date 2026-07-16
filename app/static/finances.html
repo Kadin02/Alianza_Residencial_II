@@ -900,9 +900,15 @@
       <!-- Selectores -->
       <div class="rep-modal-selectors">
         <div>
-          <label class="field-label">Apartamento *</label>
+          <label class="field-label">Apartamento</label>
           <select id="rep-apto" onchange="generarReporte()">
-            <option value="">Seleccione</option>
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Año</label>
+          <select id="rep-anio" onchange="generarReporte()">
+            <option value="">Todos</option>
           </select>
         </div>
         <div>
@@ -925,7 +931,7 @@
       <div id="reporte-content">
         <div style="text-align:center;padding:3rem;color:var(--text-muted);">
           <i class="fas fa-home" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
-          Selecciona un apartamento para generar el reporte
+          Cargando reporte…
         </div>
       </div>
     </div>
@@ -2382,13 +2388,16 @@ async function loadPaymentsHistory() {
 function llenarSelectoresReporte() {
   const aptos     = [...new Set(allPagos.map(p => p.apto))].sort();
   const conceptos = [...new Set(allPagos.map(p => p.concepto))].sort();
-  document.getElementById('rep-apto').innerHTML     = '<option value="">Seleccione</option>' + aptos.map(a     => `<option>${a}</option>`).join('');
-  document.getElementById('rep-concepto').innerHTML = '<option value="">Todos</option>'     + conceptos.map(c => `<option>${c}</option>`).join('');
+  const anios     = [...new Set(allPagos.map(p => (p.fecha || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+  document.getElementById('rep-apto').innerHTML     = '<option value="">Todos</option>' + aptos.map(a     => `<option>${a}</option>`).join('');
+  document.getElementById('rep-concepto').innerHTML = '<option value="">Todos</option>' + conceptos.map(c => `<option>${c}</option>`).join('');
+  document.getElementById('rep-anio').innerHTML     = '<option value="">Todos</option>' + anios.map(a     => `<option>${a}</option>`).join('');
 }
 
 /* ══ REPORTE PDF ═══════════════════════════════════════ */
 function abrirReporte() {
   document.getElementById('reporte-modal').classList.add('open');
+  generarReporte();
 }
 function cerrarReporte() {
   document.getElementById('reporte-modal').classList.remove('open');
@@ -2399,15 +2408,17 @@ document.getElementById('reporte-modal').addEventListener('click', function(e) {
 
 function getPagosFiltradosReporte() {
   const apto     = document.getElementById('rep-apto').value;
+  const anio     = document.getElementById('rep-anio').value;
   const desde    = document.getElementById('rep-desde').value;
   const hasta    = document.getElementById('rep-hasta').value;
   const concepto = document.getElementById('rep-concepto').value;
-  if (!apto) return null;
-  let p = allPagos.filter(x => x.apto === apto);
+  let p = allPagos.slice();
+  if (apto)     p = p.filter(x => x.apto === apto);
+  if (anio)     p = p.filter(x => (x.fecha || '').slice(0, 4) === anio);
   if (desde)    p = p.filter(x => x.fecha >= desde);
   if (hasta)    p = p.filter(x => x.fecha <= hasta);
   if (concepto) p = p.filter(x => x.concepto === concepto);
-  return { apto, desde, hasta, concepto, pagos: p };
+  return { apto, anio, desde, hasta, concepto, pagos: p };
 }
 
 function fdate(s) {
@@ -2422,28 +2433,46 @@ function fdate(s) {
 function generarReporte()
 {
   const content = document.getElementById('reporte-content');
-  const res = getPagosFiltradosReporte();
-
-  if (!res) {
-    content.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">
-      <i class="fas fa-home" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
-      Selecciona un apartamento para generar el reporte</div>`;
-    return;
-  }
-
-  const { apto, desde, hasta, concepto, pagos } = res;
+  const { apto, anio, desde, hasta, concepto, pagos } = getPagosFiltradosReporte();
 
   if (!pagos.length) {
     content.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">Sin pagos con los filtros seleccionados</div>`;
     return;
   }
 
-  const owner  = pagos[0]?.owner_name || '—';
+  const multiApto = !apto;
   const total  = pagos.reduce((s, p) => s + p.monto, 0);
   const hoy    = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
   const periodo= desde && hasta ? `${fdate(desde)} al ${fdate(hasta)}`
                : desde ? `Desde ${fdate(desde)}`
-               : hasta ? `Hasta ${fdate(hasta)}` : 'Histórico completo';
+               : hasta ? `Hasta ${fdate(hasta)}`
+               : anio  ? `Año ${anio}` : 'Histórico completo';
+
+  const infoCells = multiApto ? `
+        <div class="info-cell">
+          <div class="ic-lbl">APARTAMENTOS</div>
+          <div class="ic-val">${new Set(pagos.map(p => p.apto)).size} unidad(es)</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">CONCEPTO</div>
+          <div class="ic-val">${concepto || 'Todos'}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">PERÍODO</div>
+          <div class="ic-val">${periodo}</div>
+        </div>` : `
+        <div class="info-cell">
+          <div class="ic-lbl">APARTAMENTO</div>
+          <div class="ic-val">Apt. ${apto}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">PROPIETARIO</div>
+          <div class="ic-val">${pagos[0]?.owner_name || '—'}</div>
+        </div>
+        <div class="info-cell">
+          <div class="ic-lbl">PERÍODO</div>
+          <div class="ic-val">${periodo}</div>
+        </div>`;
 
   let tableRows = '';
   pagos.forEach(p => {
@@ -2451,6 +2480,7 @@ function generarReporte()
       <tr>
         <td style="font-family:monospace;font-size:.78rem;">${p.factura || '—'}</td>
         <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
+        ${multiApto ? `<td>Apt. ${p.apto}</td><td>${p.owner_name}</td>` : ''}
         <td>${p.concepto || p.factura || '—'}</td>
         <td class="right"><strong>$${formatMoney(p.monto)}</strong></td>
       </tr>
@@ -2471,18 +2501,7 @@ function generarReporte()
       </div>
 
       <div class="info-grid">
-        <div class="info-cell">
-          <div class="ic-lbl">APARTAMENTO</div>
-          <div class="ic-val">Apt. ${apto}</div>
-        </div>
-        <div class="info-cell">
-          <div class="ic-lbl">PROPIETARIO</div>
-          <div class="ic-val">${owner}</div>
-        </div>
-        <div class="info-cell">
-          <div class="ic-lbl">PERÍODO</div>
-          <div class="ic-val">${periodo}</div>
-        </div>
+        ${infoCells}
       </div>
 
       <div class="summary-cards">
@@ -2495,6 +2514,7 @@ function generarReporte()
           <tr>
             <th># Factura</th>
             <th>Fecha</th>
+            ${multiApto ? `<th>Apartamento</th><th>Propietario</th>` : ''}
             <th>Concepto</th>
             <th class="right">Monto</th>
           </tr>
@@ -2526,7 +2546,6 @@ function generarReporte()
 /* ── Imprimir / Exportar PDF ─────────────────────────── */
 function imprimirPDF() {
   const apto = document.getElementById('rep-apto').value;
-  if (!apto) { showToast('Selecciona un apartamento primero','warning'); return; }
 
   const doc = document.getElementById('pdf-doc');
   if (!doc)  { showToast('Genera el reporte primero','warning'); return; }
@@ -2539,7 +2558,7 @@ function imprimirPDF() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Reporte Apt. ${apto}</title>
+      <title>${apto ? 'Reporte Apt. ' + apto : 'Reporte de Pagos'}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -2624,9 +2643,7 @@ function imprimirPDF() {
 
 /* ── Excel del reporte ───────────────────────────────── */
 function exportarReporteExcel() {
-  const res = getPagosFiltradosReporte();
-  if (!res) { showToast('Selecciona un apartamento primero','warning'); return; }
-  const { apto, pagos } = res;
+  const { apto, pagos } = getPagosFiltradosReporte();
   if (!pagos.length) { showToast('Sin datos para exportar','warning'); return; }
 
   const total   = pagos.reduce((s,p) => s+p.monto, 0);
@@ -2637,8 +2654,8 @@ function exportarReporteExcel() {
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:28},{wch:22},{wch:12}];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `Apt ${apto}`);
-  XLSX.writeFile(wb, `reporte_apt${apto}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, apto ? `Apt ${apto}` : 'Todos');
+  XLSX.writeFile(wb, `reporte_${apto ? 'apt' + apto : 'pagos'}_${new Date().toISOString().split('T')[0]}.xlsx`);
   showToast('Reporte descargado','success');
 }
 
