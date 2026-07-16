@@ -886,6 +886,9 @@
     <div class="rep-modal-header">
       <h3><i class="fas fa-file-alt" style="color:var(--accent);margin-right:6px;"></i>Reporte por Apartamento</h3>
       <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary" id="rep-vista-btn" onclick="toggleVistaReporte()" style="width:auto;margin-top:0;">
+          <i class="fas fa-calendar-alt"></i> <span id="rep-vista-label">Agrupar por Mes</span>
+        </button>
         <button class="btn btn-secondary" onclick="imprimirPDF()" style="width:auto;margin-top:0;">
           <i class="fas fa-file-pdf"></i> Exportar PDF
         </button>
@@ -2395,12 +2398,42 @@ function llenarSelectoresReporte() {
 }
 
 /* ══ REPORTE PDF ═══════════════════════════════════════ */
+let repVistaAgrupada = false;
+
 function abrirReporte() {
+  repVistaAgrupada = false;
   document.getElementById('reporte-modal').classList.add('open');
   generarReporte();
 }
 function cerrarReporte() {
   document.getElementById('reporte-modal').classList.remove('open');
+}
+
+function toggleVistaReporte() {
+  repVistaAgrupada = !repVistaAgrupada;
+  const label = document.getElementById('rep-vista-label');
+  if (label) label.textContent = repVistaAgrupada ? 'Ver Lista Detallada' : 'Agrupar por Mes';
+  generarReporte();
+}
+
+function agruparPagosPorMes(pagos) {
+  const map = new Map();
+  pagos.forEach(p => {
+    const key = (p.fecha || '').slice(0, 7); // YYYY-MM
+    if (!map.has(key)) map.set(key, { key, monto: 0, count: 0, aptos: new Set() });
+    const g = map.get(key);
+    g.monto += p.monto;
+    g.count += 1;
+    g.aptos.add(p.apto);
+  });
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function mesLabel(key) {
+  if (!key) return '—';
+  const [y, m] = key.split('-');
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `${meses[parseInt(m) - 1] || '—'} ${y}`;
 }
 document.getElementById('reporte-modal').addEventListener('click', function(e) {
   if (e.target === this) cerrarReporte();
@@ -2474,9 +2507,21 @@ function generarReporte()
           <div class="ic-val">${periodo}</div>
         </div>`;
 
-  let tableRows = '';
-  pagos.forEach(p => {
-    tableRows += `
+  let tableRows, theadCols;
+  if (repVistaAgrupada) {
+    const grouped = agruparPagosPorMes(pagos);
+    theadCols = `<th>Mes</th>${multiApto ? '<th>Apartamentos</th>' : ''}<th class="right">Cant. Pagos</th><th class="right">Total</th>`;
+    tableRows = grouped.map(g => `
+      <tr>
+        <td style="text-transform:capitalize;">${mesLabel(g.key)}</td>
+        ${multiApto ? `<td>${g.aptos.size} unidad(es)</td>` : ''}
+        <td class="right">${g.count}</td>
+        <td class="right"><strong>$${formatMoney(g.monto)}</strong></td>
+      </tr>
+    `).join('');
+  } else {
+    theadCols = `<th># Factura</th><th>Fecha</th>${multiApto ? '<th>Apartamento</th><th>Propietario</th>' : ''}<th>Concepto</th><th class="right">Monto</th>`;
+    tableRows = pagos.map(p => `
       <tr>
         <td style="font-family:monospace;font-size:.78rem;">${p.factura || '—'}</td>
         <td style="white-space:nowrap;">${fdate(p.fecha)}</td>
@@ -2484,8 +2529,8 @@ function generarReporte()
         <td>${p.concepto || p.factura || '—'}</td>
         <td class="right"><strong>$${formatMoney(p.monto)}</strong></td>
       </tr>
-    `;
-  });
+    `).join('');
+  }
 
   content.innerHTML = `
     <div id="pdf-doc" style="background:white;padding:20px;">
@@ -2511,13 +2556,7 @@ function generarReporte()
 
       <table class="doc-table">
         <thead>
-          <tr>
-            <th># Factura</th>
-            <th>Fecha</th>
-            ${multiApto ? `<th>Apartamento</th><th>Propietario</th>` : ''}
-            <th>Concepto</th>
-            <th class="right">Monto</th>
-          </tr>
+          <tr>${theadCols}</tr>
         </thead>
         <tbody>${tableRows}</tbody>
       </table>
@@ -2646,16 +2685,32 @@ function exportarReporteExcel() {
   const { apto, pagos } = getPagosFiltradosReporte();
   if (!pagos.length) { showToast('Sin datos para exportar','warning'); return; }
 
-  const total   = pagos.reduce((s,p) => s+p.monto, 0);
-  const headers = ['# Factura','Fecha','Apartamento','Propietario','Concepto','Monto'];
-  const rows    = pagos.map(p => [p.factura, p.fecha, p.apto, p.owner_name, p.concepto, p.monto]);
-  rows.push([], ['','','','','TOTAL', total]);
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:28},{wch:22},{wch:12}];
+  const total = pagos.reduce((s,p) => s+p.monto, 0);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, apto ? `Apt ${apto}` : 'Todos');
-  XLSX.writeFile(wb, `reporte_${apto ? 'apt' + apto : 'pagos'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  let ws;
+
+  if (repVistaAgrupada) {
+    const grouped = agruparPagosPorMes(pagos);
+    const headers = apto ? ['Mes','Cant. Pagos','Total'] : ['Mes','Apartamentos','Cant. Pagos','Total'];
+    const rows = grouped.map(g => apto
+      ? [mesLabel(g.key), g.count, g.monto]
+      : [mesLabel(g.key), g.aptos.size, g.count, g.monto]);
+    const totalRow = new Array(headers.length).fill('');
+    totalRow[headers.length - 2] = 'TOTAL';
+    totalRow[headers.length - 1] = total;
+    rows.push([], totalRow);
+    ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = headers.map(() => ({wch: 16}));
+  } else {
+    const headers = ['# Factura','Fecha','Apartamento','Propietario','Concepto','Monto'];
+    const rows    = pagos.map(p => [p.factura, p.fecha, p.apto, p.owner_name, p.concepto, p.monto]);
+    rows.push([], ['','','','','TOTAL', total]);
+    ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:28},{wch:22},{wch:12}];
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, apto ? `Apt ${apto}` : (repVistaAgrupada ? 'Por Mes' : 'Todos'));
+  XLSX.writeFile(wb, `reporte_${apto ? 'apt' + apto : 'pagos'}${repVistaAgrupada ? '_por_mes' : ''}_${new Date().toISOString().split('T')[0]}.xlsx`);
   showToast('Reporte descargado','success');
 }
 
