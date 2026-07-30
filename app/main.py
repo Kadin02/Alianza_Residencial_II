@@ -25,6 +25,31 @@ logger = logging.getLogger(__name__)
 Base.metadata.create_all(bind=engine)
 
 
+# ── Migraciones aditivas idempotentes ────────
+# El proyecto no usa Alembic: create_all() crea tablas nuevas pero nunca
+# agrega columnas a tablas que ya existían. Cuando el modelo gana una
+# columna (ej. Charge.concept), hay que agregarla a mano vía ALTER TABLE
+# o cualquier deploy contra una base ya existente (como Postgres en
+# Railway) queda leyendo una columna que no existe y revienta con 500 en
+# la primera consulta. Se corre siempre al arrancar, ignorando el error
+# si la columna ya existe.
+def _run_additive_migrations():
+    from sqlalchemy import text
+    statements = [
+        "ALTER TABLE charges ADD COLUMN concept VARCHAR",
+    ]
+    with engine.connect() as conn:
+        for stmt in statements:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+                logger.info(f"[MIGRATION] OK: {stmt}")
+            except Exception:
+                conn.rollback()
+
+_run_additive_migrations()
+
+
 # ── Crear usuario admin por defecto ──────────
 def _seed_admin():
     from app.services.auth_service import create_default_admin
