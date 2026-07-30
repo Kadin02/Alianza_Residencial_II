@@ -63,6 +63,14 @@
       display: inline-flex; align-items: center; justify-content: center;
     }
     .kebab-btn:hover { background: var(--accent-soft); color: var(--accent); }
+
+    .btn-icon {
+      width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--text-secondary); cursor: pointer;
+      font-size: .85rem; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-icon:hover { background: var(--accent-soft); color: var(--accent); }
+    .btn-icon.danger:hover { background: #fee2e2; color: #991b1b; }
     .kebab-menu {
       display: none;
       position: absolute; right: 0; top: calc(100% + 4px);
@@ -325,18 +333,22 @@
     #pdf-doc .doc-title h2 { font-size: .95rem; font-weight: 700; color: var(--doc-accent); }
     #pdf-doc .doc-title .date { font-size: .72rem; color: var(--doc-muted); }
 
+    /* display:flex en vez de grid a propósito: html2canvas (usado por
+       html2pdf.js) tiene soporte pobre para CSS Grid y desarmaba estas
+       tarjetas en el PDF exportado -- flexbox se ve igual en pantalla y
+       captura bien en la exportación. */
     #pdf-doc .info-grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+      display: flex; flex-wrap: wrap; gap: 0;
       border: 1px solid var(--doc-border); border-radius: 6px; overflow: hidden;
       margin-bottom: 16px;
     }
-    #pdf-doc .info-cell { padding: 10px 14px; border-right: 1px solid var(--doc-border); }
+    #pdf-doc .info-cell { flex: 1 1 0; min-width: 150px; padding: 10px 14px; border-right: 1px solid var(--doc-border); }
     #pdf-doc .info-cell:last-child { border-right: none; }
     #pdf-doc .info-cell .ic-lbl { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--doc-light); margin-bottom: 3px; }
     #pdf-doc .info-cell .ic-val { font-size: .88rem; font-weight: 700; color: var(--doc-text); }
 
-    #pdf-doc .summary-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 10px; margin-bottom: 16px; }
-    #pdf-doc .sum-card { text-align: center; padding: 12px; border-radius: 6px; border: 1px solid var(--doc-border); }
+    #pdf-doc .summary-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    #pdf-doc .sum-card { flex: 1 1 100px; text-align: center; padding: 12px; border-radius: 6px; border: 1px solid var(--doc-border); }
     #pdf-doc .sum-card .sv { font-size: 1.1rem; font-weight: 800; color: var(--doc-accent); }
     #pdf-doc .sum-card .sl { font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--doc-muted); margin-top: 3px; }
 
@@ -352,6 +364,18 @@
     #pdf-doc .signature-line { border-top: 1.5px solid var(--doc-text); margin-bottom: 6px; }
     #pdf-doc .sig-name { font-size: .8rem; font-weight: 700; color: var(--doc-text); }
     #pdf-doc .sig-title { font-size: .68rem; color: var(--doc-muted); }
+
+    /* Caja de Balance Final destacada + nota, mismo look que estado_cuenta.html
+       (flex en vez de grid: ver nota sobre html2canvas más arriba). */
+    #pdf-doc .doc-footer-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+    #pdf-doc .footer-balance-box {
+      flex: 1 1 200px; background: var(--doc-accent); color: #fff;
+      border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center;
+    }
+    #pdf-doc .footer-balance-box .fb-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,0.75); margin-bottom: 3px; }
+    #pdf-doc .footer-balance-box .fb-value { font-size: 1.3rem; font-weight: 800; }
+    #pdf-doc .footer-balance-box .fb-date  { font-size: .65rem; color: rgba(255,255,255,0.65); margin-top: 5px; }
+    #pdf-doc .doc-footer-grid .doc-footer-note { flex: 1.4 1 240px; margin-top: 0; }
 
     #pdf-doc .doc-footer-note {
       margin-top: 20px; padding: 12px 16px; background: var(--warning-bg);
@@ -402,15 +426,19 @@
       <button class="btn btn-secondary" onclick="openStatementModal()"><i class="fas fa-file-alt"></i> Generar Estado de Cuenta</button>
 
       <div class="dropdown-wrap" id="reporte-dd-wrap">
-        <button class="btn btn-secondary" onclick="toggleDropdown('reporte-dd-wrap'); renderReportTypeFilters();">
+        <button class="btn btn-secondary" onclick="toggleDropdown('reporte-dd-wrap'); applyReportRoleRestrictions(); renderReportTypeFilters();">
           <i class="fas fa-chart-bar"></i> Reporte <i class="fas fa-caret-down" style="margin-left:2px;"></i>
         </button>
         <div class="dropdown-panel" id="reporte-dd-panel">
           <label class="field-label">Tipo de reporte</label>
           <select id="rpt-type" onchange="renderReportTypeFilters()">
-            <option value="morosos">Apartamentos con Saldo Pendiente</option>
-            <option value="aldia">Unidades Paz y Salvo</option>
+            <!-- "morosos" (Cuentas por Cobrar) se muestra/oculta por JS según
+                 el rol -- solo ADMIN, ver toggleReporteDropdown(). -->
+            <option value="morosos" id="rpt-opt-morosos">Cuentas por Cobrar</option>
+            <!-- Al día queda deshabilitado por ahora (no borrado, ver ADDENDUM) -->
+            <option value="aldia" style="display:none;">Unidades Paz y Salvo</option>
             <option value="proveedores">Proveedores</option>
+            <option value="ledger">Reporte General</option>
           </select>
           <div id="rpt-type-filters"></div>
           <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px;" onclick="generarReporteFlexible()">
@@ -419,7 +447,17 @@
         </div>
       </div>
 
-      <div class="dropdown-wrap" id="mas-dd-wrap">
+      <button class="btn btn-secondary" onclick="exportarExcelMovimientos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+
+      <!-- "Reporte por Apartamento" (modal #reporte-modal) se fusionó dentro de
+           "Reporte General" (Unidad/Propietario + Concepto + Cargos/Pagos + dos
+           períodos). El botón se retira, pero abrirReporte()/generarReporte()/etc.
+           siguen en el archivo sin usarse, por si hace falta revertir. -->
+      <button class="btn btn-secondary" onclick="abrirReporte()" style="display:none;"><i class="fas fa-file-alt"></i> Reporte por Apartamento</button>
+
+      <!-- Deshabilitado por ahora (no borrado, ver ADDENDUM): Generar Cuotas del Mes,
+           Aplicar Mora, Aplicar Crédito, Pago FIFO. Las funciones JS siguen intactas. -->
+      <div class="dropdown-wrap" id="mas-dd-wrap" style="display:none;">
         <button class="btn btn-ghost" onclick="toggleDropdown('mas-dd-wrap')">
           <i class="fas fa-ellipsis-h"></i> Más acciones <i class="fas fa-caret-down" style="margin-left:2px;"></i>
         </button>
@@ -428,8 +466,6 @@
           <button onclick="closeDropdowns(); openLateFeeModal()"><i class="fas fa-exclamation-triangle"></i> Aplicar Mora</button>
           <button onclick="closeDropdowns(); openApplyCreditModal()"><i class="fas fa-hand-holding-usd"></i> Aplicar Crédito</button>
           <button onclick="closeDropdowns(); openFifoModal()"><i class="fas fa-layer-group"></i> Pago FIFO</button>
-          <button onclick="closeDropdowns(); abrirReporte()"><i class="fas fa-file-alt"></i> Reporte por Apartamento</button>
-          <button onclick="closeDropdowns(); exportarExcelMovimientos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
         </div>
       </div>
     </div>
@@ -1069,6 +1105,16 @@ function propOptionsHtml() {
   return (allPropsCache || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 }
 
+function ownerOptionsHtml() {
+  return (allOwnersCache || []).slice().sort((a, b) => a.full_name.localeCompare(b.full_name))
+    .map(o => `<option value="${o.id}">${o.full_name}</option>`).join('');
+}
+
+function unitOptionsHtmlFull() {
+  return (allUnitsCache || []).slice().sort((a, b) => String(a.unit_number).localeCompare(String(b.unit_number)))
+    .map(u => `<option value="${u.unit_number}">Apt. ${u.unit_number}</option>`).join('');
+}
+
 function ownerUnitNumberFlex(ownerId) {
   const uo   = (allUnitOwnersCache || []).find(x => x.owner_id == ownerId && x.is_active);
   const unit = uo ? allUnitsCache.find(u => u.id === uo.unit_id) : null;
@@ -1106,28 +1152,107 @@ function buildOwnerBalanceMapFlex(year) {
   });
 }
 
+// "Cuentas por Cobrar" (antes "morosos") solo es visible/ejecutable para
+// ADMIN. Se oculta la opción del <select> en vez de borrarla del DOM.
+function applyReportRoleRestrictions() {
+  const opt = document.getElementById('rpt-opt-morosos');
+  if (!opt) return;
+  const isAdmin = typeof Auth !== 'undefined' && Auth.isAdmin();
+  opt.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin && document.getElementById('rpt-type').value === 'morosos') {
+    document.getElementById('rpt-type').value = 'ledger';
+  }
+}
+
+// FIX: Charge.concept es una columna nueva, agregada vía ALTER TABLE --
+// los 1155 cargos históricos existentes quedaron con concept=NULL (nunca
+// se hizo backfill). Filtrar por c.concept a secas dejaba estos reportes
+// siempre vacíos. Se infiere el concepto desde description cuando concept
+// viene null, con el mismo criterio que ya usaba migrar_historial_2024_2025.py.
+function inferChargeConcept(c) {
+  if (c.concept) return c.concept;
+  const d = c.description || '';
+  if (d.startsWith('Mantenimiento')) return 'Mantenimiento';
+  if (d.includes('Ascensor')) return 'Ascensor';
+  if (d.startsWith('Facturación de Gas')) return 'Gas';
+  return null;
+}
+
 const REPORT_TYPES = {
+  // Cuentas por Cobrar -- solo ADMIN (ver applyReportRoleRestrictions()).
+  // Mismo esquema de filtros que "Reporte General"/Estado de Cuenta:
+  // Unidad O Propietario, Concepto, Estado, Período de Cobro. No tiene
+  // Período de Pago propio porque es una foto agregada de saldo por
+  // propietario, no un ledger fila-por-fila de pagos.
   morosos: {
     filtersHtml: () => `
-      <label class="field-label">Propiedad</label>
-      <select id="rpt-f-prop"><option value="">Todas</option>${propOptionsHtml()}</select>
-      <label class="field-label">Año</label>
-      <select id="rpt-f-year">${chargeYearOptionsHtml()}</select>
+      <label class="field-label">Unidad</label>
+      <select id="rpt-f-unit" onchange="if(this.value) document.getElementById('rpt-f-owner').value='';">
+        <option value="">Todas</option>${unitOptionsHtmlFull()}
+      </select>
+      <label class="field-label">Propietario</label>
+      <select id="rpt-f-owner" onchange="if(this.value) document.getElementById('rpt-f-unit').value='';">
+        <option value="">Todos</option>${ownerOptionsHtml()}
+      </select>
+      <p style="font-size:.72rem;color:var(--text-muted);margin:-6px 0 8px;">Elige Unidad o Propietario (no ambos a la vez).</p>
+      <label class="field-label">Concepto</label>
+      <select id="rpt-f-concepto">
+        <option value="">Todos</option>
+        <option value="Mantenimiento">Mantenimiento</option>
+        <option value="Ascensor">Ascensor</option>
+      </select>
+      <label class="field-label">Estado del cargo</label>
+      <select id="rpt-f-estado">
+        <option value="">Todos</option>
+        <option value="PENDIENTE">Pendiente</option>
+        <option value="PARCIAL">Parcial</option>
+      </select>
+      <label class="field-label">Período de Cobro (cargos)</label>
+      <div style="display:flex;gap:6px;">
+        <input type="date" id="rpt-f-cobro-desde" style="flex:1;min-width:0;">
+        <input type="date" id="rpt-f-cobro-hasta" style="flex:1;min-width:0;">
+      </div>
       <label class="field-label">Monto mínimo pendiente</label>
       <input type="number" id="rpt-f-min" placeholder="0.00" min="0" step="0.01">
     `,
     run: () => {
-      const propId = document.getElementById('rpt-f-prop')?.value || '';
-      const year    = document.getElementById('rpt-f-year')?.value || '';
-      const minAmt  = parseFloat(document.getElementById('rpt-f-min')?.value) || 0.01;
-      let result = buildOwnerBalanceMapFlex(year).filter(o => o.pendiente >= minAmt);
-      if (propId) result = result.filter(o => {
-        const unit = allUnitsCache.find(u => u.unit_number === o.unitNum);
-        return unit && String(unit.property_id) === propId;
+      let   unitNum    = document.getElementById('rpt-f-unit')?.value || '';
+      const ownerId    = document.getElementById('rpt-f-owner')?.value || '';
+      const concepto   = document.getElementById('rpt-f-concepto')?.value || '';
+      const estado     = document.getElementById('rpt-f-estado')?.value || '';
+      const cobroDesde = document.getElementById('rpt-f-cobro-desde')?.value || '';
+      const cobroHasta = document.getElementById('rpt-f-cobro-hasta')?.value || '';
+      const minAmt     = parseFloat(document.getElementById('rpt-f-min')?.value) || 0.01;
+
+      if (!unitNum && ownerId) unitNum = ownerUnitNumberFlex(ownerId);
+
+      let charges = (allChargesCache || []).filter(c => ['Mantenimiento', 'Ascensor'].includes(inferChargeConcept(c)));
+      if (unitNum)    charges = charges.filter(c => c.unit_number === unitNum);
+      if (concepto)   charges = charges.filter(c => inferChargeConcept(c) === concepto);
+      if (estado)     charges = charges.filter(c => c.status === estado);
+      if (cobroDesde) charges = charges.filter(c => (c.date_created || '') >= cobroDesde);
+      if (cobroHasta) charges = charges.filter(c => (c.date_created || '') <= cobroHasta);
+
+      const byOwner = new Map();
+      charges.forEach(c => {
+        const key = c.owner_id ?? c.unit_number;
+        if (!byOwner.has(key)) {
+          const unit = allUnitsCache.find(u => u.unit_number === c.unit_number);
+          const prop = unit ? allPropsCache.find(p => p.id === unit.property_id) : null;
+          byOwner.set(key, { name: c.owner_name || '—', unitNum: c.unit_number, propName: prop ? prop.name : '—', facturado: 0, pagado: 0 });
+        }
+        const g = byOwner.get(key);
+        g.facturado += parseFloat(c.amount  || 0);
+        g.pagado    += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
       });
-      result.sort((a, b) => b.pendiente - a.pendiente);
+
+      let result = [...byOwner.values()]
+        .map(g => ({ ...g, pendiente: g.facturado - g.pagado }))
+        .filter(o => o.pendiente >= minAmt)
+        .sort((a, b) => b.pendiente - a.pendiente);
+
       return {
-        title: 'Apartamentos con Saldo Pendiente',
+        title: 'Cuentas por Cobrar',
         columns: ['Propietario', 'Unidad', 'Propiedad', 'Facturado', 'Pagado', 'Pendiente'],
         rightCols: [3, 4, 5],
         rows: result.map(o => [o.name, o.unitNum ? `Apt. ${o.unitNum}` : '—', o.propName,
@@ -1206,7 +1331,128 @@ const REPORT_TYPES = {
       };
     },
   },
+  // Reporte General unificado -- reemplaza al viejo "Reporte por
+  // Apartamento" y absorbe todos los filtros que antes estaban repartidos
+  // en reportes distintos: Unidad O Propietario (uno u otro, no ambos),
+  // Concepto, Cargos/Pagos/Ambos, y dos rangos de fecha independientes
+  // (Período de Cobro filtra los CARGOS, Período de Pago filtra los
+  // PAGOS). Concepto solo se llena en filas de Cargo, nunca en las de
+  // Pago. Gas queda fuera -- tiene su propio Estado de Cuenta en V1.
+  ledger: {
+    filtersHtml: () => `
+      <label class="field-label">Unidad</label>
+      <select id="rpt-f-unit" onchange="if(this.value) document.getElementById('rpt-f-owner').value='';">
+        <option value="">Todas</option>${unitOptionsHtmlFull()}
+      </select>
+      <label class="field-label">Propietario</label>
+      <select id="rpt-f-owner" onchange="if(this.value) document.getElementById('rpt-f-unit').value='';">
+        <option value="">Todos</option>${ownerOptionsHtml()}
+      </select>
+      <p style="font-size:.72rem;color:var(--text-muted);margin:-6px 0 8px;">Elige Unidad o Propietario (no ambos a la vez).</p>
+      <label class="field-label">Concepto</label>
+      <select id="rpt-f-concepto">
+        <option value="">Todos</option>
+        <option value="Mantenimiento">Mantenimiento</option>
+        <option value="Ascensor">Ascensor</option>
+      </select>
+      <label class="field-label">Movimientos a incluir</label>
+      <select id="rpt-f-tipo">
+        <option value="">Cargos + Pagos</option>
+        <option value="CARGO">Solo Cargos</option>
+        <option value="PAGO">Solo Pagos</option>
+      </select>
+      <label class="field-label">Período de Cobro (cargos)</label>
+      <div style="display:flex;gap:6px;">
+        <input type="date" id="rpt-f-cobro-desde" style="flex:1;min-width:0;">
+        <input type="date" id="rpt-f-cobro-hasta" style="flex:1;min-width:0;">
+      </div>
+      <label class="field-label">Período de Pago (pagos)</label>
+      <div style="display:flex;gap:6px;">
+        <input type="date" id="rpt-f-pago-desde" style="flex:1;min-width:0;">
+        <input type="date" id="rpt-f-pago-hasta" style="flex:1;min-width:0;">
+      </div>
+    `,
+    run: () => {
+      let   unitNum    = document.getElementById('rpt-f-unit')?.value || '';
+      const ownerId    = document.getElementById('rpt-f-owner')?.value || '';
+      const concepto   = document.getElementById('rpt-f-concepto')?.value || '';
+      const tipoFiltro = document.getElementById('rpt-f-tipo')?.value || '';
+      const cobroDesde = document.getElementById('rpt-f-cobro-desde')?.value || '';
+      const cobroHasta = document.getElementById('rpt-f-cobro-hasta')?.value || '';
+      const pagoDesde  = document.getElementById('rpt-f-pago-desde')?.value || '';
+      const pagoHasta  = document.getElementById('rpt-f-pago-hasta')?.value || '';
+
+      // Propietario se resuelve a su unidad activa -- el resto del filtro
+      // sigue funcionando igual que si se hubiera elegido esa unidad.
+      if (!unitNum && ownerId) unitNum = ownerUnitNumberFlex(ownerId);
+
+      // Cargos y pagos de Mantenimiento/Ascensor/Abono -- Gas queda fuera,
+      // tiene su propia vista en V1.
+      let cargos = (allChargesCache || []).filter(c => ['Mantenimiento', 'Ascensor'].includes(inferChargeConcept(c)));
+      let pagos  = (allPagos || []).filter(p => p.concepto !== 'Gas');
+
+      if (unitNum) { cargos = cargos.filter(c => c.unit_number === unitNum); pagos = pagos.filter(p => p.apto === unitNum); }
+      if (concepto) cargos = cargos.filter(c => inferChargeConcept(c) === concepto);
+      if (tipoFiltro === 'CARGO') pagos  = [];
+      if (tipoFiltro === 'PAGO')  cargos = [];
+      if (cobroDesde) cargos = cargos.filter(c => (c.date_created || '') >= cobroDesde);
+      if (cobroHasta) cargos = cargos.filter(c => (c.date_created || '') <= cobroHasta);
+      if (pagoDesde)  pagos  = pagos.filter(p => (p.fecha || '') >= pagoDesde);
+      if (pagoHasta)  pagos  = pagos.filter(p => (p.fecha || '') <= pagoHasta);
+
+      let rows = [
+        ...cargos.map(c => ({ id: c.charge_id ?? c.id, tipo: 'CARGO', fecha: c.date_created,
+                               concepto: inferChargeConcept(c) === 'Mantenimiento' ? c.description : 'Ascensor',
+                               factura: '—', cargo: parseFloat(c.amount || 0), pago: 0 })),
+        ...pagos.map(p => ({ id: p.payment_id, tipo: 'PAGO', fecha: p.fecha, concepto: '',
+                               factura: (p.factura && p.factura !== '—') ? p.factura : '—',
+                               cargo: 0, pago: parseFloat(p.monto || 0) })),
+      ].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+      let saldo = 0;
+      rows = rows.map(r => { saldo += r.cargo - r.pago; return { ...r, saldo }; });
+
+      // Nombre de propietario a mostrar en el info-grid: si se filtró por
+      // Propietario o por Unidad (que resuelve a un único dueño), se puede
+      // mostrar un nombre puntual; si no, queda "Todos".
+      let ownerDisplay = 'Todos';
+      if (ownerId) {
+        const o = (allOwnersCache || []).find(o => String(o.id) === String(ownerId));
+        ownerDisplay = o ? o.full_name : 'Todos';
+      } else if (unitNum) {
+        ownerDisplay = cargos[0]?.owner_name || pagos[0]?.owner_name || '—';
+      }
+
+      const periodoParts = [];
+      if (cobroDesde || cobroHasta) periodoParts.push(`Cobro: ${cobroDesde ? fdate2(cobroDesde) : '...'} al ${cobroHasta ? fdate2(cobroHasta) : '...'}`);
+      if (pagoDesde  || pagoHasta)  periodoParts.push(`Pago: ${pagoDesde ? fdate2(pagoDesde) : '...'} al ${pagoHasta ? fdate2(pagoHasta) : '...'}`);
+
+      return {
+        title: 'Reporte General',
+        isStatement: true,
+        infoCells: [
+          { label: 'Unidad',      value: unitNum ? `Apt. ${unitNum}` : 'Todas' },
+          { label: 'Propietario', value: ownerDisplay },
+          { label: 'Período',     value: periodoParts.length ? periodoParts.join(' · ') : 'Histórico completo' },
+        ],
+        columns: ['Fecha', 'Tipo', 'Concepto', 'Factura', 'Cargo', 'Pago', 'Saldo'],
+        rightCols: [4, 5, 6],
+        rowsMeta: rows,
+        rows: rows.map(r => [formatDate(r.fecha), r.tipo === 'CARGO' ? 'Cargo' : 'Pago', r.concepto || '—', r.factura,
+          r.cargo ? '$' + formatMoney(r.cargo) : '—', r.pago ? '$' + formatMoney(r.pago) : '—', '$' + formatMoney(r.saldo)]),
+        totals: [
+          { label: 'Total cargos', value: '$' + formatMoney(rows.reduce((s,r) => s + r.cargo, 0)) },
+          { label: 'Total pagos',  value: '$' + formatMoney(rows.reduce((s,r) => s + r.pago, 0)) },
+        ],
+        saldoFinal: saldo,
+      };
+    },
+  },
 };
+
+function fdate2(s) {
+  return s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' }) : '—';
+}
 
 function renderReportTypeFilters() {
   const type = document.getElementById('rpt-type').value;
@@ -1218,6 +1464,10 @@ async function generarReporteFlexible() {
   const type = document.getElementById('rpt-type').value;
   const def  = REPORT_TYPES[type];
   if (!def) return;
+  if (type === 'morosos' && !Auth.isAdmin()) {
+    showToast('Solo el administrador puede generar el reporte de Cuentas por Cobrar', 'error');
+    return;
+  }
 
   closeDropdowns();
   document.getElementById('reporte-flex-content').innerHTML = `
@@ -1226,11 +1476,57 @@ async function generarReporteFlexible() {
 
   const result = await def.run();
 
-  const theadCols = result.columns.map((c, i) => `<th${result.rightCols.includes(i) ? ' class="right"' : ''}>${c}</th>`).join('');
+  const theadCols = result.columns.map((c, i) => `<th${result.rightCols.includes(i) ? ' class="right"' : ''}>${c}</th>`).join('')
+    + (result.rowsMeta ? `<th class="right no-export">Acciones</th>` : '');
   const bodyRows = result.rows.length
-    ? result.rows.map(row => `<tr>${row.map((cell, i) => `<td${result.rightCols.includes(i) ? ' class="right"' : ''}>${cell}</td>`).join('')}</tr>`).join('')
-    : `<tr><td colspan="${result.columns.length}" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin resultados</td></tr>`;
+    ? result.rows.map((row, i) => {
+        const meta = result.rowsMeta ? result.rowsMeta[i] : null;
+        const actions = !meta ? '' : meta.tipo === 'CARGO'
+          ? `<td class="right no-export" style="white-space:nowrap;">
+               <button class="btn-icon" title="Editar" onclick="openEditChargeRow(${meta.id})"><i class="fas fa-pen"></i></button>
+               <button class="btn-icon danger" title="Anular" onclick="anularCharge(${meta.id}, '${(meta.concepto||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash-alt"></i></button>
+             </td>`
+          : `<td class="right no-export" style="white-space:nowrap;">
+               <button class="btn-icon" title="Editar" onclick="openEditPaymentRow(${meta.id})"><i class="fas fa-pen"></i></button>
+               <button class="btn-icon danger" title="Anular" onclick="anularPayment(${meta.id})"><i class="fas fa-trash-alt"></i></button>
+             </td>`;
+        return `<tr>${row.map((cell, i) => `<td${result.rightCols.includes(i) ? ' class="right"' : ''}>${cell}</td>`).join('')}${actions}</tr>`;
+      }).join('')
+    : `<tr><td colspan="${result.columns.length + (result.rowsMeta ? 1 : 0)}" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin resultados</td></tr>`;
   const summaryCards = result.totals.map(t => `<div class="sum-card"><div class="sv">${t.value}</div><div class="sl">${t.label}</div></div>`).join('');
+
+  // Los reportes tipo "Estado de Cuenta" (Reporte General) usan el mismo
+  // diseño de documento que estado_cuenta.html: info-grid, caja de Balance
+  // Final destacada en navy, nota informativa y firma. Reportes simples
+  // (ej. Proveedores) mantienen el formato compacto de siempre.
+  const infoGridHtml = result.isStatement ? `
+      <div class="info-grid">
+        ${result.infoCells.map(c => `
+          <div class="info-cell">
+            <div class="ic-lbl">${c.label.toUpperCase()}</div>
+            <div class="ic-val">${c.value}</div>
+          </div>`).join('')}
+      </div>` : '';
+
+  const footerHtml = result.isStatement ? `
+      <div class="doc-footer-grid">
+        <div class="footer-balance-box">
+          <div class="fb-label">Saldo Final</div>
+          <div class="fb-value">$${formatMoney(result.saldoFinal)}</div>
+          <div class="fb-date">Generado el ${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
+        </div>
+        <div class="doc-footer-note">
+          <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+          Este reporte refleja los movimientos registrados en el sistema de administración según los filtros aplicados. Para cualquier aclaración, contactar administración.
+        </div>
+      </div>
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="sig-name">Alianza Residencial</div>
+          <div class="sig-title">Administración</div>
+        </div>
+      </div>` : '';
 
   document.getElementById('reporte-flex-content').innerHTML = `
     <div id="pdf-doc" style="background:#fff;padding:20px;">
@@ -1244,11 +1540,13 @@ async function generarReporteFlexible() {
           <div class="date">${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
         </div>
       </div>
+      ${infoGridHtml}
       <div class="summary-cards">${summaryCards}</div>
       <table class="doc-table">
         <thead><tr>${theadCols}</tr></thead>
         <tbody>${bodyRows}</tbody>
       </table>
+      ${footerHtml}
     </div>`;
 }
 
@@ -1263,6 +1561,9 @@ function descargarReporteFlexPDF() {
   const type = document.getElementById('rpt-type')?.value;
   const filename = (REPORT_TYPES[type]?.run ? document.querySelector('#pdf-doc .doc-title h2')?.textContent : 'reporte') || 'reporte';
 
+  const noExportEls = doc.querySelectorAll('.no-export');
+  noExportEls.forEach(el => el.style.display = 'none');
+
   const opt = {
     margin:       [8, 8, 8, 8],
     filename:     `${filename.toLowerCase().replace(/\s+/g, '_')}.pdf`,
@@ -1271,7 +1572,9 @@ function descargarReporteFlexPDF() {
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
   };
-  html2pdf().set(opt).from(doc).save();
+  html2pdf().set(opt).from(doc).save().then(() => {
+    noExportEls.forEach(el => el.style.display = '');
+  });
 }
 
 // ══════════════════════════════════════════════
@@ -2721,6 +3024,7 @@ function exportarReporteExcel() {
 });
 
 renderSidebar('finances');
+applyReportRoleRestrictions();
 (async () => {
   await init();
   renderReportTypeFilters();

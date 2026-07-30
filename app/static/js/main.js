@@ -209,6 +209,9 @@ function renderSidebar(activePage) {
               <span id="_sb_role_label">Usuario</span>
             </div>
             <div class="sidebar-user-actions">
+              <button class="sidebar-icon-btn" onclick="goToGasV1()" title="Ir a V1 (Gas)">
+                <i class="fas fa-fire"></i>
+              </button>
               <button class="sidebar-icon-btn" onclick="logout()" title="Cerrar sesión">
                 <i class="fas fa-sign-out-alt"></i>
               </button>
@@ -333,6 +336,11 @@ function _applySidebarCollapse(collapse, save) {
 }
 
 function logout() { Auth.clear(); window.location.href = '/login'; }
+
+function goToGasV1() {
+  sessionStorage.setItem('alianza_version', 'v1');
+  window.location.href = '/static/gas.html';
+}
 
 /* ─── Loaders de selects ─────────────────────────────────── */
 async function loadSelectOptions(selectId, endpoint, valFn, labelFn, ph = 'Seleccione...') {

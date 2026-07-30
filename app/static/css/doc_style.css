@@ -98,9 +98,13 @@
      font-size: .8rem; color: var(--doc-muted);
    }
 
+   /* display:flex en vez de grid a propósito: html2canvas (usado por
+      html2pdf.js para exportar) tiene soporte pobre para CSS Grid y
+      colapsaba/reordenaba estas tarjetas en el PDF -- flexbox se ve
+      idéntico en pantalla y captura correctamente en la exportación. */
    .info-grid {
-     display: grid;
-     grid-template-columns: 1fr 1fr 1fr;
+     display: flex;
+     flex-wrap: wrap;
      gap: 0;
      border: 1px solid var(--doc-border);
      border-radius: 8px;
@@ -108,6 +112,8 @@
      margin-bottom: 24px;
    }
    .info-cell {
+     flex: 1 1 0;
+     min-width: 150px;
      padding: 12px 16px;
      border-right: 1px solid var(--doc-border);
    }
@@ -120,13 +126,15 @@
      font-size: .9rem; font-weight: 700; color: var(--doc-text);
    }
 
+   /* flex en vez de grid -- mismo motivo que .info-grid arriba */
    .summary-cards {
-     display: grid;
-     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+     display: flex;
+     flex-wrap: wrap;
      gap: 10px;
      margin-bottom: 24px;
    }
    .sum-card {
+     flex: 1 1 100px;
      text-align: center;
      padding: 16px 12px;
      border-radius: 8px;
@@ -146,13 +154,15 @@
    .sum-card.balance-highlight .sl { color: rgba(255,255,255,0.75); }
 
    /* ── Footer: Balance Actual + Nota + Contacto (Parte 4b/4c) ── */
+   /* flex en vez de grid -- mismo motivo que .info-grid arriba */
    .doc-footer-grid {
-     display: grid;
-     grid-template-columns: 1fr 1.4fr;
+     display: flex;
+     flex-wrap: wrap;
      gap: 14px;
      margin-top: 24px;
    }
    .footer-balance-box {
+     flex: 1 1 220px;
      background: var(--navy);
      color: #fff;
      border-radius: 8px;
@@ -167,6 +177,7 @@
    }
    .footer-balance-box .fb-value { font-size: 1.5rem; font-weight: 800; }
    .footer-balance-box .fb-date  { font-size: .72rem; color: rgba(255,255,255,0.65); margin-top: 6px; }
+   .doc-footer-grid .doc-footer-note { flex: 1.4 1 260px; margin-top: 0; }
 
    .contact-bar {
      margin-top: 14px;

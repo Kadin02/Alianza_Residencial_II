@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gas | Alianza Residencial V1</title>
+  <link rel="stylesheet" href="css/main.css?v=2">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* FIX: main.css define body{display:flex} pensado para el layout de
+       sidebar de V2 (.sidebar + .main-wrapper como columnas). gas.html no
+       usa sidebar, así que .gas-header y .gas-body (los dos hijos directos
+       de <body>) heredaban ese flex de fila y quedaban partidos en dos
+       columnas en vez de apilados. */
+    body { display: block; }
+
+    /* ── Header propio (no usa renderSidebar) — barra fija con TODO adentro ── */
+    .gas-header {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; row-gap: 10px;
+      padding: 14px 24px; background: var(--card-bg); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .gas-header .brand { display: flex; align-items: center; gap: 10px; }
+    .gas-header .brand .logo-icon {
+      width: 34px; height: 34px; background: var(--accent); color: #fff;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: .95rem;
+    }
+    .gas-header .brand-text { line-height: 1.1; }
+    .gas-header .brand-text .t1 { font-weight: 800; color: var(--text-primary); font-size: .95rem; }
+    .gas-header .brand-text .t2 { font-size: .72rem; color: var(--text-muted); }
+    .gas-header .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    .btn-icon {
+      width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--text-secondary); cursor: pointer;
+      font-size: .85rem; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-icon:hover { background: var(--accent-soft); color: var(--accent); }
+    .btn-icon.danger:hover { background: #fee2e2; color: #991b1b; }
+
+    .gas-body { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .page-header { margin-bottom: 18px; }
+    .page-header h1 { font-size: 1.3rem; color: var(--text-primary); }
+    .page-header p { color: var(--text-muted); font-size: .85rem; margin-top: 2px; }
+
+    .gas-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+    .gas-toolbar .spacer { flex: 1; }
+
+    .dropdown-wrap { position: relative; }
+    .dropdown-panel {
+      display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 50;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); padding: 14px; min-width: 260px;
+    }
+    .dropdown-wrap.open .dropdown-panel { display: block; }
+    .dropdown-panel select, .dropdown-panel input { width: 100%; }
+
+    .filters-row {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md);
+      padding: 14px;
+    }
+    .filters-row > div { display: flex; flex-direction: column; }
+    .filters-row label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--text-muted); margin-bottom: 3px;
+    }
+    .filters-row select, .filters-row input { width: auto; min-width: 150px; margin-bottom: 0; }
+
+    .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 10px; margin-bottom: 18px; }
+    .summary-row .sum-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px 16px; text-align: center;
+    }
+    .summary-row .sum-card .sv { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+    .summary-row .sum-card .sl { font-size: .7rem; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; }
+    .summary-row .sum-card.danger .sv { color: var(--danger); }
+
+    .badge-CARGO { background: #fef3c7; color: #92400e; }
+    .badge-PAGO  { background: #d1fae5; color: #065f46; }
+    .badge-PENDIENTE { background: #fee2e2; color: #991b1b; }
+    .badge-PARCIAL   { background: #fef3c7; color: #92400e; }
+    .badge-PAGADO    { background: #d1fae5; color: #065f46; }
+    .badge { font-size: .68rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+
+    .total-preview {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--accent-soft); border: 1px solid #c7d9f8;
+      border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 12px; font-size: .85rem;
+    }
+
+    .charges-empty { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem; }
+    .charges-empty i { font-size: 1.8rem; display: block; margin-bottom: 8px; opacity: .4; }
+
+    /* ══ DOCUMENTO PDF (modal Reportería) — mismas reglas escopadas a
+       #pdf-doc que finances.html/estado_cuenta.html/Factura.html ══ */
+    #pdf-doc {
+      --doc-accent: var(--navy, var(--accent));
+      --doc-text:   var(--text-primary);
+      --doc-muted:  var(--text-secondary);
+      --doc-light:  var(--text-muted);
+      --doc-border: var(--border);
+      font-family: 'Inter', 'Lato', sans-serif;
+      color: var(--doc-text);
+      font-size: 12.5px;
+    }
+    #pdf-doc .doc-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 2px solid var(--doc-accent);
+      padding-bottom: 16px; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+    }
+    #pdf-doc .doc-header h1 { font-size: 1.15rem; font-weight: 800; color: var(--doc-accent); text-transform: uppercase; letter-spacing: .04em; }
+    #pdf-doc .sub-info { font-size: .75rem; color: var(--doc-muted); }
+    #pdf-doc .doc-title { text-align: right; }
+    #pdf-doc .doc-title h2 { font-size: .95rem; font-weight: 700; color: var(--doc-accent); }
+    #pdf-doc .doc-title .date { font-size: .72rem; color: var(--doc-muted); }
+    /* flex en vez de grid: html2canvas (usado por html2pdf.js) desarmaba
+       estas tarjetas en el PDF -- flexbox se ve igual y exporta bien. */
+    #pdf-doc .info-grid {
+      display: flex; flex-wrap: wrap; gap: 0;
+      border: 1px solid var(--doc-border); border-radius: 6px; overflow: hidden;
+      margin-bottom: 16px;
+    }
+    #pdf-doc .info-cell { flex: 1 1 0; min-width: 150px; padding: 10px 14px; border-right: 1px solid var(--doc-border); }
+    #pdf-doc .info-cell:last-child { border-right: none; }
+    #pdf-doc .info-cell .ic-lbl { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--doc-light); margin-bottom: 3px; }
+    #pdf-doc .info-cell .ic-val { font-size: .88rem; font-weight: 700; color: var(--doc-text); }
+
+    #pdf-doc .summary-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    #pdf-doc .sum-card { flex: 1 1 100px; text-align: center; padding: 12px; border-radius: 6px; border: 1px solid var(--doc-border); }
+    #pdf-doc .sum-card .sv { font-size: 1.1rem; font-weight: 800; color: var(--doc-accent); }
+    #pdf-doc .sum-card .sl { font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--doc-muted); margin-top: 3px; }
+    #pdf-doc table.doc-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: 14px 0; }
+    #pdf-doc .doc-table thead tr { background: var(--surface); }
+    #pdf-doc .doc-table th { padding: 8px 10px; text-align: left; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--doc-muted); border-bottom: 2px solid var(--doc-border); }
+    #pdf-doc .doc-table th.right { text-align: right; }
+    #pdf-doc .doc-table td { padding: 7px 10px; border-bottom: 1px solid var(--doc-border); }
+    #pdf-doc .doc-table td.right { text-align: right; }
+
+    #pdf-doc .doc-footer-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+    #pdf-doc .footer-balance-box {
+      flex: 1 1 200px; background: var(--doc-accent); color: #fff;
+      border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center;
+    }
+    #pdf-doc .footer-balance-box .fb-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,0.75); margin-bottom: 3px; }
+    #pdf-doc .footer-balance-box .fb-value { font-size: 1.3rem; font-weight: 800; }
+    #pdf-doc .footer-balance-box .fb-date  { font-size: .65rem; color: rgba(255,255,255,0.65); margin-top: 5px; }
+    #pdf-doc .doc-footer-grid .doc-footer-note { flex: 1.4 1 240px; margin-top: 0; }
+
+    #pdf-doc .doc-footer-note {
+      margin-top: 20px; padding: 12px 16px; background: var(--warning-bg);
+      border: 1px solid var(--warning-brd); border-left: 4px solid var(--warning);
+      border-radius: 0 8px 8px 0; font-size: .72rem; color: var(--doc-muted); line-height: 1.6;
+    }
+    #pdf-doc .doc-footer-note strong { color: var(--doc-text); display: block; margin-bottom: 4px; }
+
+    #pdf-doc .signature-section { display: flex; justify-content: flex-end; margin-top: 28px; padding-top: 16px; }
+    #pdf-doc .signature-block { text-align: center; min-width: 180px; }
+    #pdf-doc .signature-line { border-top: 1.5px solid var(--doc-text); margin-bottom: 6px; }
+    #pdf-doc .sig-name { font-size: .8rem; font-weight: 700; color: var(--doc-text); }
+    #pdf-doc .sig-title { font-size: .68rem; color: var(--doc-muted); }
+
+    @media print {
+      * { visibility: hidden; }
+      #pdf-doc, #pdf-doc * { visibility: visible; }
+      #pdf-doc { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; padding: 12mm 14mm !important; background: #fff !important; box-shadow: none !important; }
+      @page { size: A4; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="gas-header">
+    <div class="brand">
+      <div class="logo-icon">AR</div>
+      <div class="brand-text">
+        <div class="t1">ALIANZA RESIDENCIAL</div>
+        <div class="t2">V1 — Módulo de Gas</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="openChargeModal()"><i class="fas fa-file-invoice"></i> Nuevo Cargo de Gas</button>
+      <button class="btn btn-primary" onclick="openPaymentModal()"><i class="fas fa-money-bill-wave"></i> Nuevo Pago de Gas</button>
+      <button class="btn btn-secondary" onclick="openImportGasModal()"><i class="fas fa-file-import"></i> Importar</button>
+
+      <div class="dropdown-wrap" id="reporte-dd-wrap">
+        <button class="btn btn-secondary" onclick="toggleReporteDropdown()">
+          <i class="fas fa-chart-bar"></i> Reportería <i class="fas fa-caret-down" style="margin-left:2px;"></i>
+        </button>
+        <div class="dropdown-panel" id="reporte-dd-panel">
+          <label class="field-label">Tipo de reporte</label>
+          <select id="rpt-type" onchange="renderReportTypeFilters()">
+            <option value="estado_cuenta_gas">Estado de Cuenta</option>
+            <!-- Cuentas por Cobrar se muestra/oculta por JS según el rol --
+                 solo ADMIN, ver applyReportRoleRestrictionsGas(). -->
+            <option value="cxc_gas" id="rpt-opt-cxc-gas">Cuentas por Cobrar</option>
+          </select>
+          <div id="rpt-type-filters"></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px;" onclick="generarReporteGas()">
+            <i class="fas fa-file-alt"></i> Generar
+          </button>
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:6px;" onclick="exportarMovimientosExcel()">
+            <i class="fas fa-file-excel"></i> Exportar movimientos actuales a Excel
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="cambiarVersion()"><i class="fas fa-exchange-alt"></i> Cambiar de versión</button>
+      <button class="btn btn-ghost" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+    </div>
+  </div>
+
+  <div class="gas-body">
+    <div class="page-header">
+      <h1><i class="fas fa-fire" style="color:var(--accent);margin-right:8px;"></i>Gas</h1>
+      <p>Cargos, pagos y cuentas por cobrar del concepto Gas</p>
+    </div>
+
+    <!-- Filtros de la tabla — siempre visibles, nunca dentro de un dropdown -->
+    <div class="filters-row">
+      <div>
+        <label>Unidad</label>
+        <select id="f-unit" onchange="renderMovimientosGas()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div>
+        <label>Desde</label>
+        <input type="date" id="f-desde" onchange="renderMovimientosGas()">
+      </div>
+      <div>
+        <label>Hasta</label>
+        <input type="date" id="f-hasta" onchange="renderMovimientosGas()">
+      </div>
+      <div>
+        <label>Estado (cargos)</label>
+        <select id="f-status" onchange="renderMovimientosGas()">
+          <option value="">Todos</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="PARCIAL">Parcial</option>
+          <option value="PAGADO">Pagado</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="summary-row" id="gas-summary"></div>
+
+    <div class="card" style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Unidad</th>
+            <th>Propietario</th>
+            <th>Descripción / Concepto</th>
+            <th>Factura</th>
+            <th class="right">Monto</th>
+            <th>Estado</th>
+            <th class="right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="gas-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: NUEVO CARGO DE GAS ══ -->
+  <div class="modal-overlay" id="charge-modal">
+    <div class="modal-box" style="width:480px;">
+      <h3><i class="fas fa-fire" style="color:var(--accent);"></i> Nuevo Cargo de Gas</h3>
+
+      <label class="field-label">Unidad *</label>
+      <select id="charge-unit-select"><option value="">Seleccione unidad</option></select>
+
+      <label class="field-label">Fecha de creación</label>
+      <input type="date" id="charge-date">
+
+      <label class="field-label">Fecha de vencimiento *</label>
+      <input type="date" id="charge-due">
+
+      <label class="field-label">Lectura Inicial *</label>
+      <input type="number" id="charge-lectura-inicial" placeholder="0" step="0.01" min="0">
+
+      <label class="field-label">Lectura Final *</label>
+      <input type="number" id="charge-lectura-final" placeholder="0" step="0.01" min="0">
+
+      <label class="field-label">Monto (Total a Pagar) *</label>
+      <input type="number" id="charge-amount-input" placeholder="0.00" step="0.01" min="0">
+
+      <div class="modal-actions">
+        <button class="btn btn-muted" onclick="closeChargeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmCreateCharge()">
+          <i class="fas fa-check"></i> Crear Cargo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: NUEVO PAGO DE GAS ══ -->
+  <div class="modal-overlay" id="payment-modal">
+    <div class="modal-box" style="width:480px;">
+      <h3><i class="fas fa-money-bill-wave" style="color:var(--accent);"></i> Nuevo Pago de Gas</h3>
+
+      <label class="field-label">Propietario *</label>
+      <select id="owner-select"><option value="">Seleccione propietario</option></select>
+
+      <label class="field-label">Fecha de pago *</label>
+      <input type="date" id="payment-date">
+
+      <label class="field-label">Monto *</label>
+      <input type="number" id="payment-amount" placeholder="0.00" step="0.01" min="0">
+
+      <label class="field-label">N° Factura</label>
+      <input type="text" id="payment-invoice" placeholder="Ej: 17530">
+
+      <label class="field-label">Referencia (opcional)</label>
+      <input type="text" id="payment-reference" placeholder="Ej: transferencia, efectivo...">
+
+      <div class="modal-actions">
+        <button class="btn btn-muted" onclick="closePaymentModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmCreatePayment()">
+          <i class="fas fa-check"></i> Registrar Pago
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: IMPORTAR (Cargos de Gas / Pagos de Gas) ══ -->
+  <div class="modal-overlay" id="import-gas-modal">
+    <div class="modal-box" style="width:640px;">
+      <h3><i class="fas fa-file-import" style="color:var(--accent);"></i> Importar Gas desde Excel</h3>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-primary" id="import-gas-tab-cargos" onclick="switchImportGasTab('cargos')" style="width:auto;">
+          <i class="fas fa-file-invoice"></i> Cargos de Gas
+        </button>
+        <button class="btn btn-secondary" id="import-gas-tab-pagos" onclick="switchImportGasTab('pagos')" style="width:auto;">
+          <i class="fas fa-money-bill-wave"></i> Pagos de Gas
+        </button>
+      </div>
+
+      <div id="import-gas-panel-cargos">
+        <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:10px;">
+          Archivo <strong>Migracion_Gas_Cargo.xlsx</strong> — columnas: MES, Apto, Propietario, Lectura Inicial, Lectura Final, Total a Pagar, YEAR, ID.
+        </p>
+        <input type="file" id="import-gas-file-cargos" accept=".xlsx,.xls,.csv" onchange="handleImportGasFile(this,'cargos')">
+        <div id="import-gas-preview-cargos"></div>
+        <div id="import-gas-actions-cargos" style="display:none;margin-top:12px;">
+          <button class="btn btn-primary" onclick="executeImportGasCargos()">
+            <i class="fas fa-check"></i> Importar <span id="import-gas-count-cargos">0</span> cargos
+          </button>
+        </div>
+        <div id="import-gas-result-cargos"></div>
+      </div>
+
+      <div id="import-gas-panel-pagos" style="display:none;">
+        <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:10px;">
+          Archivo <strong>Migracion_Gas_Pagos.xlsx</strong> — columnas: AÑO, MES, Fecha, Apartamento, Monto, Propietario, Concepto, # Factura, ID_Pago, ID_Cargo.
+        </p>
+        <input type="file" id="import-gas-file-pagos" accept=".xlsx,.xls,.csv" onchange="handleImportGasFile(this,'pagos')">
+        <div id="import-gas-preview-pagos"></div>
+        <div id="import-gas-actions-pagos" style="display:none;margin-top:12px;">
+          <button class="btn btn-primary" onclick="executeImportGasPagos()">
+            <i class="fas fa-check"></i> Importar <span id="import-gas-count-pagos">0</span> pagos
+          </button>
+        </div>
+        <div id="import-gas-result-pagos"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-muted" onclick="closeImportGasModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: REPORTE (Cuentas por Cobrar / Historial) ══ -->
+  <div class="modal-overlay" id="reporte-gas-modal">
+    <div class="modal-box" style="width:820px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3><i class="fas fa-chart-bar" style="color:var(--accent);"></i> Reporte</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-secondary" onclick="descargarReporteGasPDF()" style="width:auto;margin:0;">
+            <i class="fas fa-file-pdf"></i> Descargar PDF
+          </button>
+          <button class="btn btn-secondary" onclick="exportarReporteGasExcel()" style="width:auto;margin:0;">
+            <i class="fas fa-file-excel"></i> Excel
+          </button>
+          <button class="btn btn-muted" onclick="closeReporteGasModal()" style="width:auto;margin:0;">
+            <i class="fas fa-times"></i> Cerrar
+          </button>
+        </div>
+      </div>
+      <div id="reporte-gas-content" style="max-height:70vh;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div id="notification"></div>
+
+  <script src="js/main.js"></script>
+  <script>
+    Auth.require();
+    if (Auth.isGarita()) { window.location.href = '/static/garita.html'; }
+
+    function cambiarVersion() {
+      sessionStorage.removeItem('alianza_version');
+      window.location.href = '/static/select-version.html';
+    }
+
+    let allChargesCache    = [];
+    let allPagosCache      = [];
+    let allUnitsCache      = [];
+    let allOwnersCache     = [];
+    let allUnitOwnersCache = [];
+
+    const isGasCharge = c => (c.description || '').startsWith('Facturación de Gas');
+    const isGasPago   = p => p.concepto === 'Gas';
+
+    async function init() {
+      const [charges, pagos, units, owners, unitOwnersAll] = await Promise.all([
+        apiRequest('/finance/charges'),
+        apiRequest('/finance/payments-history'),
+        apiRequest('/units'),
+        apiRequest('/owners'),
+        apiRequest('/unit-owners/all').catch(() => []),
+      ]);
+
+      allChargesCache     = (charges || []).filter(isGasCharge);
+      allPagosCache       = (pagos   || []).filter(isGasPago);
+      allUnitsCache       = units  || [];
+      allOwnersCache      = owners || [];
+      allUnitOwnersCache  = unitOwnersAll || [];
+
+      const unitSel = document.getElementById('f-unit');
+      allUnitsCache.slice().sort((a,b) => String(a.unit_number).localeCompare(String(b.unit_number)))
+        .forEach(u => unitSel.innerHTML += `<option value="${u.unit_number}">Apt. ${u.unit_number}</option>`);
+
+      await loadUnitsSelect('charge-unit-select');
+      await loadOwnersSelect('owner-select');
+
+      renderMovimientosGas();
+    }
+
+    /* ══ MOVIMIENTOS (cargos + pagos de Gas, chronológico) ══ */
+    function getFilteredGasRows() {
+      const unit   = document.getElementById('f-unit').value;
+      const desde  = document.getElementById('f-desde').value;
+      const hasta  = document.getElementById('f-hasta').value;
+      const status = document.getElementById('f-status').value;
+
+      let cargos = allChargesCache.map(c => ({
+        id: c.id, fecha: c.date_created, tipo: 'CARGO', unit_number: c.unit_number, owner_name: c.owner_name || '—',
+        descripcion: c.description, factura: '—', monto: c.amount, estado: c.status,
+      }));
+      let pagos = allPagosCache.map(p => ({
+        id: p.payment_id, fecha: p.fecha, tipo: 'PAGO', unit_number: p.unit_number, owner_name: p.owner_name,
+        descripcion: p.concepto, factura: p.factura || '—', monto: p.monto, estado: '—',
+      }));
+
+      let rows = [...cargos, ...pagos];
+      if (unit)   rows = rows.filter(r => String(r.unit_number) === unit);
+      if (desde)  rows = rows.filter(r => r.fecha >= desde);
+      if (hasta)  rows = rows.filter(r => r.fecha <= hasta);
+      if (status) rows = rows.filter(r => r.tipo === 'PAGO' || r.estado === status);
+
+      rows.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      return rows;
+    }
+
+    function renderMovimientosGas() {
+      const rows = getFilteredGasRows();
+      const tbody = document.getElementById('gas-tbody');
+
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Sin movimientos de Gas con los filtros seleccionados</td></tr>`;
+      } else {
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td style="white-space:nowrap;">${formatDate(r.fecha)}</td>
+            <td><span class="badge badge-${r.tipo}">${r.tipo === 'CARGO' ? 'Cargo' : 'Pago'}</span></td>
+            <td>Apt. ${r.unit_number || '—'}</td>
+            <td>${r.owner_name || '—'}</td>
+            <td>${r.descripcion || '—'}</td>
+            <td style="font-family:monospace;font-size:.78rem;">${r.factura}</td>
+            <td class="right">$${formatMoney(r.monto)}</td>
+            <td>${r.estado !== '—' ? `<span class="badge badge-${r.estado}">${r.estado}</span>` : '—'}</td>
+            <td class="right" style="white-space:nowrap;">
+              <button class="btn-icon" title="Editar" onclick="editarMovimientoGas('${r.tipo}', ${r.id})"><i class="fas fa-pen"></i></button>
+              <button class="btn-icon danger" title="Anular" onclick="anularMovimientoGas('${r.tipo}', ${r.id})"><i class="fas fa-trash-alt"></i></button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      const cargos = allChargesCache;
+      const totalFacturado = cargos.reduce((s,c) => s + parseFloat(c.amount || 0), 0);
+      const totalPendiente = cargos.reduce((s,c) => s + parseFloat(c.balance || 0), 0);
+      const totalPagosGas  = allPagosCache.reduce((s,p) => s + parseFloat(p.monto || 0), 0);
+
+      document.getElementById('gas-summary').innerHTML = `
+        <div class="sum-card"><div class="sv">${cargos.length}</div><div class="sl">Cargos de Gas</div></div>
+        <div class="sum-card"><div class="sv">$${formatMoney(totalFacturado)}</div><div class="sl">Total Facturado</div></div>
+        <div class="sum-card"><div class="sv">$${formatMoney(totalPagosGas)}</div><div class="sl">Total Pagado</div></div>
+        <div class="sum-card danger"><div class="sv">$${formatMoney(totalPendiente)}</div><div class="sl">Saldo Pendiente</div></div>
+      `;
+    }
+
+    function exportarMovimientosExcel() {
+      closeDropdowns();
+      const rows = getFilteredGasRows();
+      if (!rows.length) { showToast('Sin datos para exportar', 'warning'); return; }
+      const headers = ['Fecha','Tipo','Unidad','Propietario','Descripción/Concepto','Factura','Monto','Estado'];
+      const data = rows.map(r => [r.fecha, r.tipo, r.unit_number, r.owner_name, r.descripcion, r.factura, r.monto, r.estado]);
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+      ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:26},{wch:26},{wch:12},{wch:12},{wch:12}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Movimientos Gas');
+      XLSX.writeFile(wb, `movimientos_gas_${new Date().toISOString().split('T')[0]}.xlsx`);
+      showToast('Exportado correctamente', 'success');
+    }
+
+    /* ══ MODAL: NUEVO / EDITAR CARGO DE GAS ══ */
+    let chargeEditId = null;
+
+    function openChargeModal() {
+      chargeEditId = null;
+      document.querySelector('#charge-modal h3').innerHTML = '<i class="fas fa-fire" style="color:var(--accent);"></i> Nuevo Cargo de Gas';
+      document.getElementById('charge-lectura-inicial').value = '';
+      document.getElementById('charge-lectura-final').value = '';
+      document.getElementById('charge-amount-input').value = '';
+      document.getElementById('charge-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('charge-due').value = '';
+      document.getElementById('charge-unit-select').disabled = false;
+      document.getElementById('charge-modal').classList.add('open');
+    }
+    function closeChargeModal() {
+      document.getElementById('charge-modal').classList.remove('open');
+    }
+    async function confirmCreateCharge() {
+      const unitId = document.getElementById('charge-unit-select').value;
+      const fechaCreacion = document.getElementById('charge-date').value;
+      const fechaVenc = document.getElementById('charge-due').value;
+      const lecturaInicial = document.getElementById('charge-lectura-inicial').value;
+      const lecturaFinal = document.getElementById('charge-lectura-final').value;
+      const monto = parseFloat(document.getElementById('charge-amount-input').value);
+
+      if (!unitId || !fechaVenc || lecturaInicial === '' || lecturaFinal === '' || !monto) {
+        showToast('Todos los campos marcados con * son obligatorios', 'error');
+        return;
+      }
+
+      const payload = {
+        unit_id: parseInt(unitId),
+        description: `Facturación de Gas - Lectura ${lecturaInicial} → ${lecturaFinal}`,
+        amount: parseFloat(monto.toFixed(2)),
+        date_created: fechaCreacion,
+        due_date: fechaVenc,
+        concept: 'Gas',
+      };
+
+      const r = chargeEditId
+        ? await apiRequest(`/charges/${chargeEditId}`, 'PUT', payload)
+        : await apiRequest('/charges/', 'POST', payload);
+
+      if (r) {
+        showToast(chargeEditId ? 'Cargo de Gas actualizado correctamente' : 'Cargo de Gas creado correctamente');
+        closeChargeModal();
+        await init();
+      }
+    }
+
+    /* ══ MODAL: NUEVO / EDITAR PAGO DE GAS ══ */
+    let paymentEditId = null;
+
+    function openPaymentModal() {
+      paymentEditId = null;
+      document.querySelector('#payment-modal h3').innerHTML = '<i class="fas fa-money-bill-wave" style="color:var(--accent);"></i> Nuevo Pago de Gas';
+      document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('payment-amount').value = '';
+      document.getElementById('payment-invoice').value = '';
+      document.getElementById('payment-reference').value = '';
+      document.getElementById('owner-select').disabled = false;
+      document.getElementById('payment-modal').classList.add('open');
+    }
+    function closePaymentModal() {
+      document.getElementById('payment-modal').classList.remove('open');
+    }
+    async function confirmCreatePayment() {
+      const ownerId = document.getElementById('owner-select').value;
+      const fecha = document.getElementById('payment-date').value;
+      const monto = parseFloat(document.getElementById('payment-amount').value);
+      const invoice = document.getElementById('payment-invoice').value.trim() || null;
+      const reference = document.getElementById('payment-reference').value.trim() || null;
+
+      if (!ownerId || !fecha || !monto) {
+        showToast('Propietario, fecha y monto son obligatorios', 'error');
+        return;
+      }
+
+      let r;
+      if (paymentEditId) {
+        r = await apiRequest(`/finance/payment/${paymentEditId}`, 'PUT', {
+          payment_date: fecha,
+          amount: monto,
+          invoice_number: invoice,
+          reference: reference,
+        });
+      } else {
+        r = await apiRequest('/finance/payments', 'POST', {
+          owner_id: parseInt(ownerId),
+          payment_date: fecha,
+          amount: monto,
+          invoice_number: invoice,
+          reference: reference,
+          concept: 'Gas',
+        });
+      }
+      if (r) {
+        showToast(paymentEditId ? 'Pago de Gas actualizado correctamente' : 'Pago de Gas registrado correctamente');
+        closePaymentModal();
+        await init();
+      }
+    }
+
+    /* ══ EDITAR / ANULAR movimiento (cargo o pago) desde la tabla ══ */
+    function editarMovimientoGas(tipo, id) {
+      if (tipo === 'CARGO') {
+        const c = allChargesCache.find(x => x.id === id);
+        if (!c) { showToast('Cargo no encontrado', 'error'); return; }
+
+        chargeEditId = id;
+        document.querySelector('#charge-modal h3').innerHTML = '<i class="fas fa-fire" style="color:var(--accent);"></i> Editar Cargo de Gas';
+
+        const m = (c.description || '').match(/Lectura\s*([\d.]+)\s*(?:→|->)\s*([\d.]+)/i);
+        document.getElementById('charge-lectura-inicial').value = m ? m[1] : '';
+        document.getElementById('charge-lectura-final').value   = m ? m[2] : '';
+        document.getElementById('charge-amount-input').value = c.amount;
+
+        document.getElementById('charge-unit-select').value = c.unit_id;
+        document.getElementById('charge-unit-select').disabled = true;
+        document.getElementById('charge-date').value = c.date_created;
+        document.getElementById('charge-due').value = c.due_date;
+        document.getElementById('charge-modal').classList.add('open');
+      } else {
+        const p = allPagosCache.find(x => x.payment_id === id);
+        if (!p) { showToast('Pago no encontrado', 'error'); return; }
+
+        paymentEditId = id;
+        document.querySelector('#payment-modal h3').innerHTML = '<i class="fas fa-money-bill-wave" style="color:var(--accent);"></i> Editar Pago de Gas';
+
+        document.getElementById('owner-select').value = p.owner_id;
+        document.getElementById('owner-select').disabled = true;
+        document.getElementById('payment-date').value = p.fecha;
+        document.getElementById('payment-amount').value = p.monto;
+        document.getElementById('payment-invoice').value = (p.factura && p.factura !== '—') ? p.factura : '';
+        document.getElementById('payment-reference').value = p.referencia || '';
+        document.getElementById('payment-modal').classList.add('open');
+      }
+    }
+
+    async function anularMovimientoGas(tipo, id) {
+      const label = tipo === 'CARGO' ? 'cargo' : 'pago';
+      if (!confirm(`¿Anular este ${label} de Gas?`)) return;
+
+      const r = tipo === 'CARGO'
+        ? await apiRequest(`/charges/${id}`, 'DELETE')
+        : await apiRequest(`/finance/payment/${id}`, 'DELETE');
+
+      if (r) {
+        showToast(`${tipo === 'CARGO' ? 'Cargo' : 'Pago'} anulado correctamente`);
+        await init();
+      }
+    }
+
+    /* ══ IMPORTAR (Cargos de Gas / Pagos de Gas) desde los Excel reales ══ */
+    let parsedGasCargos = [];
+    let parsedGasPagos  = [];
+
+    function readStr(val) { return (val === null || val === undefined) ? '' : String(val).trim(); }
+    function readNum(val) {
+      if (val === null || val === undefined || val === '') return null;
+      if (typeof val === 'number') return val;
+      const cleaned = String(val).replace(/,/g, '.').replace(/[^0-9.\-]/g, '').trim();
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? null : parsed;
+    }
+    function lastDayOfMonth(year, month) {
+      return new Date(year, month, 0).getDate();
+    }
+    function readGasDate(val) {
+      if (!val) return null;
+      if (val instanceof Date) return val.toISOString().split('T')[0];
+      if (typeof val === 'number') {
+        const d = XLSX.SSF.parse_date_code(val);
+        if (d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+      }
+      const s = String(val).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split('T')[0];
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) { const [d,m,y] = s.split('/'); return `${y}-${m}-${d}`; }
+      return s.split('T')[0];
+    }
+
+    function openImportGasModal() {
+      document.getElementById('import-gas-modal').classList.add('open');
+      switchImportGasTab('cargos');
+    }
+    function closeImportGasModal() {
+      document.getElementById('import-gas-modal').classList.remove('open');
+    }
+    function switchImportGasTab(tab) {
+      document.getElementById('import-gas-panel-cargos').style.display = tab === 'cargos' ? '' : 'none';
+      document.getElementById('import-gas-panel-pagos').style.display  = tab === 'pagos'  ? '' : 'none';
+      document.getElementById('import-gas-tab-cargos').className = 'btn ' + (tab === 'cargos' ? 'btn-primary' : 'btn-secondary');
+      document.getElementById('import-gas-tab-pagos').className  = 'btn ' + (tab === 'pagos'  ? 'btn-primary' : 'btn-secondary');
+    }
+
+    function handleImportGasFile(input, tipo) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb   = XLSX.read(e.target.result, { type: 'binary', cellDates: true, raw: false });
+          const ws   = wb.Sheets[wb.SheetNames[0]];
+          // Excel suele traer un rango usado más grande que los datos reales
+          // (mismo problema que ya se vio en migrar_historial_2024_2025.py) --
+          // se descartan las filas completamente vacías.
+          const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
+            .filter(row => Object.values(row).some(v => v !== '' && v !== null && v !== undefined));
+          if (!data.length) { showToast('El archivo está vacío o no tiene datos', 'error'); return; }
+
+          if (tipo === 'cargos') parsedGasCargos = data; else parsedGasPagos = data;
+
+          const previewEl = document.getElementById('import-gas-preview-' + tipo);
+          const actionsEl = document.getElementById('import-gas-actions-' + tipo);
+          const countEl   = document.getElementById('import-gas-count-' + tipo);
+          previewEl.innerHTML = `<div style="margin-top:8px;font-size:.82rem;color:var(--text-secondary);">
+            <strong>${data.length} filas</strong> encontradas — columnas: ${Object.keys(data[0]).join(', ')}</div>`;
+          countEl.textContent = data.length;
+          actionsEl.style.display = '';
+        } catch (err) {
+          showToast('Error al leer el archivo: ' + err.message, 'error');
+        }
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    async function executeImportGasCargos() {
+      if (!parsedGasCargos.length) return;
+      const resultEl = document.getElementById('import-gas-result-cargos');
+      let ok = 0, err = 0, errs = [];
+      resultEl.innerHTML = `<div style="padding:8px;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Importando ${parsedGasCargos.length} cargos...</div>`;
+
+      const units = await apiRequest('/units') || [];
+
+      for (const row of parsedGasCargos) {
+        try {
+          const apto  = readStr(row['Apto']);
+          const mes   = parseInt(row['MES']);
+          const anio  = parseInt(row['YEAR']);
+          const li    = readNum(row['Lectura Inicial']);
+          const lf    = readNum(row['Lectura Final']);
+          const monto = readNum(row['Total a Pagar']);
+
+          if (!apto)          { errs.push('Fila sin Apto'); err++; continue; }
+          if (!mes || !anio)  { errs.push(`Apto ${apto}: MES/YEAR inválido`); err++; continue; }
+          if (monto === null || monto <= 0) { errs.push(`Apto ${apto}: Total a Pagar inválido`); err++; continue; }
+
+          const unit = units.find(u => u.unit_number === apto);
+          if (!unit) { errs.push(`Unidad "${apto}" no encontrada`); err++; continue; }
+
+          const dateCreated = `${anio}-${String(mes).padStart(2,'0')}-01`;
+          const dueDate = `${anio}-${String(mes).padStart(2,'0')}-${String(lastDayOfMonth(anio, mes)).padStart(2,'0')}`;
+
+          const r = await apiRequest('/charges/', 'POST', {
+            unit_id: unit.id,
+            description: `Facturación de Gas - Lectura ${li} → ${lf}`,
+            amount: Math.round(monto * 100) / 100,
+            date_created: dateCreated,
+            due_date: dueDate,
+            concept: 'Gas',
+          });
+          if (!r) { err++; errs.push(`Error del servidor creando cargo para Apto ${apto}`); }
+          else ok++;
+        } catch (e) {
+          err++; errs.push(`Error inesperado: ${e.message}`);
+        }
+      }
+
+      resultEl.innerHTML = `<div style="margin-top:8px;">
+        <div style="color:var(--success);"><i class="fas fa-check-circle"></i> ${ok} cargos importados</div>
+        ${err > 0 ? `<div style="color:var(--danger);"><i class="fas fa-exclamation-circle"></i> ${err} errores</div>` : ''}
+        ${errs.slice(0,8).map(m => `<div style="font-size:.76rem;color:var(--danger);">· ${m}</div>`).join('')}
+      </div>`;
+      if (ok > 0) { showToast(`${ok} cargos de Gas importados`); await init(); }
+    }
+
+    async function executeImportGasPagos() {
+      if (!parsedGasPagos.length) return;
+      const resultEl = document.getElementById('import-gas-result-pagos');
+      let ok = 0, err = 0, errs = [];
+      resultEl.innerHTML = `<div style="padding:8px;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Importando ${parsedGasPagos.length} pagos...</div>`;
+
+      const [units, unitOwners] = await Promise.all([
+        apiRequest('/units') || [],
+        apiRequest('/unit-owners/all') || [],
+      ]);
+
+      for (const row of parsedGasPagos) {
+        try {
+          const apto      = readStr(row['Apartamento']);
+          const fecha     = readGasDate(row['Fecha']);
+          const monto     = readNum(row['Monto']);
+          const factura   = readStr(row['# Factura']) || null;
+          const concepto  = readStr(row['Concepto']) || 'Facturación de Gas';
+
+          if (!apto)  { errs.push('Fila sin Apartamento'); err++; continue; }
+          if (!fecha) { errs.push(`Apto ${apto}: Fecha inválida`); err++; continue; }
+          if (monto === null || monto <= 0) { errs.push(`Apto ${apto}: Monto inválido`); err++; continue; }
+
+          const unit = units.find(u => u.unit_number === apto);
+          if (!unit) { errs.push(`Unidad "${apto}" no encontrada`); err++; continue; }
+
+          const activeRelation = unitOwners.find(x => x.unit_id === unit.id && x.is_active);
+          if (!activeRelation) { errs.push(`Apto ${apto}: sin propietario activo`); err++; continue; }
+
+          const r = await apiRequest('/finance/payments', 'POST', {
+            owner_id: activeRelation.owner_id,
+            payment_date: fecha,
+            amount: Math.round(monto * 100) / 100,
+            invoice_number: factura,
+            reference: null,
+            concept: concepto,
+          });
+          if (!r) { err++; errs.push(`Error del servidor creando pago para Apto ${apto}`); }
+          else ok++;
+        } catch (e) {
+          err++; errs.push(`Error inesperado: ${e.message}`);
+        }
+      }
+
+      resultEl.innerHTML = `<div style="margin-top:8px;">
+        <div style="color:var(--success);"><i class="fas fa-check-circle"></i> ${ok} pagos importados</div>
+        ${err > 0 ? `<div style="color:var(--danger);"><i class="fas fa-exclamation-circle"></i> ${err} errores</div>` : ''}
+        ${errs.slice(0,8).map(m => `<div style="font-size:.76rem;color:var(--danger);">· ${m}</div>`).join('')}
+      </div>`;
+      if (ok > 0) { showToast(`${ok} pagos de Gas importados`); await init(); }
+    }
+
+    /* ══ DROPDOWN Reportería ══ */
+    function toggleReporteDropdown() {
+      const wrap = document.getElementById('reporte-dd-wrap');
+      wrap.classList.toggle('open');
+      applyReportRoleRestrictionsGas();
+      renderReportTypeFilters();
+    }
+
+    // "Cuentas por Cobrar" solo es visible/ejecutable para ADMIN (mismo
+    // patrón que finances.html). Se oculta la opción, no se borra.
+    function applyReportRoleRestrictionsGas() {
+      const opt = document.getElementById('rpt-opt-cxc-gas');
+      if (!opt) return;
+      const isAdmin = typeof Auth !== 'undefined' && Auth.isAdmin();
+      opt.style.display = isAdmin ? '' : 'none';
+      if (!isAdmin && document.getElementById('rpt-type').value === 'cxc_gas') {
+        document.getElementById('rpt-type').value = 'estado_cuenta_gas';
+      }
+    }
+    function closeDropdowns() {
+      document.querySelectorAll('.dropdown-wrap.open').forEach(w => w.classList.remove('open'));
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown-wrap')) closeDropdowns();
+    });
+
+    /* ══ REPORTE ▾ — mismo patrón REPORT_TYPES de finances.html ══ */
+    function unitOptionsHtml() {
+      return allUnitsCache.slice().sort((a,b) => String(a.unit_number).localeCompare(String(b.unit_number)))
+        .map(u => `<option value="${u.unit_number}">Apt. ${u.unit_number}</option>`).join('');
+    }
+    function ownerOptionsHtml() {
+      return (allOwnersCache || []).slice().sort((a,b) => a.full_name.localeCompare(b.full_name))
+        .map(o => `<option value="${o.id}">${o.full_name}</option>`).join('');
+    }
+    function ownerUnitNumberGas(ownerId) {
+      const uo   = (allUnitOwnersCache || []).find(x => x.owner_id == ownerId && x.is_active);
+      const unit = uo ? allUnitsCache.find(u => u.id === uo.unit_id) : null;
+      return unit ? unit.unit_number : '';
+    }
+
+    // Estado de Cuenta unificado (mismo esquema que finances.html V2):
+    // dos rangos de fecha independientes -- Período de Cobro filtra los
+    // CARGOS por su fecha, Período de Pago filtra los PAGOS por la suya.
+    // Concepto solo se llena en filas de Cargo, nunca en las de Pago.
+    const REPORT_TYPES = {
+      estado_cuenta_gas: {
+        filtersHtml: () => `
+          <label class="field-label">Unidad</label>
+          <select id="rpt-f-unit"><option value="">Todas</option>${unitOptionsHtml()}</select>
+          <label class="field-label">Período de Cobro (cargos)</label>
+          <div style="display:flex;gap:6px;">
+            <input type="date" id="rpt-f-cobro-desde" style="flex:1;min-width:0;">
+            <input type="date" id="rpt-f-cobro-hasta" style="flex:1;min-width:0;">
+          </div>
+          <label class="field-label">Período de Pago (pagos)</label>
+          <div style="display:flex;gap:6px;">
+            <input type="date" id="rpt-f-pago-desde" style="flex:1;min-width:0;">
+            <input type="date" id="rpt-f-pago-hasta" style="flex:1;min-width:0;">
+          </div>
+        `,
+        run: () => {
+          const unit       = document.getElementById('rpt-f-unit')?.value || '';
+          const cobroDesde = document.getElementById('rpt-f-cobro-desde')?.value || '';
+          const cobroHasta = document.getElementById('rpt-f-cobro-hasta')?.value || '';
+          const pagoDesde  = document.getElementById('rpt-f-pago-desde')?.value || '';
+          const pagoHasta  = document.getElementById('rpt-f-pago-hasta')?.value || '';
+
+          let cargos = allChargesCache.slice();
+          let pagos  = allPagosCache.slice();
+
+          if (unit) {
+            cargos = cargos.filter(c => String(c.unit_number) === unit);
+            pagos  = pagos.filter(p => String(p.unit_number) === unit);
+          }
+          if (cobroDesde) cargos = cargos.filter(c => c.date_created >= cobroDesde);
+          if (cobroHasta) cargos = cargos.filter(c => c.date_created <= cobroHasta);
+          if (pagoDesde)  pagos  = pagos.filter(p => p.fecha >= pagoDesde);
+          if (pagoHasta)  pagos  = pagos.filter(p => p.fecha <= pagoHasta);
+
+          let rows = [
+            ...cargos.map(c => ({ id: c.id, tipo: 'CARGO', fecha: c.date_created, concepto: c.description,
+                                   factura: '—', cargo: parseFloat(c.amount || 0), pago: 0 })),
+            ...pagos.map(p => ({ id: p.payment_id, tipo: 'PAGO', fecha: p.fecha, concepto: '',
+                                   factura: (p.factura && p.factura !== '—') ? p.factura : '—',
+                                   cargo: 0, pago: parseFloat(p.monto || 0) })),
+          ].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+          let saldo = 0;
+          rows = rows.map(r => { saldo += r.cargo - r.pago; return { ...r, saldo }; });
+
+          const periodoParts = [];
+          if (cobroDesde || cobroHasta) periodoParts.push(`Cobro: ${cobroDesde ? fdateLong(cobroDesde) : '...'} al ${cobroHasta ? fdateLong(cobroHasta) : '...'}`);
+          if (pagoDesde  || pagoHasta)  periodoParts.push(`Pago: ${pagoDesde ? fdateLong(pagoDesde) : '...'} al ${pagoHasta ? fdateLong(pagoHasta) : '...'}`);
+
+          return {
+            title: 'Estado de Cuenta — Gas',
+            isStatement: true,
+            infoCells: [
+              { label: 'Unidad',      value: unit ? `Apt. ${unit}` : 'Todas' },
+              { label: 'Propietario', value: unit ? (cargos[0]?.owner_name || pagos[0]?.owner_name || '—') : 'Todos' },
+              { label: 'Período',     value: periodoParts.length ? periodoParts.join(' · ') : 'Histórico completo' },
+            ],
+            columns: ['Fecha', 'Tipo', 'Concepto', 'Factura', 'Cargo', 'Pago', 'Saldo'],
+            rightCols: [4, 5, 6],
+            rowsMeta: rows,
+            rows: rows.map(r => [formatDate(r.fecha), r.tipo === 'CARGO' ? 'Cargo' : 'Pago', r.concepto || '—', r.factura,
+              r.cargo ? '$' + formatMoney(r.cargo) : '—', r.pago ? '$' + formatMoney(r.pago) : '—', '$' + formatMoney(r.saldo)]),
+            totals: [
+              { label: 'Total cargos', value: '$' + formatMoney(rows.reduce((s,r) => s + r.cargo, 0)) },
+              { label: 'Total pagos',  value: '$' + formatMoney(rows.reduce((s,r) => s + r.pago, 0)) },
+            ],
+            saldoFinal: saldo,
+          };
+        },
+      },
+      // Cuentas por Cobrar -- solo ADMIN (ver applyReportRoleRestrictionsGas()).
+      // Mismo esquema de filtros que en finances.html: Unidad O Propietario,
+      // Estado, Período de Cobro. Sin Concepto porque en Gas todo es Gas.
+      cxc_gas: {
+        filtersHtml: () => `
+          <label class="field-label">Unidad</label>
+          <select id="rpt-f-unit" onchange="if(this.value) document.getElementById('rpt-f-owner').value='';">
+            <option value="">Todas</option>${unitOptionsHtml()}
+          </select>
+          <label class="field-label">Propietario</label>
+          <select id="rpt-f-owner" onchange="if(this.value) document.getElementById('rpt-f-unit').value='';">
+            <option value="">Todos</option>${ownerOptionsHtml()}
+          </select>
+          <p style="font-size:.72rem;color:var(--text-muted);margin:-6px 0 8px;">Elige Unidad o Propietario (no ambos a la vez).</p>
+          <label class="field-label">Estado del cargo</label>
+          <select id="rpt-f-estado">
+            <option value="">Todos</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="PARCIAL">Parcial</option>
+          </select>
+          <label class="field-label">Período de Cobro (cargos)</label>
+          <div style="display:flex;gap:6px;">
+            <input type="date" id="rpt-f-cobro-desde" style="flex:1;min-width:0;">
+            <input type="date" id="rpt-f-cobro-hasta" style="flex:1;min-width:0;">
+          </div>
+          <label class="field-label">Monto mínimo pendiente</label>
+          <input type="number" id="rpt-f-min" placeholder="0.00" min="0" step="0.01">
+        `,
+        run: () => {
+          let   unitNum    = document.getElementById('rpt-f-unit')?.value || '';
+          const ownerId    = document.getElementById('rpt-f-owner')?.value || '';
+          const estado     = document.getElementById('rpt-f-estado')?.value || '';
+          const cobroDesde = document.getElementById('rpt-f-cobro-desde')?.value || '';
+          const cobroHasta = document.getElementById('rpt-f-cobro-hasta')?.value || '';
+          const minAmt     = parseFloat(document.getElementById('rpt-f-min')?.value) || 0.01;
+
+          if (!unitNum && ownerId) unitNum = ownerUnitNumberGas(ownerId);
+
+          let charges = allChargesCache.slice();
+          if (unitNum)    charges = charges.filter(c => String(c.unit_number) === unitNum);
+          if (estado)     charges = charges.filter(c => c.status === estado);
+          if (cobroDesde) charges = charges.filter(c => (c.date_created || '') >= cobroDesde);
+          if (cobroHasta) charges = charges.filter(c => (c.date_created || '') <= cobroHasta);
+
+          const byOwner = new Map();
+          charges.forEach(c => {
+            const key = c.owner_id ?? c.unit_number;
+            if (!byOwner.has(key)) {
+              byOwner.set(key, { name: c.owner_name || '—', unitNum: c.unit_number, facturado: 0, pagado: 0 });
+            }
+            const g = byOwner.get(key);
+            g.facturado += parseFloat(c.amount  || 0);
+            g.pagado    += parseFloat(c.amount  || 0) - parseFloat(c.balance || 0);
+          });
+
+          let result = [...byOwner.values()]
+            .map(g => ({ ...g, pendiente: g.facturado - g.pagado }))
+            .filter(o => o.pendiente >= minAmt)
+            .sort((a, b) => b.pendiente - a.pendiente);
+
+          return {
+            title: 'Cuentas por Cobrar — Gas',
+            columns: ['Propietario', 'Unidad', 'Facturado', 'Pagado', 'Pendiente'],
+            rightCols: [2, 3, 4],
+            rows: result.map(o => [o.name, o.unitNum ? `Apt. ${o.unitNum}` : '—',
+              '$' + formatMoney(o.facturado), '$' + formatMoney(o.pagado), '$' + formatMoney(o.pendiente)]),
+            totals: [
+              { label: 'Unidades con deuda', value: result.length },
+              { label: 'Total pendiente', value: '$' + formatMoney(result.reduce((s,o) => s + o.pendiente, 0)) },
+            ],
+          };
+        },
+      },
+    };
+
+    function fdateLong(s) {
+      return s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' }) : '—';
+    }
+
+    function renderReportTypeFilters() {
+      const type = document.getElementById('rpt-type').value;
+      const def  = REPORT_TYPES[type];
+      document.getElementById('rpt-type-filters').innerHTML = def ? def.filtersHtml() : '';
+    }
+
+    function generarReporteGas() {
+      const type = document.getElementById('rpt-type').value;
+      const def  = REPORT_TYPES[type];
+      if (!def) return;
+      if (type === 'cxc_gas' && !Auth.isAdmin()) {
+        showToast('Solo el administrador puede generar el reporte de Cuentas por Cobrar', 'error');
+        return;
+      }
+
+      closeDropdowns();
+      const result = def.run();
+
+      const theadCols = result.columns.map((c, i) => `<th${result.rightCols.includes(i) ? ' class="right"' : ''}>${c}</th>`).join('')
+        + `<th class="right no-export">Acciones</th>`;
+      const bodyRows = result.rows.length
+        ? result.rows.map((row, i) => {
+            const meta = result.rowsMeta ? result.rowsMeta[i] : null;
+            const actions = meta ? `
+              <td class="right no-export" style="white-space:nowrap;">
+                <button class="btn-icon" title="Editar" onclick="editarMovimientoGas('${meta.tipo}', ${meta.id})"><i class="fas fa-pen"></i></button>
+                <button class="btn-icon danger" title="Anular" onclick="anularMovimientoGas('${meta.tipo}', ${meta.id})"><i class="fas fa-trash-alt"></i></button>
+              </td>` : `<td class="no-export"></td>`;
+            return `<tr>${row.map((cell, i) => `<td${result.rightCols.includes(i) ? ' class="right"' : ''}>${cell}</td>`).join('')}${actions}</tr>`;
+          }).join('')
+        : `<tr><td colspan="${result.columns.length + 1}" style="text-align:center;padding:2rem;color:var(--doc-muted);">Sin resultados</td></tr>`;
+      const summaryCards = result.totals.map(t => `<div class="sum-card"><div class="sv">${t.value}</div><div class="sl">${t.label}</div></div>`).join('');
+
+      // Mismo diseño de documento que estado_cuenta.html / Reporte General
+      // de V2: info-grid, caja de Balance Final destacada, nota y firma.
+      const infoGridHtml = result.isStatement ? `
+          <div class="info-grid">
+            ${result.infoCells.map(c => `
+              <div class="info-cell">
+                <div class="ic-lbl">${c.label.toUpperCase()}</div>
+                <div class="ic-val">${c.value}</div>
+              </div>`).join('')}
+          </div>` : '';
+
+      const footerHtml = result.isStatement ? `
+          <div class="doc-footer-grid">
+            <div class="footer-balance-box">
+              <div class="fb-label">Saldo Final</div>
+              <div class="fb-value">$${formatMoney(result.saldoFinal)}</div>
+              <div class="fb-date">Generado el ${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
+            </div>
+            <div class="doc-footer-note">
+              <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
+              Este reporte refleja los movimientos de Gas registrados en el sistema según los filtros aplicados. Para cualquier aclaración, contactar administración.
+            </div>
+          </div>
+          <div class="signature-section">
+            <div class="signature-block">
+              <div class="signature-line"></div>
+              <div class="sig-name">Alianza Residencial</div>
+              <div class="sig-title">Administración</div>
+            </div>
+          </div>` : '';
+
+      document.getElementById('reporte-gas-content').innerHTML = `
+        <div id="pdf-doc" style="background:#fff;padding:20px;">
+          <div class="doc-header">
+            <div>
+              <h1>ALIANZA RESIDENCIAL</h1>
+              <div class="sub-info">V1 — Módulo de Gas</div>
+            </div>
+            <div class="doc-title">
+              <h2>${result.title}</h2>
+              <div class="date">${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
+            </div>
+          </div>
+          ${infoGridHtml}
+          <div class="summary-cards">${summaryCards}</div>
+          <table class="doc-table">
+            <thead><tr>${theadCols}</tr></thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+          ${footerHtml}
+        </div>`;
+
+      document.getElementById('reporte-gas-modal').classList.add('open');
+    }
+
+    function closeReporteGasModal() {
+      document.getElementById('reporte-gas-modal').classList.remove('open');
+    }
+
+    function descargarReporteGasPDF() {
+      const doc = document.getElementById('pdf-doc');
+      if (!doc) { showToast('Genera el reporte primero', 'warning'); return; }
+      const noExportEls = doc.querySelectorAll('.no-export');
+      noExportEls.forEach(el => el.style.display = 'none');
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: `reporte_gas_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      };
+      html2pdf().set(opt).from(doc).save().then(() => {
+        noExportEls.forEach(el => el.style.display = '');
+      });
+    }
+
+    function exportarReporteGasExcel() {
+      const type = document.getElementById('rpt-type').value;
+      const def  = REPORT_TYPES[type];
+      if (!def) return;
+      const result = def.run();
+      if (!result.rows.length) { showToast('Sin datos para exportar', 'warning'); return; }
+      const ws = XLSX.utils.aoa_to_sheet([result.columns, ...result.rows]);
+      ws['!cols'] = result.columns.map(() => ({wch: 18}));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, result.title.slice(0, 30));
+      XLSX.writeFile(wb, `reporte_gas_${type}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      showToast('Reporte descargado', 'success');
+    }
+
+    // Cerrar modales al hacer clic fuera de la caja
+    ['charge-modal', 'payment-modal', 'reporte-gas-modal', 'import-gas-modal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('open'); });
+    });
+
+    applyReportRoleRestrictionsGas();
+    (async () => {
+      await init();
+      renderReportTypeFilters();
+    })();
+  </script>
+</body>
+</html>

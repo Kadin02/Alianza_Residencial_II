@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import date
 from decimal import Decimal
+from typing import Optional
 
 class ChargeCreate(BaseModel):
     unit_id: int
@@ -8,6 +9,7 @@ class ChargeCreate(BaseModel):
     amount: Decimal
     date_created: date
     due_date: date
+    concept: Optional[str] = None
 
 
 class ChargeResponse(BaseModel):
@@ -19,6 +21,7 @@ class ChargeResponse(BaseModel):
     status: str
     date_created: date
     due_date: date
+    concept: Optional[str] = None
 
     class Config:
         from_attributes = True

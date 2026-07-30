@@ -17,6 +17,9 @@ class Charge(Base):
 
     status = Column(String, default="PENDIENTE")
 
+    # "Gas" | "Mantenimiento" | "Ascensor" | None (cargos viejos/otros)
+    concept = Column(String, nullable=True)
+
     date_created = Column(Date, nullable=False)
     due_date = Column(Date, nullable=False)
 

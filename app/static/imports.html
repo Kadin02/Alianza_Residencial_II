@@ -53,6 +53,7 @@
   <div class="imp-tabs">
     <button class="imp-tab active" onclick="switchTab('propietarios')"><i class="fas fa-users"></i> Propietarios</button>
     <button class="imp-tab" onclick="switchTab('cargos')"><i class="fas fa-file-invoice"></i> Cargos</button>
+    <button class="imp-tab" onclick="switchTab('pagos')"><i class="fas fa-money-bill-wave"></i> Pagos</button>
     <button class="imp-tab" onclick="switchTab('exportar')"><i class="fas fa-file-export"></i> Exportar</button>
   </div>
 
@@ -137,13 +138,16 @@
               <p>Descarga la plantilla Excel para cargos.</p>
             </div>
             <div class="step-row"><span class="step-badge">2</span>
-              <p>Columnas: <strong>numero_apartamento, descripcion, monto, fecha_creacion, fecha_vencimiento</strong></p>
+              <p>Columnas: <strong>numero_apartamento, descripcion, monto, fecha_creacion, fecha_vencimiento, concepto</strong></p>
             </div>
             <div class="step-row"><span class="step-badge">3</span>
               <p>El monto debe ser numérico (ej: <strong>56.54</strong>). Las fechas en formato <strong>YYYY-MM-DD</strong>.</p>
             </div>
             <div class="step-row"><span class="step-badge">4</span>
               <p>La columna <strong>nombre_propiedad</strong> es opcional si seleccionas la propiedad abajo.</p>
+            </div>
+            <div class="step-row"><span class="step-badge">5</span>
+              <p>La columna <strong>concepto</strong> es opcional: <strong>Gas</strong> / <strong>Mantenimiento</strong> / <strong>Ascensor</strong>.</p>
             </div>
           </div>
         </div>
@@ -191,6 +195,64 @@
     </div>
   </div>
 
+  <!-- ══ IMPORTAR PAGOS ══ -->
+  <div class="imp-panel" id="panel-pagos">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Instrucciones</h3>
+            <button class="btn template-btn" onclick="downloadTemplate('pagos')">
+              <i class="fas fa-download"></i> Descargar plantilla
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="step-row"><span class="step-badge">1</span>
+              <p>Descarga la plantilla Excel para pagos.</p>
+            </div>
+            <div class="step-row"><span class="step-badge">2</span>
+              <p>Columnas: <strong>numero_apartamento, concepto, fecha_pago, monto, numero_factura, referencia</strong></p>
+            </div>
+            <div class="step-row"><span class="step-badge">3</span>
+              <p>El propietario se resuelve automáticamente por la unidad (propietario activo del apartamento).</p>
+            </div>
+            <div class="step-row"><span class="step-badge">4</span>
+              <p><strong>concepto</strong> es opcional: <strong>Gas</strong> / <strong>Mantenimiento</strong> / <strong>Ascensor</strong> / <strong>Abono</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-upload"></i> Subir archivo</h3></div>
+          <div class="card-body">
+            <div class="drop-zone" id="drop-payments" onclick="document.getElementById('file-payments').click()"
+              ondragover="event.preventDefault();this.classList.add('drag-over')"
+              ondragleave="this.classList.remove('drag-over')"
+              ondrop="handleDrop(event,'payments')">
+              <i class="fas fa-file-excel"></i>
+              <p>Arrastra tu archivo Excel aquí<br>o <strong>haz clic para seleccionar</strong></p>
+            </div>
+            <input type="file" id="file-payments" accept=".xlsx,.xls,.csv" style="display:none"
+              onchange="handleFile(this,'payments')">
+            <div id="preview-payments"></div>
+            <div id="import-payments-actions" style="display:none;">
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <button onclick="executeImport('payments')" style="flex:1;background:var(--success);color:#fff;margin-top:0;">
+                  <i class="fas fa-check"></i> Importar <span id="payments-count">0</span> pagos
+                </button>
+                <button onclick="clearImport('payments')" class="btn btn-muted" style="width:auto;margin-top:0;">
+                  <i class="fas fa-times"></i> Cancelar
+                </button>
+              </div>
+            </div>
+            <div id="import-payments-result"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ EXPORTAR ══ -->
   <div class="imp-panel" id="panel-exportar">
     <div style="max-width:600px;">
@@ -207,6 +269,9 @@
             <button onclick="exportData('cargos')" style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);margin-top:0;">
               <i class="fas fa-file-invoice"></i> Exportar Todos los Cargos (.xlsx)
             </button>
+            <button onclick="exportData('pagos')" style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);margin-top:0;">
+              <i class="fas fa-money-bill-wave"></i> Exportar Pagos (.xlsx)
+            </button>
             <button onclick="exportData('proveedores')" style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-soft);margin-top:0;">
               <i class="fas fa-truck"></i> Exportar Proveedores y Pagos (.xlsx)
             </button>
@@ -222,10 +287,11 @@
 <script>
 renderSidebar('imports');
 
-let parsedOwners  = [];
-let parsedCharges = [];
-let allProps      = [];
-let allUnits      = [];
+let parsedOwners   = [];
+let parsedCharges  = [];
+let parsedPayments = [];
+let allProps       = [];
+let allUnits       = [];
 
 async function init() {
   [allProps, allUnits] = await Promise.all([
@@ -243,7 +309,7 @@ async function init() {
 
 function switchTab(tab) {
   document.querySelectorAll('.imp-tab').forEach((b,i) => {
-    b.classList.toggle('active', ['propietarios','cargos','exportar'][i] === tab);
+    b.classList.toggle('active', ['propietarios','cargos','pagos','exportar'][i] === tab);
   });
   document.querySelectorAll('.imp-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + tab).classList.add('active');
@@ -296,7 +362,7 @@ function readDate(val) {
 // ── Manejo de archivos ────────────────────────
 function handleDrop(e, type) {
   e.preventDefault();
-  document.getElementById('drop-' + (type==='owners'?'owners':'charges')).classList.remove('drag-over');
+  document.getElementById('drop-' + type).classList.remove('drag-over');
   if (e.dataTransfer.files[0]) parseExcel(e.dataTransfer.files[0], type);
 }
 function handleFile(input, type) {
@@ -312,12 +378,16 @@ function parseExcel(file, type) {
       const wb   = XLSX.read(e.target.result, { type:'binary', cellDates:true, raw:false });
       const ws   = wb.Sheets[wb.SheetNames[0]];
       // defval:'' → celdas vacías retornan '' en vez de undefined
-      const data = XLSX.utils.sheet_to_json(ws, { defval:'' });
+      // Excel suele traer un rango usado más grande que los datos reales --
+      // se descartan las filas completamente vacías.
+      const data = XLSX.utils.sheet_to_json(ws, { defval:'' })
+        .filter(row => Object.values(row).some(v => v !== '' && v !== null && v !== undefined));
 
       if (!data.length) { showToast('El archivo está vacío o no tiene datos', 'error'); return; }
 
-      if (type === 'owners')  { parsedOwners = data;  previewData(data, 'owners'); }
-      if (type === 'charges') { parsedCharges = data; previewData(data, 'charges'); }
+      if (type === 'owners')   { parsedOwners   = data; previewData(data, 'owners'); }
+      if (type === 'charges')  { parsedCharges  = data; previewData(data, 'charges'); }
+      if (type === 'payments') { parsedPayments = data; previewData(data, 'payments'); }
     } catch(err) {
       showToast('Error al leer el archivo: ' + err.message, 'error');
       console.error(err);
@@ -354,8 +424,9 @@ function previewData(data, type) {
 }
 
 function clearImport(type) {
-  if (type === 'owners')  parsedOwners  = [];
-  if (type === 'charges') parsedCharges = [];
+  if (type === 'owners')   parsedOwners   = [];
+  if (type === 'charges')  parsedCharges  = [];
+  if (type === 'payments') parsedPayments = [];
   document.getElementById('preview-' + type).innerHTML = '';
   document.getElementById('import-' + type + '-actions').style.display = 'none';
   document.getElementById('import-' + type + '-result').innerHTML = '';
@@ -364,8 +435,9 @@ function clearImport(type) {
 
 // ── Ejecutar importación ──────────────────────
 async function executeImport(type) {
-  if (type === 'owners')  await importOwners();
-  if (type === 'charges') await importCharges();
+  if (type === 'owners')   await importOwners();
+  if (type === 'charges')  await importCharges();
+  if (type === 'payments') await importPayments();
 }
 
 // ── Importar propietarios ─────────────────────
@@ -467,6 +539,7 @@ async function importCharges() {
       const desc     = readStr(row['descripcion']        || row['description']);
       const amount   = readNum(row['monto']              || row['amount']     || row['Monto']);
       const propName = readStr(row['nombre_propiedad']   || row['propiedad']  || '');
+      const concepto = readStr(row['concepto']) || null;
 
       const dateCreated = readDate(row['fecha_creacion'] || row['fecha']);
       const dueDate     = readDate(row['fecha_vencimiento'] || row['vencimiento'] || row['fecha_creacion'] || row['fecha']);
@@ -512,6 +585,7 @@ async function importCharges() {
         amount:       amount,
         date_created: dateCreated,
         due_date:     dueDate,
+        concept:      concepto,
       });
 
       if (!r) { err++; errs.push(`Error del servidor creando cargo para apt ${aptNum}`); }
@@ -524,6 +598,64 @@ async function importCharges() {
 
   showResult('charges', ok, err, errs);
   if (ok > 0) showToast(`${ok} cargos creados correctamente`, 'success');
+}
+
+// ── Importar pagos ────────────────────────────
+async function importPayments() {
+  if (!parsedPayments.length) return;
+
+  const resultEl = document.getElementById('import-payments-result');
+  let ok = 0, err = 0, errs = [];
+
+  resultEl.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text-muted);">
+    <i class="fas fa-spinner fa-spin"></i> Importando ${parsedPayments.length} pagos...</div>`;
+
+  // Refrescar unidades + relaciones unidad-propietario (activas e históricas)
+  const [units, unitOwners] = await Promise.all([
+    apiRequest('/units') || [],
+    apiRequest('/unit-owners/all') || [],
+  ]);
+
+  for (const row of parsedPayments) {
+    try {
+      const aptNum    = readStr(row['numero_apartamento'] || row['apartamento']);
+      const concepto  = readStr(row['concepto']) || null;
+      const fechaPago = readDate(row['fecha_pago'] || row['fecha']);
+      const monto     = readNum(row['monto'] || row['amount'] || row['Monto']);
+      const numFactura = readStr(row['numero_factura'] || row['factura']) || null;
+      const referencia  = readStr(row['referencia']) || null;
+
+      if (!aptNum) { errs.push('Fila sin número de apartamento'); err++; continue; }
+      if (monto === null || monto <= 0) {
+        errs.push(`Apt ${aptNum}: monto inválido → "${row['monto'] ?? row['amount']}"`);
+        err++; continue;
+      }
+
+      const unit = (units || []).find(u => u.unit_number === aptNum);
+      if (!unit) { errs.push(`Unidad "${aptNum}" no encontrada`); err++; continue; }
+
+      const activeRelation = (unitOwners || []).find(x => x.unit_id === unit.id && x.is_active);
+      if (!activeRelation) { errs.push(`Apt ${aptNum}: sin propietario activo asignado`); err++; continue; }
+
+      const r = await apiRequest('/finance/payments', 'POST', {
+        owner_id:       activeRelation.owner_id,
+        payment_date:   fechaPago,
+        amount:         monto,
+        invoice_number: numFactura,
+        reference:      referencia,
+        concept:        concepto,
+      });
+
+      if (!r) { err++; errs.push(`Error del servidor creando pago para apt ${aptNum}`); }
+      else ok++;
+
+    } catch(e) {
+      err++; errs.push(`Error inesperado: ${e.message}`);
+    }
+  }
+
+  showResult('payments', ok, err, errs);
+  if (ok > 0) showToast(`${ok} pagos creados correctamente`, 'success');
 }
 
 // ── Mostrar resultado ─────────────────────────
@@ -547,9 +679,13 @@ function downloadTemplate(type) {
     headers = ['nombre_propietario','cedula','email','telefono','nombre_propiedad','numero_apartamento','piso'];
     example = ['Juan Pérez','8-123-456','juan@email.com','+507 6000-0000','Torre Alianza I','101','1'];
     filename = 'plantilla_propietarios.xlsx';
+  } else if (type === 'pagos') {
+    headers = ['numero_apartamento','concepto','fecha_pago','monto','numero_factura','referencia'];
+    example = ['1-A','Gas','2026-03-05',35.99,'17530','Transferencia'];
+    filename = 'plantilla_pagos.xlsx';
   } else {
-    headers = ['numero_apartamento','descripcion','monto','fecha_creacion','fecha_vencimiento','nombre_propiedad'];
-    example = ['1-A','GAS Marzo 2026',56.54,'2026-03-01','2026-03-31','PARK VIEW'];
+    headers = ['numero_apartamento','descripcion','monto','fecha_creacion','fecha_vencimiento','nombre_propiedad','concepto'];
+    example = ['1-A','GAS Marzo 2026',56.54,'2026-03-01','2026-03-31','PARK VIEW','Gas'];
     filename = 'plantilla_cargos.xlsx';
   }
   const ws = XLSX.utils.aoa_to_sheet([headers, example]);
@@ -583,6 +719,12 @@ async function exportData(type) {
     rows     = charges.map(c=>[c.id,c.owner_name||'',c.unit_number||'',
       c.description,c.due_date,c.amount,c.balance,c.status]);
     filename = 'cargos_alianza.xlsx';
+  } else if (type === 'pagos') {
+    const pagos = await apiRequest('/finance/payments-history') || [];
+    headers  = ['ID','Propietario','Unidad','Concepto','Fecha','Factura','Monto'];
+    rows     = pagos.map(p => [p.payment_id, p.owner_name || '', p.unit_number || '',
+      p.concepto || '', p.fecha || '', p.factura || '', p.monto]);
+    filename = 'pagos_alianza.xlsx';
   } else if (type === 'proveedores') {
     const suppliers = await apiRequest('/suppliers') || [];
     headers  = ['ID','Nombre','Categoría','RUC','Teléfono','Email','Total Pagado','Pendiente'];

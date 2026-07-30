@@ -670,6 +670,7 @@ def list_charges_with_status(db: Session):
             "amount":       float(bd["total_amount"]),
             "balance":      float(bd["balance"]),
             "status":       status,
+            "concept":      charge.concept,
             "due_date":     str(charge.due_date),
             "date_created": str(charge.date_created),
             "payment_id":   last_payment_id,

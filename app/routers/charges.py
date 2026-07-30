@@ -50,6 +50,7 @@ def create_charge(
         status="PENDIENTE",
         date_created=charge_data.date_created,
         due_date=charge_data.due_date,
+        concept=charge_data.concept,
     )
     db.add(new_charge)
     db.commit()
@@ -96,6 +97,7 @@ def update_charge(
 
         charge.description  = charge_data.description
         charge.date_created = charge_data.date_created
+        charge.concept      = charge_data.concept
 
         db.commit()
         db.refresh(charge)
@@ -112,6 +114,7 @@ def update_charge(
     charge.amount       = new_amount
     charge.date_created = charge_data.date_created
     charge.due_date     = charge_data.due_date
+    charge.concept      = charge_data.concept
 
     # Recalcular estado
     if new_balance <= 0:

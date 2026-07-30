@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecciona tu versión | Alianza Residencial</title>
+  <link rel="stylesheet" href="/static/css/main.css?v=2">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--accent) 0%, #1e4a8c 100%);
+    }
+    .sv-wrap { width: 100%; max-width: 780px; padding: 2rem; }
+    .sv-logo { text-align: center; margin-bottom: 2rem; color: #fff; }
+    .sv-logo .logo-icon {
+      width: 64px; height: 64px; background: #fff; color: var(--accent);
+      border-radius: 16px; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem; font-size: 1.8rem; font-weight: 800;
+    }
+    .sv-logo h1 { font-size: 1.3rem; margin-bottom: .2rem; }
+    .sv-logo p { font-size: .85rem; opacity: .85; }
+    .sv-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 640px) { .sv-cards { grid-template-columns: 1fr; } }
+    .sv-card {
+      background: #fff; border-radius: var(--radius-xl); padding: 2rem 1.5rem;
+      box-shadow: var(--shadow-lg); text-align: center; cursor: pointer;
+      border: 2px solid transparent; transition: transform .15s, border-color .15s;
+    }
+    .sv-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .sv-card i.sv-icon { font-size: 2.2rem; color: var(--accent); margin-bottom: .75rem; display: block; }
+    .sv-card h2 { font-size: 1.1rem; color: var(--text-primary); margin-bottom: .4rem; }
+    .sv-card p { font-size: .82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5; }
+    .sv-card .btn { width: 100%; justify-content: center; }
+    .sv-footer { text-align: center; margin-top: 2rem; color: rgba(255,255,255,0.7); font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="sv-wrap">
+    <div class="sv-logo">
+      <div class="logo-icon">AR</div>
+      <h1>ALIANZA RESIDENCIAL</h1>
+      <p>Selecciona con qué versión quieres trabajar</p>
+    </div>
+
+    <div class="sv-cards">
+      <div class="sv-card" onclick="goV2()">
+        <i class="fas fa-layer-group sv-icon"></i>
+        <h2>Alianza Residencial V2</h2>
+        <p>Sistema completo: propiedades, unidades, propietarios, financiero, proveedores, agenda y garita.</p>
+        <button class="btn btn-primary">Entrar a V2</button>
+      </div>
+
+      <div class="sv-card" onclick="goV1()">
+        <i class="fas fa-fire sv-icon"></i>
+        <h2>Alianza Residencial V1 — Gas</h2>
+        <p>Versión ligera enfocada solo en el módulo de Gas: cargos, pagos, cuentas por cobrar y reportes.</p>
+        <button class="btn btn-secondary">Entrar a V1 (Gas)</button>
+      </div>
+    </div>
+
+    <div class="sv-footer">© 2026 Alianza Residencial — Mercedes Bienes Raíces</div>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script>
+    Auth.require();
+
+    function goV2() {
+      sessionStorage.setItem('alianza_version', 'v2');
+      window.location.href = '/static/index.html';
+    }
+    function goV1() {
+      sessionStorage.setItem('alianza_version', 'v1');
+      window.location.href = '/static/gas.html';
+    }
+  </script>
+</body>
+</html>
