@@ -894,31 +894,23 @@
     }
 
     // Estado de Cuenta unificado (mismo esquema que finances.html V2):
-    // dos rangos de fecha independientes -- Período de Cobro filtra los
-    // CARGOS por su fecha, Período de Pago filtra los PAGOS por la suya.
+    // un solo rango de fecha (Desde/Hasta) que filtra cargos y pagos juntos.
     // Concepto solo se llena en filas de Cargo, nunca en las de Pago.
     const REPORT_TYPES = {
       estado_cuenta_gas: {
         filtersHtml: () => `
           <label class="field-label">Unidad</label>
           <select id="rpt-f-unit"><option value="">Todas</option>${unitOptionsHtml()}</select>
-          <label class="field-label">Período de Cobro (cargos)</label>
+          <label class="field-label">Período</label>
           <div style="display:flex;gap:6px;">
-            <input type="date" id="rpt-f-cobro-desde" style="flex:1;min-width:0;">
-            <input type="date" id="rpt-f-cobro-hasta" style="flex:1;min-width:0;">
-          </div>
-          <label class="field-label">Período de Pago (pagos)</label>
-          <div style="display:flex;gap:6px;">
-            <input type="date" id="rpt-f-pago-desde" style="flex:1;min-width:0;">
-            <input type="date" id="rpt-f-pago-hasta" style="flex:1;min-width:0;">
+            <input type="date" id="rpt-f-desde" style="flex:1;min-width:0;">
+            <input type="date" id="rpt-f-hasta" style="flex:1;min-width:0;">
           </div>
         `,
         run: () => {
-          const unit       = document.getElementById('rpt-f-unit')?.value || '';
-          const cobroDesde = document.getElementById('rpt-f-cobro-desde')?.value || '';
-          const cobroHasta = document.getElementById('rpt-f-cobro-hasta')?.value || '';
-          const pagoDesde  = document.getElementById('rpt-f-pago-desde')?.value || '';
-          const pagoHasta  = document.getElementById('rpt-f-pago-hasta')?.value || '';
+          const unit  = document.getElementById('rpt-f-unit')?.value || '';
+          const desde = document.getElementById('rpt-f-desde')?.value || '';
+          const hasta = document.getElementById('rpt-f-hasta')?.value || '';
 
           let cargos = allChargesCache.slice();
           let pagos  = allPagosCache.slice();
@@ -927,10 +919,8 @@
             cargos = cargos.filter(c => String(c.unit_number) === unit);
             pagos  = pagos.filter(p => String(p.unit_number) === unit);
           }
-          if (cobroDesde) cargos = cargos.filter(c => c.date_created >= cobroDesde);
-          if (cobroHasta) cargos = cargos.filter(c => c.date_created <= cobroHasta);
-          if (pagoDesde)  pagos  = pagos.filter(p => p.fecha >= pagoDesde);
-          if (pagoHasta)  pagos  = pagos.filter(p => p.fecha <= pagoHasta);
+          if (desde) { cargos = cargos.filter(c => c.date_created >= desde); pagos = pagos.filter(p => p.fecha >= desde); }
+          if (hasta) { cargos = cargos.filter(c => c.date_created <= hasta); pagos = pagos.filter(p => p.fecha <= hasta); }
 
           let rows = [
             ...cargos.map(c => ({ id: c.id, tipo: 'CARGO', fecha: c.date_created, concepto: c.description,
@@ -944,8 +934,7 @@
           rows = rows.map(r => { saldo += r.cargo - r.pago; return { ...r, saldo }; });
 
           const periodoParts = [];
-          if (cobroDesde || cobroHasta) periodoParts.push(`Cobro: ${cobroDesde ? fdateLong(cobroDesde) : '...'} al ${cobroHasta ? fdateLong(cobroHasta) : '...'}`);
-          if (pagoDesde  || pagoHasta)  periodoParts.push(`Pago: ${pagoDesde ? fdateLong(pagoDesde) : '...'} al ${pagoHasta ? fdateLong(pagoHasta) : '...'}`);
+          if (desde || hasta) periodoParts.push(`${desde ? fdateLong(desde) : '...'} al ${hasta ? fdateLong(hasta) : '...'}`);
 
           return {
             title: 'Estado de Cuenta — Gas',
@@ -1012,6 +1001,42 @@
           if (cobroDesde) charges = charges.filter(c => (c.date_created || '') >= cobroDesde);
           if (cobroHasta) charges = charges.filter(c => (c.date_created || '') <= cobroHasta);
 
+          // Unidad puntual + sin filtro de fecha -- en vez de una sola fila
+          // agregada, mostrar el desglose mes por mes de lo pendiente de esa
+          // unidad, más el saldo total.
+          if (unitNum && !cobroDesde && !cobroHasta) {
+            const pendientes = charges.filter(c => parseFloat(c.balance || 0) >= minAmt);
+            const byMonth = new Map();
+            pendientes.forEach(c => {
+              const key = (c.date_created || '').slice(0, 7) || 'Sin fecha';
+              if (!byMonth.has(key)) byMonth.set(key, { count: 0, pendiente: 0 });
+              const m = byMonth.get(key);
+              m.count++;
+              m.pendiente += parseFloat(c.balance || 0);
+            });
+            const meses = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+            const totalPendiente = meses.reduce((s, [, m]) => s + m.pendiente, 0);
+            const nombre = pendientes[0]?.owner_name || charges[0]?.owner_name || '—';
+
+            return {
+              title: 'Cuentas por Cobrar — Gas',
+              isStatement: true,
+              infoCells: [
+                { label: 'Unidad',      value: `Apt. ${unitNum}` },
+                { label: 'Propietario', value: nombre },
+                { label: 'Período',     value: 'Histórico completo' },
+              ],
+              columns: ['Mes', 'Cargos pendientes', 'Pendiente'],
+              rightCols: [1, 2],
+              rows: meses.map(([mes, m]) => [mesLabelGas(mes), m.count, '$' + formatMoney(m.pendiente)]),
+              totals: [
+                { label: 'Meses con deuda', value: meses.length },
+                { label: 'Total pendiente', value: '$' + formatMoney(totalPendiente) },
+              ],
+              saldoFinal: totalPendiente,
+            };
+          }
+
           const byOwner = new Map();
           charges.forEach(c => {
             const key = c.owner_id ?? c.unit_number;
@@ -1042,6 +1067,13 @@
         },
       },
     };
+
+    function mesLabelGas(ym) {
+      if (!ym || ym === 'Sin fecha') return 'Sin fecha';
+      const [y, m] = ym.split('-');
+      const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+      return d.toLocaleDateString('es-PA', { year: 'numeric', month: 'long' }).replace(/^\w/, c => c.toUpperCase());
+    }
 
     function fdateLong(s) {
       return s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' }) : '—';
@@ -1144,6 +1176,18 @@
       if (!doc) { showToast('Genera el reporte primero', 'warning'); return; }
       const noExportEls = doc.querySelectorAll('.no-export');
       noExportEls.forEach(el => el.style.display = 'none');
+
+      // Mismo fix que finances.html: #reporte-gas-content recorta con
+      // max-height:70vh + overflow-y:auto para verse bien en pantalla, pero
+      // capturar el documento así hace que html2canvas solo tome la porción
+      // visible y el PDF salga cortado en reportes largos. Se libera el
+      // recorte solo durante la captura.
+      const scrollWrap    = document.getElementById('reporte-gas-content');
+      const prevMaxHeight = scrollWrap.style.maxHeight;
+      const prevOverflowY = scrollWrap.style.overflowY;
+      scrollWrap.style.maxHeight = 'none';
+      scrollWrap.style.overflowY = 'visible';
+
       const opt = {
         margin: [8, 8, 8, 8],
         filename: `reporte_gas_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -1154,6 +1198,8 @@
       };
       html2pdf().set(opt).from(doc).save().then(() => {
         noExportEls.forEach(el => el.style.display = '');
+        scrollWrap.style.maxHeight = prevMaxHeight;
+        scrollWrap.style.overflowY = prevOverflowY;
       });
     }
 
