@@ -157,14 +157,6 @@ async function loadStatement(unitId) {
       </div>
 
       ${contactItems ? `<div class="contact-bar">${contactItems}</div>` : ''}
-
-      <div class="signature-section">
-        <div class="signature-block">
-          <div class="signature-line"></div>
-          <div class="sig-name">${d.property_name || 'Alianza Residencial'}</div>
-          <div class="sig-title">Administración</div>
-        </div>
-      </div>
     `;
     document.getElementById('doc-date').textContent = new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' });
   } catch (error) {
