@@ -99,8 +99,8 @@ function render(d) {
   document.getElementById('doc').innerHTML = `
     <div class="doc-header">
       <div>
-        <h1>${(d.property_name || 'Alianza Residencial').toUpperCase()}</h1>
-        <div class="sub-info">Sistema de Administración de Propiedades</div>
+        <h1>Mercedes Bienes Raíces</h1>
+        <div class="sub-info">Alianza Residencial</div>
       </div>
       <div class="doc-title">
         <h2>Recibo de Pago</h2>
@@ -190,6 +190,21 @@ function render(d) {
   }
 })();
 
+// Numeración nativa de página (mecanismo propio de jsPDF, no un contador
+// manual) -- se dibuja después de paginar, así es correcta aunque el PDF
+// crezca o se trunque.
+function addPageNumbers(pdf) {
+  const totalPages = pdf.internal.getNumberOfPages();
+  const pageWidth  = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  pdf.setFontSize(8);
+  pdf.setTextColor(148, 163, 184);
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i);
+    pdf.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+  }
+}
+
 function descargarPDF() {
   const bar = document.getElementById('actionBar');
   bar.style.display = 'none';
@@ -199,9 +214,11 @@ function descargarPDF() {
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
+    pagebreak:    { mode: ['css', 'legacy'] },
   };
-  html2pdf().set(opt).from(document.getElementById('doc')).save().then(() => {
+  html2pdf().set(opt).from(document.getElementById('doc')).toPdf().get('pdf').then(pdf => {
+    addPageNumbers(pdf);
+    pdf.save(opt.filename);
     bar.style.display = '';
   });
 }

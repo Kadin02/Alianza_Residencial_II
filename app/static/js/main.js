@@ -113,6 +113,11 @@ function showToast(msg, type = 'success') {
 function formatMoney(v) {
   return parseFloat(v || 0).toLocaleString('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+// Saldo a favor (valor negativo) se muestra en formato contable "($X.XX)".
+function formatSaldo(v) {
+  const n = parseFloat(v || 0);
+  return n < 0 ? `($${formatMoney(Math.abs(n))})` : `$${formatMoney(n)}`;
+}
 function formatDate(str) {
   if (!str) return '—';
   try { const [y, m, d] = str.split('T')[0].split('-'); return `${d}/${m}/${y}`; }

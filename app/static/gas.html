@@ -142,15 +142,8 @@
     #pdf-doc .doc-table td { padding: 7px 10px; border-bottom: 1px solid var(--doc-border); }
     #pdf-doc .doc-table td.right { text-align: right; }
 
-    #pdf-doc .doc-footer-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
-    #pdf-doc .footer-balance-box {
-      flex: 1 1 200px; background: var(--doc-accent); color: #fff;
-      border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center;
-    }
-    #pdf-doc .footer-balance-box .fb-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,0.75); margin-bottom: 3px; }
-    #pdf-doc .footer-balance-box .fb-value { font-size: 1.3rem; font-weight: 800; }
-    #pdf-doc .footer-balance-box .fb-date  { font-size: .65rem; color: rgba(255,255,255,0.65); margin-top: 5px; }
-    #pdf-doc .doc-footer-grid .doc-footer-note { flex: 1.4 1 240px; margin-top: 0; }
+    #pdf-doc .doc-footer-grid { margin-top: 16px; }
+    #pdf-doc .doc-footer-grid .doc-footer-note { margin-top: 0; }
 
     #pdf-doc .doc-footer-note {
       margin-top: 20px; padding: 12px 16px; background: var(--warning-bg);
@@ -939,6 +932,7 @@
           return {
             title: 'Estado de Cuenta — Gas',
             isStatement: true,
+            hasCargosPagos: true,
             infoCells: [
               { label: 'Unidad',      value: unit ? `Apt. ${unit}` : 'Todas' },
               { label: 'Propietario', value: unit ? (cargos[0]?.owner_name || pagos[0]?.owner_name || '—') : 'Todos' },
@@ -1123,13 +1117,25 @@
               </div>`).join('')}
           </div>` : '';
 
+      // Tabla de saldo (Tarea 2): sin color, pie de página. Con desglose
+      // Cargos/Pagos/Pendiente cuando el reporte los tiene (Estado de
+      // Cuenta); si no (ej. Cuentas por Cobrar), lista los totales propios.
+      const saldoTableHtml = !result.isStatement ? '' : result.hasCargosPagos ? `
+          <div class="saldo-table-wrap">
+            <table class="saldo-table">
+              <tr><td>${result.totals[0].label}</td><td class="right">${result.totals[0].value}</td></tr>
+              <tr><td>${result.totals[1].label}</td><td class="right">${result.totals[1].value}</td></tr>
+              <tr class="saldo-total"><td>Pendiente por pagar</td><td class="right">${formatSaldo(result.saldoFinal)}</td></tr>
+            </table>
+          </div>` : `
+          <div class="saldo-table-wrap">
+            <table class="saldo-table">
+              ${result.totals.map((t, i) => `<tr${i === result.totals.length - 1 ? ' class="saldo-total"' : ''}><td>${t.label}</td><td class="right">${t.value}</td></tr>`).join('')}
+            </table>
+          </div>`;
+
       const footerHtml = result.isStatement ? `
           <div class="doc-footer-grid">
-            <div class="footer-balance-box">
-              <div class="fb-label">Saldo Final</div>
-              <div class="fb-value">$${formatMoney(result.saldoFinal)}</div>
-              <div class="fb-date">Generado el ${new Date().toLocaleDateString('es-PA', { year:'numeric', month:'long', day:'numeric' })}</div>
-            </div>
             <div class="doc-footer-note">
               <strong><i class="fas fa-info-circle"></i> Nota informativa</strong>
               Este reporte refleja los movimientos de Gas registrados en el sistema según los filtros aplicados. Para cualquier aclaración, contactar administración.
@@ -1147,8 +1153,8 @@
         <div id="pdf-doc" style="background:#fff;padding:20px;">
           <div class="doc-header">
             <div>
-              <h1>ALIANZA RESIDENCIAL</h1>
-              <div class="sub-info">V1 — Módulo de Gas</div>
+              <h1>Mercedes Bienes Raíces</h1>
+              <div class="sub-info">Alianza Residencial</div>
             </div>
             <div class="doc-title">
               <h2>${result.title}</h2>
@@ -1161,6 +1167,7 @@
             <thead><tr>${theadCols}</tr></thead>
             <tbody>${bodyRows}</tbody>
           </table>
+          ${saldoTableHtml}
           ${footerHtml}
         </div>`;
 
@@ -1169,6 +1176,21 @@
 
     function closeReporteGasModal() {
       document.getElementById('reporte-gas-modal').classList.remove('open');
+    }
+
+    // Numeración nativa de página (mecanismo propio de jsPDF, no un contador
+    // manual) -- se dibuja después de paginar, así es correcta aunque el PDF
+    // crezca o se trunque.
+    function addPageNumbers(pdf) {
+      const totalPages = pdf.internal.getNumberOfPages();
+      const pageWidth  = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      pdf.setFontSize(8);
+      pdf.setTextColor(148, 163, 184);
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+      }
     }
 
     function descargarReporteGasPDF() {
@@ -1194,9 +1216,11 @@
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+        pagebreak: { mode: ['css', 'legacy'] },
       };
-      html2pdf().set(opt).from(doc).save().then(() => {
+      html2pdf().set(opt).from(doc).toPdf().get('pdf').then(pdf => {
+        addPageNumbers(pdf);
+        pdf.save(opt.filename);
         noExportEls.forEach(el => el.style.display = '');
         scrollWrap.style.maxHeight = prevMaxHeight;
         scrollWrap.style.overflowY = prevOverflowY;

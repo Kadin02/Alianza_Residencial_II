@@ -1,7 +1,7 @@
 """
 Script Utiles/importar_plantillas_simple.py
 
-Importación en batch de los 3 archivos reales de Kadin, sin FIFO ni
+Importación en batch de Organizacion_Migracion 2024-2026.xlsx, sin FIFO ni
 PaymentApplication -- exactamente la misma lógica simple que ya usan
 gas.html / imports.html (un Charge o un Payment suelto por fila), solo que
 corrida de una vez en vez de fila por fila desde el navegador.
@@ -13,39 +13,40 @@ de (o además de) cargar los datos desde imports.html / gas.html.
 Requiere que Owners/Units ya existan en la base de datos (reset_v2.py no
 los toca). Si una unidad no se encuentra, la fila se omite y se reporta.
 
-Fuentes (columnas reales, verificadas con openpyxl):
+Fuente única: Organizacion_Migracion 2024-2026.xlsx (columnas reales,
+verificadas con openpyxl). Los archivos sueltos Migracion_Gas_Cargo.xlsx /
+Migracion_Gas_Pagos.xlsx quedan OBSOLETOS -- ya no se leen. Cargos_de_Gas
+de este archivo sí cubre el histórico completo (888 filas, 2024-02 a
+2026-07), a diferencia de una versión anterior de este mismo archivo donde
+esa hoja no se usaba como fuente.
 
-1. Migracion_Gas_Cargo.xlsx (hoja "Hoja1")
-   MES, Apto, Propietario, Lectura Inicial, Lectura Final, Total a Pagar, YEAR, ID
-   -> Charge(concept="Gas", description="Facturación de Gas - Lectura {LI} → {LF}",
-             amount=round(Total a Pagar, 2), date_created=YEAR-MES-01, due_date=fin de mes)
-   La columna ID es solo el orden de Kadin en Excel -- no se guarda.
+- Hoja "Cargos_de_Gas" (año, mes, Fecha, apartamento, monto, propiedad):
+  un Charge por fila (excluye "Por definir"/"A001" vía NON_REAL_APTOS) ->
+  Charge(concept="Gas", description="Facturación de Gas",
+         amount=round(monto, 2), date_created=año-mes-01, due_date=fin de mes).
+  Esta hoja no trae lecturas de medidor, solo el monto ya calculado.
 
-2. Migracion_Gas_Pagos.xlsx (hoja "Hoja1")
-   AÑO, MES, Fecha, Apartamento, Monto, Propietario, Concepto, # Factura, ID_Pago, ID_Cargo
-   -> Payment(payment_date=Fecha, amount=round(Monto, 2), invoice_number=# Factura,
-              concept=Concepto, reference=None)
-   ID_Pago / ID_Cargo son solo bookkeeping de Kadin -- no se crea ningún
-   PaymentApplication a partir de ID_Cargo, el pago no queda enlazado a un
-   cargo específico en la BD.
+- Hoja "Cargos_Fijos_Atrasados" (año, concepto, monto_anual, propiedad):
+  un Charge anual por unidad real (excluye NON_REAL_APTOS) por cada fila --
+  misma lógica que ya tenía migrar_historial_2024_2025.py paso 4, sin FIFO.
 
-3. Organizacion_Migracion 2024-2026.xlsx
-   - Hoja "Cargos_Fijos_Atrasados" (año, concepto, monto_anual, propiedad):
-     un Charge anual por unidad real (excluye "Por definir"/"A001") por cada
-     fila -- misma lógica que ya tenía migrar_historial_2024_2025.py paso 4,
-     sin FIFO.
-   - Hoja "Pagos_Varios_Globales" (año, mes, fecha, Apartamento, factura,
-     monto_pagado, concepto, Propiedad -- ojo: el nombre real de la hoja y
-     el orden de columnas difieren de lo que se documentó originalmente;
-     verificado con openpyxl contra el archivo real), FILTRANDO
-     concepto != "Facturación de Gas" (esas filas son Gas, se manejan con
-     los archivos 1 y 2 de arriba) -> Payment(payment_date=fecha,
-     amount=round(monto_pagado, 2), invoice_number=factura, concept=concepto).
-     "fecha" viene como número serial de Excel (sin formato de fecha en la
-     celda), se convierte manualmente.
-   "Clientes_Datos" y "Cargos_de_Gas" de este archivo YA NO se usan como
-   fuente -- solo sirven de referencia manual si hace falta resolver un
-   apartamento no encontrado.
+- Hoja "Pagos_Varios_Globales" (año, mes, fecha, Apartamento, factura,
+  monto_pagado, concepto, Propiedad -- ojo: el nombre real de la hoja y el
+  orden de columnas difieren de lo que se documentó originalmente;
+  verificado con openpyxl contra el archivo real). Fuente única también
+  para los pagos de Gas: las filas con concepto == "Facturación de Gas" ya
+  NO se filtran/descartan, se importan igual que el resto -> Payment(
+  payment_date=fecha, amount=round(monto_pagado, 2), invoice_number=factura,
+  concept=concepto). Excepción: para esas filas de Gas, concept se
+  normaliza a "Gas" (no el texto literal "Facturación de Gas" del Excel) --
+  gas.html filtra pagos con `p.concepto === 'Gas'` exacto y finances.html
+  excluye del Reporte General con `p.concepto !== 'Gas'`; con el texto
+  largo del Excel esos pagos quedarían invisibles en ambos módulos.
+  "fecha" viene como número serial de Excel (sin formato de fecha en la
+  celda), se convierte manualmente.
+
+"Clientes_Datos" de este archivo sigue sin usarse como fuente -- solo sirve
+de referencia manual si hace falta resolver un apartamento no encontrado.
 
 Ningún Payment creado por este script genera OwnerCredit ni PaymentApplication
 -- son filas sueltas, tal como ya se definió para gas.html/imports.html.
@@ -81,9 +82,7 @@ from app.models.unit_owner import UnitOwner  # noqa: E402
 from app.models.charge import Charge  # noqa: E402
 from app.models.payment import Payment  # noqa: E402
 
-GAS_CARGO_PATH = os.path.join(os.path.dirname(__file__), "Migracion_Gas_Cargo.xlsx")
-GAS_PAGOS_PATH = os.path.join(os.path.dirname(__file__), "Migracion_Gas_Pagos.xlsx")
-V2_PATH        = os.path.join(os.path.dirname(__file__), "Organizacion_Migracion 2024-2026.xlsx")
+V2_PATH = os.path.join(os.path.dirname(__file__), "Organizacion_Migracion 2024-2026.xlsx")
 
 CENT = Decimal("0.01")
 NON_REAL_APTOS = {"Por definir", "A001"}
@@ -157,70 +156,42 @@ class Report:
 
 
 def import_gas_cargos(db, report, unit_by_apto):
-    if not os.path.exists(GAS_CARGO_PATH):
-        print(f"[SKIP] No se encontró {GAS_CARGO_PATH}")
+    """Hoja 'Cargos_de_Gas' de Organizacion_Migracion (año, mes, Fecha,
+    apartamento, monto, propiedad) -- reemplaza a Migracion_Gas_Cargo.xlsx,
+    que queda obsoleto. Un Charge por fila; esta hoja no trae lecturas de
+    medidor, solo el monto ya calculado."""
+    wb = openpyxl.load_workbook(V2_PATH, data_only=True)
+    if "Cargos_de_Gas" not in wb.sheetnames:
+        print("[SKIP] Hoja 'Cargos_de_Gas' no encontrada")
         return
-    wb = openpyxl.load_workbook(GAS_CARGO_PATH, data_only=True)
-    for row in read_sheet_rows(wb, "Hoja1"):
-        mes, apto, propietario, li, lf, total, year, _id = row
-        if apto is None or mes is None or year is None or total is None:
-            report.omit("Migracion_Gas_Cargo", row, "campos obligatorios vacíos")
+    for row in read_sheet_rows(wb, "Cargos_de_Gas"):
+        anio, mes, _fecha, apto, monto, _propiedad = row
+        if apto is None or mes is None or anio is None or monto is None:
+            report.omit("Cargos_de_Gas", row, "campos obligatorios vacíos")
             continue
 
-        unit = unit_by_apto.get(str(apto))
+        apto = str(apto)
+        if apto in NON_REAL_APTOS:
+            continue
+
+        unit = unit_by_apto.get(apto)
         if unit is None:
-            report.omit("Migracion_Gas_Cargo", row, f"apartamento '{apto}' no encontrado")
+            report.omit("Cargos_de_Gas", row, f"apartamento '{apto}' no encontrado")
             continue
 
-        mes, year = int(mes), int(year)
-        due_day = calendar.monthrange(year, mes)[1]
+        anio, mes = int(anio), int(mes)
+        due_day = calendar.monthrange(anio, mes)[1]
         charge = Charge(
             unit=unit,
             concept="Gas",
-            description=f"Facturación de Gas - Lectura {li} → {lf}",
-            amount=to_dec(total),
+            description="Facturación de Gas",
+            amount=to_dec(monto),
             status="PENDIENTE",
-            date_created=date(year, mes, 1),
-            due_date=date(year, mes, due_day),
+            date_created=date(anio, mes, 1),
+            due_date=date(anio, mes, due_day),
         )
         db.add(charge)
         report.gas_charges += 1
-
-
-def import_gas_pagos(db, report, unit_by_apto, active_owner_by_unit):
-    if not os.path.exists(GAS_PAGOS_PATH):
-        print(f"[SKIP] No se encontró {GAS_PAGOS_PATH}")
-        return
-    wb = openpyxl.load_workbook(GAS_PAGOS_PATH, data_only=True)
-    for row in read_sheet_rows(wb, "Hoja1"):
-        anio, mes, fecha, apto, monto, propietario, concepto, factura, id_pago, id_cargo = row
-        if apto is None or fecha is None or monto is None:
-            report.omit("Migracion_Gas_Pagos", row, "campos obligatorios vacíos")
-            continue
-
-        unit = unit_by_apto.get(str(apto))
-        if unit is None:
-            report.omit("Migracion_Gas_Pagos", row, f"apartamento '{apto}' no encontrado")
-            continue
-
-        owner = active_owner_by_unit.get(unit.id)
-        if owner is None:
-            report.omit("Migracion_Gas_Pagos", row, f"unidad '{apto}' sin propietario activo")
-            continue
-
-        fecha_pago = fecha.date() if hasattr(fecha, "date") else fecha
-        payment = Payment(
-            property=unit.property,
-            owner=owner,
-            payment_date=fecha_pago,
-            amount=to_dec(monto),
-            total_amount=to_dec(monto),
-            invoice_number=str(factura) if factura is not None else None,
-            reference=None,
-            concept=str(concepto) if concepto else "Facturación de Gas",
-        )
-        db.add(payment)
-        report.gas_payments += 1
 
 
 def import_v2_cargos_fijos(db, report, unit_by_apto):
@@ -264,11 +235,17 @@ def import_v2_cargos_fijos(db, report, unit_by_apto):
             report.v2_charges += 1
 
 
-def import_v2_pagos_global(db, report, unit_by_apto, active_owner_by_unit):
+def import_v2_pagos_global(db, report, unit_by_apto, active_owner_by_unit,
+                            include_gas=True, include_v2=True):
     """Hoja real 'Pagos_Varios_Globales' (año, mes, fecha, Apartamento,
-    factura, monto_pagado, concepto, Propiedad), filtrando fuera
-    'Facturación de Gas' (esas filas se importan aparte con
-    Migracion_Gas_Pagos.xlsx)."""
+    factura, monto_pagado, concepto, Propiedad). Fuente única también para
+    los pagos de Gas -- ya no se filtran/descartan ni se importan aparte con
+    Migracion_Gas_Pagos.xlsx (obsoleto). Para las filas de Gas, el concept
+    guardado se normaliza a "Gas" (no el texto largo "Facturación de Gas"
+    del Excel): gas.html filtra pagos con `p.concepto === 'Gas'` exacto y
+    finances.html excluye del Reporte General con `p.concepto !== 'Gas'` --
+    con el texto del Excel tal cual esos pagos quedarían invisibles en
+    ambos módulos."""
     wb = openpyxl.load_workbook(V2_PATH, data_only=True)
     if "Pagos_Varios_Globales" not in wb.sheetnames:
         print("[SKIP] Hoja 'Pagos_Varios_Globales' no encontrada")
@@ -277,8 +254,11 @@ def import_v2_pagos_global(db, report, unit_by_apto, active_owner_by_unit):
     for row in read_sheet_rows(wb, "Pagos_Varios_Globales"):
         anio, mes, fecha, apto, factura, monto_pagado, concepto, _propiedad = row
 
-        if concepto == "Facturación de Gas":
-            continue  # Gas se importa aparte, con sus propias plantillas
+        es_gas = (concepto == "Facturación de Gas")
+        if es_gas and not include_gas:
+            continue
+        if not es_gas and not include_v2:
+            continue
 
         if apto is None or fecha is None or monto_pagado is None:
             report.omit("Pagos_Varios_Globales", row, "campos obligatorios vacíos")
@@ -303,10 +283,13 @@ def import_v2_pagos_global(db, report, unit_by_apto, active_owner_by_unit):
             total_amount=to_dec(monto_pagado),
             invoice_number=str(factura) if factura is not None else None,
             reference=None,
-            concept=str(concepto) if concepto else None,
+            concept="Gas" if es_gas else (str(concepto) if concepto else None),
         )
         db.add(payment)
-        report.v2_payments += 1
+        if es_gas:
+            report.gas_payments += 1
+        else:
+            report.v2_payments += 1
 
 
 def run_import(commit: bool, skip_gas: bool, skip_v2: bool):
@@ -321,16 +304,17 @@ def run_import(commit: bool, skip_gas: bool, skip_v2: bool):
         active_relations = db.query(UnitOwner).filter(UnitOwner.is_active == True).all()
         active_owner_by_unit = {r.unit_id: r.owner for r in active_relations}
 
-        if not skip_gas:
-            import_gas_cargos(db, report, unit_by_apto)
-            import_gas_pagos(db, report, unit_by_apto, active_owner_by_unit)
-
-        if not skip_v2:
-            if os.path.exists(V2_PATH):
+        if os.path.exists(V2_PATH):
+            if not skip_gas:
+                import_gas_cargos(db, report, unit_by_apto)
+            if not skip_v2:
                 import_v2_cargos_fijos(db, report, unit_by_apto)
-                import_v2_pagos_global(db, report, unit_by_apto, active_owner_by_unit)
-            else:
-                print(f"[SKIP] No se encontró {V2_PATH}")
+            # Pagos_Varios_Globales es fuente única para Gas y V2 a la vez --
+            # se llama siempre, filtrando adentro según los flags.
+            import_v2_pagos_global(db, report, unit_by_apto, active_owner_by_unit,
+                                    include_gas=not skip_gas, include_v2=not skip_v2)
+        else:
+            print(f"[SKIP] No se encontró {V2_PATH}")
 
         db.flush()
         report.print_summary()
@@ -351,10 +335,10 @@ def run_import(commit: bool, skip_gas: bool, skip_v2: bool):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Importación en batch de las plantillas reales (Gas + V2), sin FIFO")
+    parser = argparse.ArgumentParser(description="Importación en batch de Organizacion_Migracion 2024-2026.xlsx (Gas + V2), sin FIFO")
     parser.add_argument("--commit", action="store_true", help="Confirma los cambios (por defecto es dry-run)")
-    parser.add_argument("--skip-gas", action="store_true", help="No importar Migracion_Gas_Cargo.xlsx / Migracion_Gas_Pagos.xlsx")
-    parser.add_argument("--skip-v2", action="store_true", help="No importar Organizacion_Migracion 2024-2026.xlsx")
+    parser.add_argument("--skip-gas", action="store_true", help="No importar cargos/pagos de concepto Gas (hoja Cargos_de_Gas + filas 'Facturación de Gas' de Pagos_Varios_Globales)")
+    parser.add_argument("--skip-v2", action="store_true", help="No importar Cargos_Fijos_Atrasados ni los pagos que no sean de Gas de Pagos_Varios_Globales")
     args = parser.parse_args()
 
     run_import(commit=args.commit, skip_gas=args.skip_gas, skip_v2=args.skip_v2)
